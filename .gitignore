@@ -1,0 +1,17 @@
+# Microsoft Office 一時ファイル
+~$*
+*.tmp
+
+# Excel バックアップファイル
+*.xlk
+
+# VBA プロジェクトファイル
+*.vbw
+
+# Windows 一時ファイル
+Thumbs.db
+desktop.ini
+
+# その他
+*.log
+.DS_Store

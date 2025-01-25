@@ -154,9 +154,9 @@ Private Sub LoadConfigurationFromFile()
     Exit Sub
 
 ErrorHandler:
-    Dim errDetail As typErrorIDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_FILEIO_INVALID_FORMAT
+        .Code = ErrFileInvalidFormat
         .Description = "設定ファイルの読み込み中にエラーが発生しました: " & Err.Description
         .Category = ECFileIO
         .Source = MODULE_NAME
@@ -192,9 +192,9 @@ Private Sub SaveConfigurationToFile()
     Exit Sub
 
 ErrorHandler:
-    Dim errDetail As typErrorIDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_FILEIO_ACCESS_DENIED
+        .Code = ErrFileAccessDenied
         .Description = "設定ファイルの保存中にエラーが発生しました: " & Err.Description
         .Category = ECFileIO
         .Source = MODULE_NAME

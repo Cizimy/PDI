@@ -66,9 +66,9 @@ CleanUp:
     Exit Sub
     
 ErrorHandler:
-    Dim errDetail As typErrorDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_FILEIO_ACCESS_DENIED
+        .Code = ErrFileAccessDenied
         .Description = "ログファイルへの書き込み中にエラーが発生しました: " & Err.Description
         .Category = ECFileIO
         .Source = MODULE_NAME
@@ -99,21 +99,23 @@ End Property
 ' ======================
 ' プライベートメソッド
 ' ======================
-Private Function ShouldLog(ByVal errorCode As ErrorCode) As Boolean
-    ' エラーコードからログレベルを判断
-    Dim level As LogLevel
-    
+Private Function GetLogLevelForErrorCode(ByVal errorCode As ErrorCode) As LogLevel
     Select Case errorCode
         Case ErrUnexpected, ErrSystemOutOfMemory
-            level = LevelFatal
+            GetLogLevelForErrorCode = LevelFatal
         Case ErrDbConnectionFailed, ErrNetworkError
-            level = LevelError
+            GetLogLevelForErrorCode = LevelError
         Case ErrFileNotFound, ErrInvalidInput
-            level = LevelWarning
+            GetLogLevelForErrorCode = LevelWarning
         Case Else
-            level = LevelInfo
+            GetLogLevelForErrorCode = LevelInfo
     End Select
-    
+End Function
+
+Private Function ShouldLog(ByVal errorCode As ErrorCode) As Boolean
+    ' エラーコードからログレベルを判断
+    Dim level As LogLevel    
+    level = GetLogLevelForErrorCode(errorCode)    
     ShouldLog = (level >= mLogLevel)
 End Function
 
@@ -143,14 +145,19 @@ Private Function BuildLogMessage(ByVal moduleName As String, _
 End Function
 
 Private Function GetLogLevelText(ByVal errorCode As ErrorCode) As String
-    Select Case errorCode
-        Case ErrUnexpected, ErrSystemOutOfMemory
+    ' エラーコードに対応するログレベルを取得し、テキストに変換
+    Dim level As LogLevel
+    level = GetLogLevelForErrorCode(errorCode
+)
+    
+    Select Case level
+        Case LevelFatal
             GetLogLevelText = "FATAL"
-        Case ErrDbConnectionFailed, ErrNetworkError
+        Case LevelError
             GetLogLevelText = "ERROR"
-        Case ErrFileNotFound, ErrInvalidInput
+        Case LevelWarning
             GetLogLevelText = "WARNING"
-        Case Else
+        Case LevelInfo
             GetLogLevelText = "INFO"
     End Select
 End Function

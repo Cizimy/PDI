@@ -66,7 +66,7 @@ Public Function EncryptString(ByVal plainText As String, ByVal key As String) As
             .Source = "clsCrypto"
             .ProcedureName = "EncryptString"
         End With
-        modCommon.HandleError errInfo
+        modError.HandleError errInfo
     End If
     
     ' 単純なXOR暗号化（実際のプロダクションでは、より強力な暗号化アルゴリズムを使用すべき）
@@ -108,7 +108,7 @@ Public Function DecryptString(ByVal cipherText As String, ByVal key As String) A
             .Source = "clsCrypto"
             .ProcedureName = "DecryptString"
         End With
-        modCommon.HandleError errInfo
+        modError.HandleError errInfo
     End If
     
     ' Base64デコード

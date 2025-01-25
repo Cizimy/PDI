@@ -108,9 +108,9 @@ Cleanup:
     Exit Sub
     
 ErrorHandler:
-    Dim errDetail As typErrorDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_UNEXPECTED
+        .Code = ErrUnexpected
         .Description = "ログ出力中にエラーが発生しました: " & Err.Description
         .Category = ECGeneral
         .Source = MODULE_NAME
@@ -181,9 +181,9 @@ Cleanup:
     Exit Sub
     
 ErrorHandler:
-    Dim errDetail As typErrorDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_UNEXPECTED
+        .Code = ErrUnexpected
         .Description = "ログキュー処理中にエラーが発生しました: " & Err.Description
         .Category = ECGeneral
         .Source = MODULE_NAME
@@ -210,9 +210,9 @@ Private Sub WriteToFile(ByVal logEntry As Variant)
     Exit Sub
     
 ErrorHandler:
-    Dim errDetail As typErrorDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_FILEIO_ACCESS_DENIED
+        .Code = ErrFileAccessDenied
         .Description = "ファイルへのログ出力に失敗しました: " & Err.Description
         .Category = ECFileIO
         .Source = MODULE_NAME
@@ -258,9 +258,9 @@ ErrorHandler:
         mLock.ReleaseLock
     End If
     
-    Dim errDetail As typErrorDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_DATABASE_QUERY_FAILED
+        .Code = ErrDbQueryFailed
         .Description = "データベースへのログ出力に失敗しました: " & Err.Description
         .Category = ECDatabase
         .Source = MODULE_NAME
@@ -308,9 +308,9 @@ Private Sub WriteToEventLog(ByVal logEntry As Variant)
         Exit Sub
     
     ErrorHandler:
-        Dim errDetail As typErrorDetail
+        Dim errDetail As ErrorInfo
         With errDetail
-            .ErrorCode = IIf(Err.Number = ErrEventLogCreateFailed, ErrEventLogCreateFailed, ErrEventLogWriteFailed)
+            .Code = IIf(Err.Number = ErrEventLogCreateFailed, ErrEventLogCreateFailed, ErrEventLogWriteFailed)
             .Description = "イベントログへの書き込みに失敗しました: " & Err.Description
             .Category = ECSystem
             .Source = MODULE_NAME

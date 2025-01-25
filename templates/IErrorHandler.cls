@@ -41,5 +41,5 @@ Option Explicit
 '''    - スタックトレースなど、デバッグに有用な情報を付加してください
 '''    - エラーコードやカテゴリを適切に設定してください
 ''' </remarks>
-Public Function HandleError(ByRef errorDetail As typErrorDetail) As Boolean
+Public Function HandleError(ByRef errorDetail As ErrorInfo) As Boolean
 End Function

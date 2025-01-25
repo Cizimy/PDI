@@ -40,9 +40,9 @@ Public Function Create() As DatabaseConnectionErrorHandler
     Exit Function
 
 ErrorHandler:
-    Dim errDetail As typErrorDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_UNEXPECTED
+        .Code = ErrUnexpected
         .Description = "データベースエラーハンドラの作成中にエラーが発生しました: " & Err.Description
         .Category = ECDatabase
         .Source = MODULE_NAME
@@ -57,7 +57,7 @@ End Function
 ' ======================
 ' IErrorHandler実装
 ' ======================
-Private Function IErrorHandler_HandleError(ByRef errorDetail As typErrorDetail) As Boolean
+Private Function IErrorHandler_HandleError(ByRef errorDetail As ErrorInfo) As Boolean
     Dim proceed As Boolean
     proceed = False  ' デフォルトでは処理を中断
     
@@ -78,7 +78,7 @@ End Function
 ' ======================
 ' プライベートメソッド
 ' ======================
-Private Function AttemptRetry(ByRef errorDetail As typErrorDetail) As Boolean
+Private Function AttemptRetry(ByRef errorDetail As ErrorInfo) As Boolean
     On Error GoTo ErrorHandler
     
     Dim retryCount As Long
@@ -98,16 +98,16 @@ Private Function AttemptRetry(ByRef errorDetail As typErrorDetail) As Boolean
         Set logger = New FileLogger
         logger.Log MODULE_NAME, _
                   "データベース接続リトライ " & retryCount & "/" & MAX_RETRY_COUNT, _
-                  errorDetail.ErrorCode
+                  errorDetail.Code
     Next retryCount
     
     AttemptRetry = success
     Exit Function
 
 ErrorHandler:
-    Dim errDetail As typErrorDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_UNEXPECTED
+        .Code = ErrUnexpected
         .Description = "データベース接続のリトライ中にエラーが発生しました: " & Err.Description
         .Category = ECDatabase
         .Source = MODULE_NAME
@@ -137,7 +137,7 @@ Private Function TryDatabaseConnection() As Boolean
     On Error GoTo 0
 End Function
 
-Private Sub LogError(ByRef errorDetail As typErrorDetail)
+Private Sub LogError(ByRef errorDetail As ErrorInfo)
     On Error GoTo ErrorHandler
     
     ' エラーログの出力
@@ -146,13 +146,13 @@ Private Sub LogError(ByRef errorDetail As typErrorDetail)
     
     logger.Log MODULE_NAME, _
               "データベース接続エラー: " & errorDetail.Description, _
-              errorDetail.ErrorCode
+              errorDetail.Code
     Exit Sub
 
 ErrorHandler:
-    Dim errDetail As typErrorDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_UNEXPECTED
+        .Code = ErrUnexpected
         .Description = "データベースエラーのログ出力中にエラーが発生しました: " & Err.Description
         .Category = ECDatabase
         .Source = MODULE_NAME
@@ -163,7 +163,7 @@ ErrorHandler:
     modError.HandleError errDetail
 End Sub
 
-Private Sub NotifyUser(ByRef errorDetail As typErrorDetail, ByVal style As VbMsgBoxStyle)
+Private Sub NotifyUser(ByRef errorDetail As ErrorInfo, ByVal style As VbMsgBoxStyle)
     On Error GoTo ErrorHandler
     
     ' ユーザーへの通知
@@ -174,9 +174,9 @@ Private Sub NotifyUser(ByRef errorDetail As typErrorDetail, ByVal style As VbMsg
     Exit Sub
 
 ErrorHandler:
-    Dim errDetail As typErrorDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_UNEXPECTED
+        .Code = ErrUnexpected
         .Description = "データベースエラーの通知中にエラーが発生しました: " & Err.Description
         .Category = ECDatabase
         .Source = MODULE_NAME

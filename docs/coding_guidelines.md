@@ -9,6 +9,8 @@
   例: `clsCustomer`, `clsOrder`
 - フォーム: `frm〈画面名〉`
   例: `frmMain`, `frmSettings`
+- レポート: `rpt〈レポート名〉`
+  例: `rptSalesReport`, `rptInventory`
 
 ### 変数
 ```vb
@@ -20,6 +22,43 @@ Public UserName As String
 
 ' 定数: すべて大文字（アンダースコア区切り）
 Const MAX_RETRY_COUNT As Integer = 3
+
+' プロシージャ内変数は先頭小文字のキャメルケース
+Dim localValue As Integer
+
+' カスタムタイプ
+Type typCustomerData
+    ID As Long
+    Name As String
+End Type
+```
+
+### イベントハンドラ
+```vb
+' コントロール種別＋操作内容＋イベント種別
+Private Sub btnSave_Click()
+Private Sub txtName_Change()
+```
+
+### UIコントロール
+```vb
+' プレフィックス方式（3文字略称）
+txtUserName   ' テキストボックス
+lblStatus      ' ラベル
+btnSubmit      ' ボタン
+lstProducts    ' リストボックス
+chkAgreement   ' チェックボックス
+cmbCategory    ' コンボボックス
+optPayment     ' オプションボタン
+tblResults     ' テーブル
+```
+
+### 列挙型
+```vb
+Public Enum FileAccessMode
+    famReadOnly = 1
+    famReadWrite = 2
+End Enum
 ```
 
 ### プロシージャ
@@ -34,7 +73,97 @@ Const MAX_RETRY_COUNT As Integer = 3
   Public Function IsValidDate(ByVal testDate As Date) As Boolean
   ```
 
+## コード品質
+
+### 必須宣言
+```vb
+Option Explicit  ' 全モジュールで必須
+Option Base 1    ' 明示的な指定を推奨
+Option Compare Binary  ' 文字列比較は厳密なバイナリ比較を使用
+```
+
+### 型安全な宣言
+```vb
+' 悪い例
+Dim count, total  ' Variant型
+
+' 良い例
+Dim count As Long
+Dim total As Double
+
+' 複数変数宣言時の注意
+Dim count As Long, total As Double ' 個別に型指定
+```
+
+### 配列操作ガイドライン
+```vb
+' 動的配列の明示的初期化
+Dim data() As Variant
+data = Array()
+
+' 配列のサイズ変更は慎重に
+ReDim Preserve data(1 To newSize)
+```
+
+## 外部参照とバインディング
+
+### バインディング方針
+```vb
+' 基本は早期バインディングを使用
+Dim excel As Excel.Application
+Dim wb As Excel.Workbook
+
+' 遅延バインディングが必要な場合は理由をコメントで明記
+''' <remarks>
+''' 配布環境でのExcelバージョン互換性のため遅延バインディングを使用
+''' </remarks>
+Dim excel As Object
+```
+
+### 参照設定のガイドライン
+- プロジェクトの参照設定は明示的にバージョンを指定
+- 必要最小限の参照のみを追加
+- バージョン依存性の高い参照は遅延バインディングを検討
+
+## フォーム設計ガイドライン
+
+### ビジネスロジックの分離
+```vb
+' 悪い例：フォームに直接ビジネスロジックを記述
+Private Sub btnSave_Click()
+    ' フォーム上で直接データ処理
+    Sheets("Data").Range("A1").Value = txtName.Value
+End Sub
+
+' 良い例：ビジネスロジックをクラスに分離
+Private Sub btnSave_Click()
+    Dim dataManager As New clsDataManager
+    dataManager.SaveData GetFormData()
+End Sub
+
+Private Function GetFormData() As typFormData
+    ' UIからデータを収集してクラスに渡す
+End Function
+```
+
+### フォームの責務
+- フォームはUIの表示と入力の受付のみを担当
+- データの検証はビジネスロジッククラスで実施
+- コントロールへの直接参照は最小限に抑える
+- イベントハンドラはできるだけシンプルに保つ
+- 複雑な処理は別クラスに委譲
+
 ## コメント規則
+
+### XMLドキュメントコメント
+```vb
+''' <summary>
+''' 顧客情報を更新する
+''' </summary>
+''' <param name="customerId">顧客ID（数値必須）</param>
+''' <returns>更新成功時にTrueを返す</returns>
+Public Function UpdateCustomer(ByVal customerId As Long) As Boolean
+```
 
 ### プロシージャヘッダー
 ```vb
@@ -59,17 +188,80 @@ End If
 
 ## エラー処理
 
+### 階層化エラーハンドリング
 ```vb
-Public Sub ExampleErrorHandling()
+Public Sub MainProcedure()
+    On Error GoTo GlobalHandler
+    
+    ' 詳細処理
+    Call SubProcedure
+    
+    Exit Sub
+    
+GlobalHandler:
+    Call LogError(Err.Number, Err.Description)
+    Exit Sub
+End Sub
+
+Private Sub SubProcedure()
+    On Error GoTo LocalHandler
+    
+    ' 処理内容
+    
+    Exit Sub
+    
+LocalHandler:
+    ' 局所的な回復処理
+    Resume Next
+End Sub
+```
+
+### リソース管理
+```vb
+Public Sub ProcessFile()
+    Dim fileNum As Integer
+    Dim obj As Object
+    
     On Error GoTo ErrorHandler
     
-    ' メイン処理
+    fileNum = FreeFile
+    Open "data.txt" For Input As #fileNum
+    Set obj = CreateObject("Some.Object")
+    
+    ' 処理内容
     
     Exit Sub
 
 ErrorHandler:
-    MsgBox "エラーが発生しました: " & Err.Description
-    Exit Sub
+    ' エラー処理
+    
+Cleanup:
+    ' リソースの明示的解放
+    If Not obj Is Nothing Then Set obj = Nothing
+    Close #fileNum
+End Sub
+```
+
+### リトライメカニズム
+```vb
+' リトライメカニズム
+Const MAX_RETRIES = 3
+Dim retryCount As Integer
+
+On Error Resume Next
+Do While retryCount < MAX_RETRIES
+    ' 処理実行
+    If Err.Number = 0 Then Exit Do
+    retryCount = retryCount + 1
+Loop
+On Error GoTo 0
+```
+
+### エラーログ記録
+```vb
+Public Sub LogError(ByVal errNumber As Long, ByVal errDesc As String)
+    ' エラー情報をファイル/DBに記録
+    ' 発生時刻・プロシージャ名・モジュール名を含む
 End Sub
 ```
 
@@ -91,30 +283,199 @@ End Sub
 
 ## パフォーマンス最適化
 
-### ベストプラクティス
-- ループ内でのシート操作を避ける
-  ```vb
-  Application.ScreenUpdating = False
-  ' ループ処理
-  Application.ScreenUpdating = True
-  ```
-- 配列を使用してシートデータを一括処理
+### 画面更新とイベント制御
+```vb
+' 画面更新の制御
+Application.ScreenUpdating = False
+' 処理実行
+Application.ScreenUpdating = True
+
+' イベントハンドリングの無効化
+Application.EnableEvents = False
+' 処理実行
+Application.EnableEvents = True
+```
+
+### 計算設定制御
+```vb
+Application.Calculation = xlManual
+' 重い処理実行
+Application.Calculation = xlAutomatic
+```
+
+### オブジェクト操作ベストプラクティス
+```vb
+With Worksheets("Data")
+    .Range(.Cells(1,1), .Cells(100,10)).Value = dataArray
+End With
+
+' Select/Activateの使用禁止
+' 悪い例
+Range("A1").Select
+Selection.Value = 10
+
+' 良い例
+Range("A1").Value = 10
+```
+
+### メモリ効率の良い操作
+```vb
+' セル操作は配列経由で
+Dim buffer As Variant
+buffer = Range("A1:Z1000").Value
+' 配列操作
+Range("A1:Z1000").Value = buffer
+```
+
+### 文字列操作の最適化
+```vb
+' 悪い例：文字列の連続結合
+Dim result As String
+For i = 1 To 1000
+    result = result & data(i) & ","
+Next i
+
+' 良い例：配列とJoinを使用
+Dim items(1 To 1000) As String
+For i = 1 To 1000
+    items(i) = data(i)
+Next i
+result = Join(items, ",")
+
+' 大量テキスト生成時は StringBuilder パターンを使用
+' または配列に格納してから Join で結合
+```
 
 ### メモリ管理
-- オブジェクト変数は明示的に解放
-  ```vb
-  Dim wb As Workbook
-  Set wb = Nothing
-  ```
+```vb
+Dim wb As Workbook
+Set wb = Nothing
+```
 
 ## セキュリティ
 
-- ユーザー入力は必ず検証
-- 機密情報はワークシートに直接保存しない
-- マクロのデジタル署名を使用
+### パスワード管理
+```vb
+' 禁止事項
+Const PASSWORD = "secret123"  ' コード内直書き厳禁
+
+' 推奨方法
+Function GetPassword() As String
+    ' 暗号化ストレージ/資格情報管理システムから取得
+End Function
+```
+
+### コード保護
+- プロジェクトロックは最終手段としてのみ使用
+- デジタル署名必須化
+- 重要な機密処理は.NETアセンブリ化を検討
+
+### 入力検証
+```vb
+' 文字列長の検証
+Const MAX_INPUT_LENGTH As Long = 255
+If Len(strInput) > MAX_INPUT_LENGTH Then
+    Err.Raise vbObjectError + 1000, , "入力が長すぎます"
+End If
+
+' 数値範囲の検証
+If value < MIN_VALUE Or value > MAX_VALUE Then
+    Err.Raise vbObjectError + 1001, , "値が範囲外です"
+End If
+```
+
+### SQLインジェクション対策
+```vb
+' 悪い例
+sql = "SELECT * FROM Users WHERE Name = '" & txtName & "'"
+
+' 良い例
+sql = "SELECT * FROM Users WHERE Name = ?"
+cmd.Parameters.Append cmd.CreateParameter("@name", adVarChar, adParamInput, 255, txtName)
+```
+
+## テスト・検証
+
+### 単体テスト基準
+```vb
+' テストプロシージャ命名規則
+Sub Test_CalculateTax()
+    ' テストコード
+    Debug.Assert CalculateTax(100) = 10
+End Sub
+```
+
+### 入力検証パターン
+```vb
+Function ValidateInput(ByVal inputValue As Variant) As Boolean
+    ' 型チェック
+    If Not IsNumeric(inputValue) Then Exit Function
+    
+    ' 範囲チェック
+    If inputValue < 0 Or inputValue > 100 Then Exit Function
+    
+    ValidateInput = True
+End Function
+```
 
 ## バージョン管理
 
-- モジュールヘッダーにバージョン情報を記載
-- 重要な変更は必ずコメントに記録
-- エクスポートしたコードファイルをGitで管理
+### コードエクスポート規則
+```
+/ProjectName
+  ├── /src
+  │   ├── /modules
+  │   ├── /classes
+  │   └── /forms
+  ├── /docs
+  └── /tests
+```
+
+### バージョンタグ形式
+```
+' メジャー.マイナー.パッチ＋アルファベット識別子
+v2.1.5a  ' 開発版
+v2.1.5rc ' リリース候補
+v2.1.5   ' 正式版
+```
+
+## 高度な設計パターン
+
+### 依存性注入
+```vb
+Public Sub ProcessData(ByVal dataRepository As IDataRepository)
+    ' 具象クラスに依存しない実装
+End Sub
+```
+
+### 非同期処理実装
+```vb
+Public Sub AsyncProcess()
+    Dim task As New clsAsyncTask
+    task.RunAsync AddressOf LongRunningProcess
+End Sub
+```
+
+## リファクタリングガイドライン
+
+### コードメトリクス基準
+```
+指標           許容値
+プロシージャ行数  最大50行
+循環的複雑度     最大10
+パラメータ数     最大5
+```
+
+### 技術的負債管理
+```vb
+' TODO リファクタリング必要
+' HACK 暫定対処コード
+' WARNING パフォーマンス問題あり
+```
+
+### 変更管理表
+モジュールヘッダーに追記する項目：
+- 影響範囲
+- 関連チケット番号
+- 技術的負債フラグ
+- テストステータス

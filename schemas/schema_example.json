@@ -1,0 +1,1050 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com/schemas/unified-implementation-plan.json",
+  "title": "Unified Implementation Plan Schema",
+  "type": "object",
+  "required": [
+    "metadata",
+    "projectDefinition",
+    "objectives",
+    "schedule",
+    "implementationSpec",
+    "qualityManagement",
+    "deliverables",
+    "futurePhases"
+  ],
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "required": ["project_id", "version", "timestamp", "status", "ai_handlers", "ai_metadata"],
+      "properties": {
+        "project_id": {
+          "type": "string",
+          "pattern": "^[A-Z]{3,}-[0-9]{4,}$",
+          "description": "プロジェクトを一意に識別するID"
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["planning", "in_progress", "completed", "on_hold"]
+        },
+        "ai_handlers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "progress_tracking",
+              "metrics_calculation",
+              "risk_assessment",
+              "implementation_validation",
+              "cross_reference_management"
+            ]
+          }
+        },
+        "ai_metadata": {
+          "type": "object",
+          "required": ["version", "capabilities_required", "action_permissions"],
+          "properties": {
+            "version": {
+              "type": "string"
+            },
+            "capabilities_required": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "code_analysis",
+                  "metrics_calculation",
+                  "documentation_generation",
+                  "schema_validation",
+                  "cross_reference_tracking"
+                ]
+              }
+            },
+            "action_permissions": {
+              "type": "object",
+              "properties": {
+                "read": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "write": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "projectDefinition": {
+      "type": "object",
+      "required": ["name", "period", "status", "progress", "metrics"],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "period": {
+          "type": "object",
+          "required": ["start", "end", "phase"],
+          "properties": {
+            "start": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "end": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "phase": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "status": {
+          "type": "string",
+          "enum": ["planning", "in_progress", "completed", "on_hold"]
+        },
+        "progress": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "metrics": {
+          "type": "object",
+          "required": ["code_coverage_target", "error_detection_rate", "documentation_completion"],
+          "properties": {
+            "code_coverage_target": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "error_detection_rate": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "documentation_completion": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            }
+          }
+        }
+      }
+    },
+
+    "objectives": {
+      "type": "object",
+      "required": ["background", "targets", "expected_outcomes", "ai_actions"],
+      "properties": {
+        "background": {
+          "type": "object",
+          "required": ["current_issues", "improvement_areas"],
+          "properties": {
+            "current_issues": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "system_maintainability",
+                  "system_extensibility",
+                  "code_quality",
+                  "infrastructure"
+                ]
+              }
+            },
+            "improvement_areas": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "error_handling",
+                  "testing_environment",
+                  "documentation"
+                ]
+              }
+            }
+          }
+        },
+        "targets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "category", "description", "metrics"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Z]+-[0-9]{3}$"
+              },
+              "category": {
+                "type": "string",
+                "enum": ["error_handling", "testing", "documentation"]
+              },
+              "description": {
+                "type": "string"
+              },
+              "metrics": {
+                "type": "object",
+                "required": ["completion_rate", "target_rate", "measurement"],
+                "properties": {
+                  "completion_rate": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "target_rate": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "measurement": {
+                    "type": "string",
+                    "enum": ["percentage"]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "expected_outcomes": {
+          "type": "object",
+          "required": ["metrics"],
+          "properties": {
+            "metrics": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["id", "category", "name", "target"],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^METRIC-[0-9]{3}$"
+                  },
+                  "category": {
+                    "type": "string",
+                    "enum": [
+                      "error_tracking",
+                      "system_stability",
+                      "code_maintainability",
+                      "development_efficiency"
+                    ]
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "target": {
+                    "type": "object",
+                    "oneOf": [
+                      {
+                        "required": ["reduction_rate", "unit"],
+                        "properties": {
+                          "reduction_rate": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 100
+                          },
+                          "unit": {
+                            "type": "string",
+                            "enum": ["percentage"]
+                          }
+                        }
+                      },
+                      {
+                        "required": ["uptime", "unit"],
+                        "properties": {
+                          "uptime": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 100
+                          },
+                          "unit": {
+                            "type": "string",
+                            "enum": ["percentage"]
+                          }
+                        }
+                      },
+                      {
+                        "required": ["improvement_rate", "unit"],
+                        "properties": {
+                          "improvement_rate": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 100
+                          },
+                          "unit": {
+                            "type": "string",
+                            "enum": ["percentage"]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "ai_actions": {
+          "type": "object",
+          "required": ["analysis", "generation", "monitoring"],
+          "properties": {
+            "analysis": {
+              "type": "object",
+              "required": ["input", "output", "validation_rules"],
+              "properties": {
+                "input": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": ["source_code", "metrics", "documentation"]
+                  }
+                },
+                "output": {
+                  "type": "string",
+                  "enum": ["analysis_report", "recommendations", "metrics_summary"]
+                },
+                "validation_rules": {
+                  "type": "object",
+                  "properties": {
+                    "required_metrics": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "threshold_checks": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            },
+            "generation": {
+              "type": "object",
+              "required": ["input", "output", "constraints"],
+              "properties": {
+                "input": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": ["templates", "requirements", "existing_code"]
+                  }
+                },
+                "output": {
+                  "type": "string",
+                  "enum": ["documentation", "test_cases", "code_templates"]
+                },
+                "constraints": {
+                  "type": "object",
+                  "properties": {
+                    "format": {
+                      "type": "string",
+                      "enum": ["markdown", "json", "vba"]
+                    },
+                    "max_length": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            },
+            "monitoring": {
+              "type": "object",
+              "required": ["metrics", "alerts", "reporting"],
+              "properties": {
+                "metrics": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": ["completion_rate", "error_rate", "quality_score"]
+                  }
+                },
+                "alerts": {
+                  "type": "object",
+                  "properties": {
+                    "threshold": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 100
+                    },
+                    "notification_channel": {
+                      "type": "string",
+                      "enum": ["email", "slack", "teams"]
+                    }
+                  }
+                },
+                "reporting": {
+                  "type": "object",
+                  "properties": {
+                    "frequency": {
+                      "type": "string",
+                      "enum": ["daily", "weekly", "monthly"]
+                    },
+                    "format": {
+                      "type": "string",
+                      "enum": ["pdf", "html", "json"]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "schedule": {
+      "type": "object",
+      "required": ["phases", "critical_path", "automated_monitoring", "progress_tracking", "automation_config"],
+      "properties": {
+        "phases": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "name", "period", "tasks"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^PHASE-[0-9]{3}$"
+              },
+              "name": {
+                "type": "string"
+              },
+              "period": {
+                "type": "object",
+                "required": ["start", "end", "duration_days"],
+                "properties": {
+                  "start": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "end": {
+                    "type": "string",
+                    "format": "date"
+                  },
+                  "duration_days": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                }
+              },
+              "tasks": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["id", "name", "assignee", "duration_days"],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^TASK-[0-9]{3}$"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "assignee": {
+                      "type": "string"
+                    },
+                    "duration_days": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "dependencies": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "pattern": "^TASK-[0-9]{3}$"
+                      }
+                    },
+                    "autoFeatures": {
+                      "type": "array",
+                      "description": "タスクに紐づく自動化要素",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "auto_implementation",
+                          "auto_detection",
+                          "auto_generation",
+                          "auto_optimization",
+                          "auto_tuning"
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "critical_path": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^TASK-[0-9]{3}$"
+          }
+        },
+        "automated_monitoring": {
+          "type": "boolean"
+        },
+        "progress_tracking": {
+          "type": "object",
+          "required": ["update_frequency", "metrics_calculation", "alert_threshold"],
+          "properties": {
+            "update_frequency": {
+              "type": "string",
+              "enum": ["daily", "weekly", "monthly"]
+            },
+            "metrics_calculation": {
+              "type": "string",
+              "enum": ["automatic", "manual"]
+            },
+            "alert_threshold": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            }
+          }
+        },
+        "automation_config": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            },
+            "tools": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "enabled": { "const": true }
+                }
+              },
+              "then": {
+                "required": ["tools"]
+              }
+            }
+          ]
+        }
+      }
+    },
+
+    "implementationSpec": {
+      "type": "object",
+      "required": ["error_handling", "testing_environment"],
+      "properties": {
+        "error_handling": {
+          "type": "object",
+          "required": ["error_categories", "logging_schema"],
+          "properties": {
+            "error_categories": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["id", "range", "name", "auto_detection"],
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "range": {
+                    "type": "object",
+                    "required": ["start", "end"],
+                    "properties": {
+                      "start": { "type": "integer" },
+                      "end": { "type": "integer" }
+                    }
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "auto_detection": {
+                    "type": "boolean"
+                  },
+                  "references": {
+                    "type": "object",
+                    "properties": {
+                      "tasks": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "pattern": "^TASK-[0-9]{3}$"
+                        }
+                      },
+                      "documentation": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "logging_schema": {
+              "type": "object",
+              "required": ["timestamp", "errorCode", "errorType", "message", "source"],
+              "properties": {
+                "timestamp": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "errorCode": {
+                  "type": "integer"
+                },
+                "errorType": {
+                  "type": "string",
+                  "enum": ["Database", "FileSystem", "BusinessLogic", "UI"]
+                },
+                "message": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "details": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "testing_environment": {
+          "type": "object",
+          "required": ["framework", "test_guidelines", "automation"],
+          "properties": {
+            "framework": {
+              "type": "object",
+              "required": ["name", "components"],
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "components": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["name"],
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "auto_generation": {
+                        "type": "boolean",
+                        "default": false
+                      },
+                      "references": {
+                        "type": "object",
+                        "properties": {
+                          "tasks": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "pattern": "^TASK-[0-9]{3}$"
+                            }
+                          },
+                          "documentation": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "test_guidelines": {
+              "type": "object",
+              "required": ["naming_convention", "data_management"],
+              "properties": {
+                "naming_convention": {
+                  "type": "object",
+                  "required": ["pattern", "validation"],
+                  "properties": {
+                    "pattern": {
+                      "type": "string"
+                    },
+                    "validation": {
+                      "type": "string",
+                      "enum": ["automatic", "manual"]
+                    }
+                  }
+                },
+                "data_management": {
+                  "type": "object",
+                  "properties": {
+                    "storage": {
+                      "type": "string",
+                      "enum": ["json", "csv", "xml"]
+                    },
+                    "auto_generation": {
+                      "type": "boolean",
+                      "default": false
+                    }
+                  }
+                }
+              }
+            },
+            "automation": {
+              "type": "object",
+              "properties": {
+                "ci_cd": {
+                  "type": "object",
+                  "required": ["enabled", "pipeline", "coverage_monitoring"],
+                  "properties": {
+                    "enabled": { "type": "boolean" },
+                    "pipeline": { "type": "string", "enum": ["manual", "automated"] },
+                    "coverage_monitoring": { "type": "boolean" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "qualityManagement": {
+      "type": "object",
+      "required": ["metrics", "review_process", "progress_monitoring"],
+      "properties": {
+        "metrics": {
+          "type": "object",
+          "required": ["code_coverage", "error_detection", "documentation"],
+          "properties": {
+            "code_coverage": {
+              "type": "object",
+              "required": ["target", "unit"],
+              "properties": {
+                "target": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "unit": {
+                  "type": "string",
+                  "enum": ["percentage"]
+                },
+                "auto_measurement": {
+                  "type": "boolean"
+                },
+                "references": {
+                  "$ref": "#/definitions/referencesType"
+                }
+              }
+            },
+            "error_detection": {
+              "type": "object",
+              "required": ["target", "unit"],
+              "properties": {
+                "target": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "unit": {
+                  "type": "string",
+                  "enum": ["percentage"]
+                },
+                "auto_detection": {
+                  "type": "boolean"
+                },
+                "references": {
+                  "$ref": "#/definitions/referencesType"
+                }
+              }
+            },
+            "documentation": {
+              "type": "object",
+              "required": ["target", "unit"],
+              "properties": {
+                "target": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "unit": {
+                  "type": "string",
+                  "enum": ["percentage"]
+                },
+                "auto_verification": {
+                  "type": "boolean"
+                },
+                "references": {
+                  "$ref": "#/definitions/referencesType"
+                }
+              }
+            }
+          }
+        },
+        "review_process": {
+          "type": "object",
+          "required": ["code_review", "documentation_review"],
+          "properties": {
+            "code_review": {
+              "$ref": "#/definitions/reviewChecklistType"
+            },
+            "documentation_review": {
+              "$ref": "#/definitions/reviewChecklistType"
+            }
+          }
+        },
+        "progress_monitoring": {
+          "type": "object",
+          "required": ["weekly", "monthly", "quarterly"],
+          "properties": {
+            "weekly": {
+              "$ref": "#/definitions/monitoringType"
+            },
+            "monthly": {
+              "$ref": "#/definitions/monitoringType"
+            },
+            "quarterly": {
+              "$ref": "#/definitions/monitoringType"
+            }
+          }
+        }
+      }
+    },
+
+    "deliverables": {
+      "type": "object",
+      "required": ["code", "documentation"],
+      "properties": {
+        "code": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "name", "type"],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string",
+                "enum": ["module", "framework", "script", "library"]
+              },
+              "autoFeatures": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "auto_generation",
+                    "auto_implementation",
+                    "auto_tuning",
+                    "auto_optimization"
+                  ]
+                }
+              },
+              "references": {
+                "$ref": "#/definitions/referencesType"
+              }
+            }
+          }
+        },
+        "documentation": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "name", "type"],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string",
+                "enum": ["specification", "manual", "guideline", "report"]
+              },
+              "autoFeatures": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "auto_generation",
+                    "auto_verification",
+                    "auto_detection"
+                  ]
+                }
+              },
+              "references": {
+                "$ref": "#/definitions/referencesType"
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "futurePhases": {
+      "type": "object",
+      "patternProperties": {
+        "^phase[0-9]+$": {
+          "type": "object",
+          "required": ["period", "objectives"],
+          "properties": {
+            "period": {
+              "type": "object",
+              "required": ["start", "end", "duration_months"],
+              "properties": {
+                "start": {
+                  "type": "string",
+                  "format": "date"
+                },
+                "end": {
+                  "type": "string",
+                  "format": "date"
+                },
+                "duration_months": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "objectives": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["id", "name"],
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "autoFeatures": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "auto_implementation",
+                        "auto_optimization",
+                        "auto_generation",
+                        "auto_detection",
+                        "auto_tuning"
+                      ]
+                    }
+                  },
+                  "references": {
+                    "$ref": "#/definitions/referencesType"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  "definitions": {
+    "referencesType": {
+      "type": "object",
+      "properties": {
+        "tasks": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^TASK-[0-9]{3}$"
+          }
+        },
+        "documentation": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "deliverables": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "reviewChecklistType": {
+      "type": "object",
+      "properties": {
+        "checklist": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["category", "auto_check"],
+            "properties": {
+              "category": {
+                "type": "string"
+              },
+              "auto_check": {
+                "type": "boolean"
+              },
+              "ai_validation": {
+                "type": "boolean"
+              },
+              "ai_analysis": {
+                "type": "boolean"
+              },
+              "ai_audit": {
+                "type": "boolean"
+              },
+              "ai_verification": {
+                "type": "boolean"
+              },
+              "references": {
+                "$ref": "#/definitions/referencesType"
+              }
+            }
+          }
+        }
+      }
+    },
+    "monitoringType": {
+      "type": "object",
+      "required": ["type", "ai_analysis"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "automated_report",
+            "quality_review",
+            "milestone_review"
+          ]
+        },
+        "ai_analysis": {
+          "type": "boolean"
+        },
+        "references": {
+          "$ref": "#/definitions/referencesType"
+        }
+      }
+    }
+  }
+}

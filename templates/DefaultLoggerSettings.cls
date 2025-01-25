@@ -103,12 +103,16 @@ Public Property Let ConnectionString(ByVal Value As String)
 End Property
 
 ' ======================
-' ファクトリメソッド
+' テストサポート機能（開発環境専用）
+' 警告: これらのメソッドは開発時のテスト目的でのみ使用し、
+' 本番環境では使用しないでください。
 ' ======================
+#If DEBUG Then
 ''' <summary>
-''' デバッグ用の設定を作成します
+''' デバッグ用の設定を作成（テスト用）
+''' 詳細なログ出力と高頻度な更新を行う設定を生成します
 ''' </summary>
-Public Function CreateDebugSettings() As DefaultLoggerSettings
+Private Function CreateDebugSettings() As DefaultLoggerSettings
     Set CreateDebugSettings = New DefaultLoggerSettings
     With CreateDebugSettings
         .LogLevel = LOG_LEVEL_DEBUG
@@ -118,9 +122,10 @@ Public Function CreateDebugSettings() As DefaultLoggerSettings
 End Function
 
 ''' <summary>
-''' 本番用の設定を作成します
+''' 本番用の設定を作成（テスト用）
+''' 標準的なログレベルと低頻度な更新を行う設定を生成します
 ''' </summary>
-Public Function CreateProductionSettings() As DefaultLoggerSettings
+Private Function CreateProductionSettings() As DefaultLoggerSettings
     Set CreateProductionSettings = New DefaultLoggerSettings
     With CreateProductionSettings
         .LogLevel = LOG_LEVEL_INFO
@@ -130,9 +135,10 @@ Public Function CreateProductionSettings() As DefaultLoggerSettings
 End Function
 
 ''' <summary>
-''' データベースログ用の設定を作成します
+''' データベースログ用の設定を作成（テスト用）
+''' データベースへのログ出力に特化した設定を生成します
 ''' </summary>
-Public Function CreateDatabaseSettings() As DefaultLoggerSettings
+Private Function CreateDatabaseSettings() As DefaultLoggerSettings
     Set CreateDatabaseSettings = New DefaultLoggerSettings
     With CreateDatabaseSettings
         .LogLevel = LOG_LEVEL_INFO
@@ -141,3 +147,4 @@ Public Function CreateDatabaseSettings() As DefaultLoggerSettings
         .TimerInterval = 2000
     End With
 End Function
+#End If

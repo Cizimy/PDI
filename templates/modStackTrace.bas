@@ -82,20 +82,32 @@ Public Property Get StackDepth() As Long
 End Property
 
 ' ======================
-' テストサポート機能
+' テストサポート機能（開発環境専用）
+' 警告: これらのメソッドは開発時のテスト目的でのみ使用し、
+' 本番環境では使用しないでください。
 ' ======================
 #If DEBUG Then
-    Public Sub ClearStack()
+    ''' <summary>
+    ''' スタックの内容をクリア（テスト用）
+    ''' </summary>
+    Private Sub ClearStack()
         If Not mIsInitialized Then Exit Sub
         Set mStack = New Collection
     End Sub
     
-    Public Function ValidateStackState() As Boolean
+    ''' <summary>
+    ''' スタックの状態が有効かどうかを検証（テスト用）
+    ''' </summary>
+    ''' <returns>スタックの深さが最大値以下の場合True</returns>
+    Private Function ValidateStackState() As Boolean
         If Not mIsInitialized Then Exit Function
         ValidateStackState = (mStack.Count <= MAX_STACK_TRACE_DEPTH)
     End Function
     
-    Public Sub ResetModule()
+    ''' <summary>
+    ''' モジュールの状態を初期化（テスト用）
+    ''' </summary>
+    Private Sub ResetModule()
         TerminateModule
         InitializeModule
     End Sub

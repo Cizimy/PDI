@@ -69,11 +69,14 @@ Public Function EncryptString(ByVal plainText As String, ByVal key As String) As
     Dim keyLen As Long
     
     keyLen = Len(key)
+    ' 空のキーチェック
     If keyLen = 0 Then
         Dim errInfo As ErrorInfo
         With errInfo
             .Code = ErrCryptoKeyNotSpecified
-            .Description = "暗号化キーが指定されていません。"
+            .Description = "空の暗号化キーが指定されました。"
+            .Source = "clsCrypto"
+            .ProcedureName = "EncryptString"
         End With
         modCommon.HandleError errInfo
     End If
@@ -112,7 +115,9 @@ Public Function DecryptString(ByVal cipherText As String, ByVal key As String) A
         Dim errInfo As ErrorInfo
         With errInfo
             .Code = ErrCryptoKeyNotSpecified
-            .Description = "暗号化キーが指定されていません。"
+            .Description = "空の暗号化キーが指定されました。"
+            .Source = "clsCrypto"
+            .ProcedureName = "DecryptString"
         End With
         modCommon.HandleError errInfo
     End If
@@ -244,14 +249,18 @@ Private Function BytesToString(ByRef bytes() As Byte) As String
 End Function
 
 ' ======================
-' テストサポート機能
+' テストサポート機能（開発環境専用）
+' 警告: これらのメソッドは開発時のテスト目的でのみ使用し、
+' 本番環境では使用しないでください。
 ' ======================
 #If DEBUG Then
-    Public Function ValidateProvider() As Boolean
+    Private Function ValidateProvider() As Boolean
+        ' 暗号化プロバイダーの状態を検証（テスト用）
         ValidateProvider = mInitialized And mCryptoProvider <> 0
     End Function
     
-    Public Sub ResetProvider()
+    Private Sub ResetProvider()
+        ' 暗号化プロバイダーをリセット（テスト用）
         If mInitialized Then
             CryptReleaseContext mCryptoProvider, 0
             mInitialized = False

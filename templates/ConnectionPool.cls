@@ -196,13 +196,21 @@ End Function
 
 ' ======================
 ' テストサポート機能
+' 警告: これらのメソッドは開発時のテスト目的でのみ使用し、
+' 本番環境では使用しないでください。
 ' ======================
 #If DEBUG Then
-    Public Property Get PoolSize() As Long
+    ''' <summary>
+    ''' コネクションプールの現在のサイズを取得（テスト用）
+    ''' </summary>
+    Private Property Get PoolSize() As Long
         PoolSize = mPoolSize
     End Property
     
-    Public Property Get ActiveConnections() As Long
+    ''' <summary>
+    ''' アクティブなコネクション数を取得（テスト用）
+    ''' </summary>
+    Private Property Get ActiveConnections() As Long
         Dim count As Long
         Dim i As Long
         For i = 1 To mPoolSize
@@ -211,7 +219,10 @@ End Function
         ActiveConnections = count
     End Property
     
-    Public Sub ClearPool()
+    ''' <summary>
+    ''' コネクションプールをクリア（テスト用）
+    ''' </summary>
+    Private Sub ClearPool()
         Class_Terminate
         Class_Initialize
     End Sub

@@ -9,6 +9,11 @@ Attribute VB_PredefinedId = False
 Attribute VB_Exposed = False
 Option Explicit
 
+' ======================
+' 警告: このクラスは開発時のテスト目的でのみ使用し、
+' 本番環境では使用しないでください。
+' ======================
+
 Implements ILogger
 
 ' ======================
@@ -75,19 +80,22 @@ Private Property Get ILogger_LogDestination() As LogDestination
 End Property
 
 ' ======================
-' テストサポートメソッド
+' テストサポートメソッド（開発環境専用）
 ' ======================
+
 ''' <summary>
-''' ログエントリの数を取得します
+''' ログエントリの総数を取得（テスト用）
 ''' </summary>
-Public Property Get LogCount() As Long
+Private Property Get LogCount() As Long
     LogCount = mLogEntries.Count
 End Property
 
 ''' <summary>
-''' 指定されたインデックスのログエントリを取得します
+''' 指定されたインデックスのログエントリを取得（テスト用）
 ''' </summary>
-Public Function GetLogEntry(ByVal index As Long) As String
+''' <param name="index">取得するログエントリのインデックス</param>
+''' <returns>フォーマット済みのログエントリ文字列、無効なインデックスの場合は空文字列</returns>
+Private Function GetLogEntry(ByVal index As Long) As String
     If index < 1 Or index > mLogEntries.Count Then
         GetLogEntry = ""
         Exit Function
@@ -103,16 +111,18 @@ Public Function GetLogEntry(ByVal index As Long) As String
 End Function
 
 ''' <summary>
-''' すべてのログエントリをクリアします
+''' すべてのログエントリをクリア（テスト用）
 ''' </summary>
-Public Sub ClearLogs()
+Private Sub ClearLogs()
     Set mLogEntries = New Collection
 End Sub
 
 ''' <summary>
-''' 特定のモジュールからのログエントリ数を取得します
+''' 特定のモジュールからのログエントリ数を取得（テスト用）
 ''' </summary>
-Public Function GetLogCountForModule(ByVal moduleName As String) As Long
+''' <param name="moduleName">対象のモジュール名</param>
+''' <returns>指定されたモジュールのログエントリ数</returns>
+Private Function GetLogCountForModule(ByVal moduleName As String) As Long
     Dim count As Long
     Dim i As Long
     Dim entry As LogEntry
@@ -128,9 +138,11 @@ Public Function GetLogCountForModule(ByVal moduleName As String) As Long
 End Function
 
 ''' <summary>
-''' 特定のエラーコードのログエントリ数を取得します
+''' 特定のエラーコードのログエントリ数を取得（テスト用）
 ''' </summary>
-Public Function GetLogCountForErrorCode(ByVal errorCode As ErrorCode) As Long
+''' <param name="errorCode">対象のエラーコード</param>
+''' <returns>指定されたエラーコードのログエントリ数</returns>
+Private Function GetLogCountForErrorCode(ByVal errorCode As ErrorCode) As Long
     Dim count As Long
     Dim i As Long
     Dim entry As LogEntry
@@ -146,9 +158,10 @@ Public Function GetLogCountForErrorCode(ByVal errorCode As ErrorCode) As Long
 End Function
 
 ''' <summary>
-''' 最後のログエントリを取得します
+''' 最後のログエントリを取得（テスト用）
 ''' </summary>
-Public Function GetLastLogEntry() As String
+''' <returns>最後のログエントリ、ログが空の場合は空文字列</returns>
+Private Function GetLastLogEntry() As String
     If mLogEntries.Count > 0 Then
         GetLastLogEntry = GetLogEntry(mLogEntries.Count)
     Else

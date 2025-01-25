@@ -165,19 +165,30 @@ Public Property Get CurrentOperation() As String
 End Property
 
 ' ======================
-' テストサポート機能
+' テストサポート機能（開発環境専用）
+' 警告: これらのメソッドは開発時のテスト目的でのみ使用し、
+' 本番環境では使用しないでください。
 ' ======================
 #If DEBUG Then
-    Public Function ValidatePerformanceCounter() As Boolean
+    ''' <summary>
+    ''' パフォーマンスカウンターの有効性を検証（テスト用）
+    ''' </summary>
+    Private Function ValidatePerformanceCounter() As Boolean
         Dim counter As Currency
         ValidatePerformanceCounter = (modWindowsAPI.QueryPerformanceCounter(counter) <> 0) And (mFrequency <> 0)
     End Function
     
-    Public Function GetMeasurementCount() As Long
+    ''' <summary>
+    ''' 測定データの数を取得（テスト用）
+    ''' </summary>
+    Private Function GetMeasurementCount() As Long
         GetMeasurementCount = mMeasurements.Count
     End Function
     
-    Public Sub SimulateMeasurement(ByVal description As String, ByVal elapsedTime As Double)
+    ''' <summary>
+    ''' テスト用の測定データを追加（テスト用）
+    ''' </summary>
+    Private Sub SimulateMeasurement(ByVal description As String, ByVal elapsedTime As Double)
         Dim perfData As PerformanceData
         perfData.Description = description
         perfData.ElapsedTime = elapsedTime

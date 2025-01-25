@@ -154,15 +154,19 @@ Public Sub HandleError(ByRef errInfo As ErrorInfo)
 End Sub
 
 ' ======================
-' テストサポート機能
+' テストサポート機能（開発環境専用）
+' 警告: これらのメソッドは開発時のテスト目的でのみ使用し、
+' 本番環境では使用しないでください。
 ' ======================
 #If DEBUG Then
-    Public Sub ResetModule()
+    Private Sub ResetModule()
+        ' モジュールの状態を初期化（テスト用）
         TerminateModule
         InitializeModule
     End Sub
     
-    Public Function GetPerformanceMonitor() As clsPerformanceMonitor
+    Private Function GetPerformanceMonitor() As clsPerformanceMonitor
+        ' パフォーマンスモニターの参照を取得（テスト用）
         Set GetPerformanceMonitor = mPerformanceMonitor
     End Function
 #End If

@@ -55,6 +55,16 @@ Public Function SafeDivide(ByVal numerator As Double, ByVal denominator As Doubl
     On Error GoTo ErrorHandler
     
     If Abs(denominator) < EPSILON Then
+        ' 分母が0の場合の警告を出力
+        Dim errDetail As typErrorDetail
+        With errDetail
+            .ErrorCode = ERR_DIVISION_BY_ZERO
+            .Description = "分母が0のため、デフォルト値" & CStr(defaultValue) & "を返します。(分子: " & CStr(numerator) & ")"
+            .Source = MODULE_NAME
+            .ProcedureName = "SafeDivide"
+        End With
+        modError.HandleError errDetail
+        
         SafeDivide = defaultValue
     Else
         SafeDivide = numerator / denominator
@@ -127,14 +137,22 @@ End Function
 
 ' ======================
 ' テストサポート機能
+' 警告: これらのメソッドは開発時のテスト目的でのみ使用し、
+' 本番環境では使用しないでください。
 ' ======================
 #If DEBUG Then
-    Public Sub ResetModule()
+    ''' <summary>
+    ''' モジュールの状態を初期化（テスト用）
+    ''' </summary>
+    Private Sub ResetModule()
         TerminateModule
         InitializeModule
     End Sub
     
-    Public Function GetPerformanceMonitor() As clsPerformanceMonitor
+    ''' <summary>
+    ''' パフォーマンスモニターの参照を取得（テスト用）
+    ''' </summary>
+    Private Function GetPerformanceMonitor() As clsPerformanceMonitor
         Set GetPerformanceMonitor = mPerformanceMonitor
     End Function
 #End If

@@ -193,14 +193,22 @@ End Function
 
 ' ======================
 ' テストサポート機能
+' 警告: これらのメソッドは開発時のテスト目的でのみ使用し、
+' 本番環境では使用しないでください。
 ' ======================
 #If DEBUG Then
-    Public Sub ResetModule()
+    ''' <summary>
+    ''' モジュールの状態を初期化（テスト用）
+    ''' </summary>
+    Private Sub ResetModule()
         TerminateModule
         InitializeModule
     End Sub
     
-    Public Function GetPerformanceMonitor() As clsPerformanceMonitor
+    ''' <summary>
+    ''' パフォーマンスモニターの参照を取得（テスト用）
+    ''' </summary>
+    Private Function GetPerformanceMonitor() As clsPerformanceMonitor
         Set GetPerformanceMonitor = mPerformanceMonitor
     End Function
 #End If

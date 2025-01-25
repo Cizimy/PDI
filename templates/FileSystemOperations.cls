@@ -116,15 +116,23 @@ Public Function CreateInstance() As IFileOperations
 End Function
 
 ' ======================
-' テストサポート機能
+' テストサポート機能（開発環境専用）
+' 警告: これらのメソッドは開発時のテスト目的でのみ使用し、
+' 本番環境では使用しないでください。
 ' ======================
 #If DEBUG Then
-    Public Sub ResetModule()
+    ''' <summary>
+    ''' モジュールの状態を初期化（テスト用）
+    ''' </summary>
+    Private Sub ResetModule()
         Class_Terminate
         Class_Initialize
     End Sub
     
-    Public Property Get IsInitialized() As Boolean
+    ''' <summary>
+    ''' 初期化状態を取得（テスト用）
+    ''' </summary>
+    Private Property Get IsInitialized() As Boolean
         IsInitialized = mIsInitialized
     End Property
 #End If

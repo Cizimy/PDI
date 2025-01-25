@@ -147,35 +147,37 @@ Public Property Get Count() As Long
 End Property
 
 ' ======================
-' テストサポート機能
+' テストサポート機能（開発環境専用）
+' 警告: これらのメソッドは開発時のテスト目的でのみ使用し、
+' 本番環境では使用しないでください。
 ' ======================
 #If DEBUG Then
     ''' <summary>
-    ''' スタックの状態を検証
+    ''' スタックの状態を検証（テスト用）
     ''' </summary>
     ''' <returns>スタックが有効な状態の場合True</returns>
-    Public Function ValidateStackState() As Boolean
+    Private Function ValidateStackState() As Boolean
         ValidateStackState = modStackTrace.ValidateStackState()
     End Function
     
     ''' <summary>
-    ''' スタックをクリア
+    ''' スタックをクリア（テスト用）
     ''' </summary>
-    Public Sub ClearStack()
+    Private Sub ClearStack()
         modStackTrace.ClearStack
     End Sub
     
     ''' <summary>
-    ''' パフォーマンスモニターの参照を取得
+    ''' パフォーマンスモニターの参照を取得（テスト用）
     ''' </summary>
-    Public Function GetPerformanceMonitor() As clsPerformanceMonitor
+    Private Function GetPerformanceMonitor() As clsPerformanceMonitor
         Set GetPerformanceMonitor = mPerformanceMonitor
     End Function
     
     ''' <summary>
-    ''' モジュールをリセット
+    ''' モジュールをリセット（テスト用）
     ''' </summary>
-    Public Sub ResetModule()
+    Private Sub ResetModule()
         Set mPerformanceMonitor = Nothing
         mIsInitialized = False
         

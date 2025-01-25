@@ -279,21 +279,35 @@ End Sub
 
 ' ======================
 ' テストサポート機能
+' 警告: これらのメソッドは開発時のテスト目的でのみ使用し、
+' 本番環境では使用しないでください。
 ' ======================
 #If DEBUG Then
-    Public Function GetQueueCount() As Long
+    ''' <summary>
+    ''' ログキューのエントリ数を取得（テスト用）
+    ''' </summary>
+    Private Function GetQueueCount() As Long
         GetQueueCount = mLogQueue.Count
     End Function
     
-    Public Sub ClearQueue()
+    ''' <summary>
+    ''' ログキューをクリア（テスト用）
+    ''' </summary>
+    Private Sub ClearQueue()
         Set mLogQueue = New Queue
     End Sub
     
-    Public Function GetPerformanceMonitor() As clsPerformanceMonitor
+    ''' <summary>
+    ''' パフォーマンスモニターの参照を取得（テスト用）
+    ''' </summary>
+    Private Function GetPerformanceMonitor() As clsPerformanceMonitor
         Set GetPerformanceMonitor = mPerformanceMonitor
     End Function
     
-    Public Sub SimulateTimer()
+    ''' <summary>
+    ''' タイマー処理をシミュレート（テスト用）
+    ''' </summary>
+    Private Sub SimulateTimer()
         ProcessLogQueue
     End Sub
 #End If

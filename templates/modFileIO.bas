@@ -270,10 +270,15 @@ Private Sub RaiseFileError(ByVal errorCode As ErrorCode, ByVal description As St
 End Sub
 
 ' ======================
-' テストサポート機能
+' テストサポート機能（開発環境専用）
+' 警告: これらのメソッドは開発時のテスト目的でのみ使用し、
+' 本番環境では使用しないでください。
 ' ======================
 #If DEBUG Then
-    Public Sub ResetModule()
+    ''' <summary>
+    ''' モジュールの状態を初期化（テスト用）
+    ''' </summary>
+    Private Sub ResetModule()
         TerminateModule
         InitializeModule
     End Sub

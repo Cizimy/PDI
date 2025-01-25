@@ -123,6 +123,13 @@ End Sub
 ' エラーハンドリング
 ' ======================
 Public Sub HandleError(ByRef errInfo As ErrorInfo)
+    If Not mIsInitialized Then InitializeModule
+    
+    ' パフォーマンスモニタリング開始
+    If Not mPerformanceMonitor Is Nothing Then
+        mPerformanceMonitor.StartMeasurement "ErrorHandling_" & errInfo.Code
+    End If
+    
     ' エラー情報の補完
     With errInfo
         If .OccurredAt = #12:00:00 AM# Then .OccurredAt = Now
@@ -130,29 +137,14 @@ Public Sub HandleError(ByRef errInfo As ErrorInfo)
         If Len(.StackTrace) = 0 Then .StackTrace = modStackTrace.GetStackTrace()
     End With
     
-    ' エラーハンドラの取得
-    Dim handler As IErrorHandler
-    Set handler = GetErrorHandler(errInfo.Code)
+    ' エラー処理をmodErrorに委譲
+    modError.HandleError errInfo
     
-    ' パフォーマンスモニタリング（エラー発生時の状態記録）
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.StartMeasurement "ErrorHandling_" & errInfo.Code
-    End If
-    
-    ' エラーハンドラによる処理
-    Dim proceed As Boolean
-    proceed = handler.HandleError(errInfo)
-    
-    ' エラー処理の結果に基づいて処理を継続するかどうかを判断
-    If Not proceed Then
-        Err.Raise errInfo.Code, errInfo.Source, errInfo.Description
-    End If
-    
+    ' パフォーマンスモニタリング終了
     If Not mPerformanceMonitor Is Nothing Then
         mPerformanceMonitor.EndMeasurement "ErrorHandling_" & errInfo.Code
     End If
 End Sub
-
 ' ======================
 ' テストサポート機能（開発環境専用）
 ' 警告: これらのメソッドは開発時のテスト目的でのみ使用し、

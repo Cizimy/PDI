@@ -58,7 +58,8 @@ Private Sub ILogger_Log(ByVal moduleName As String, _
     Dim logMessage As String
     logMessage = BuildLogMessage(moduleName, message, errorCode)
     
-    WriteToFile logMessage
+    ' modFileIOを使用してファイルに書き込み
+    modFileIO.WriteTextFile mLogFilePath, logMessage & vbCrLf, True
     
 CleanUp:
     mLock.ReleaseLock
@@ -113,7 +114,7 @@ Private Function BuildLogMessage(ByVal moduleName As String, _
     Dim builder As String
     
     ' タイムスタンプ
-    builder = Format$(Now, "yyyy/mm/dd hh:nn:ss") & " "
+    builder = Format$(Now, DEFAULT_DATE_FORMAT) & " "
     
     ' ログレベル
     builder = builder & "[" & GetLogLevelText(errorCode) & "] "
@@ -131,15 +132,6 @@ Private Function BuildLogMessage(ByVal moduleName As String, _
     
     BuildLogMessage = builder
 End Function
-
-Private Sub WriteToFile(ByVal message As String)
-    Dim fileNum As Integer
-    fileNum = FreeFile
-    
-    Open mLogFilePath For Append As #fileNum
-    Print #fileNum, message
-    Close #fileNum
-End Sub
 
 Private Function GetLogLevelText(ByVal errorCode As ErrorCode) As String
     Select Case errorCode

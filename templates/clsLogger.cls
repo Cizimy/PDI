@@ -65,7 +65,7 @@ Public Sub Configure(ByVal settings As ILoggerSettings)
     
     ' コネクションプールの初期化
     If Not mSettings Is Nothing Then
-        mConnectionPool.Initialize mSettings.ConnectionString
+        mConnectionPool.Initialize modDatabaseUtils.GetConnectionString()
     End If
     
     ' タイマーの設定

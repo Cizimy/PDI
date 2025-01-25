@@ -50,6 +50,20 @@ End Sub
 ' ======================
 ' 公開メソッド
 ' ======================
+
+''' <summary>
+''' テキストファイルを読み込みます
+''' </summary>
+''' <param name="filePath">ファイルパス</param>
+''' <param name="encoding">文字エンコーディング（オプション）</param>
+''' <returns>ファイルの内容、エラー時は空文字列</returns>
+''' <remarks>
+''' エラー処理要件：
+''' - ファイルの存在確認
+''' - エンコーディングの検証
+''' - ファイルロックの確認
+''' - メモリ不足への対応
+''' </remarks>
 Public Function ReadTextFile(ByVal filePath As String, _
                            Optional ByVal encoding As String = DEFAULT_ENCODING) As String
     InitializeIfNeeded
@@ -84,10 +98,26 @@ ErrorHandler:
         .OccurredAt = Now
     End With
     
-    modCommon.HandleError errInfo
+    modError.HandleError errInfo
+    ReadTextFile = ""  ' エラー時は空文字列を返す（IFileOperationsの規定に従う）
     Resume CleanUp
 End Function
 
+''' <summary>
+''' テキストファイルに書き込みます
+''' </summary>
+''' <param name="filePath">ファイルパス</param>
+''' <param name="content">書き込む内容</param>
+''' <param name="append">追記モード（オプション）</param>
+''' <param name="encoding">文字エンコーディング（オプション）</param>
+''' <returns>成功時True、失敗時False</returns>
+''' <remarks>
+''' エラー処理要件：
+''' - 書き込み権限の確認
+''' - ディスク容量の確認
+''' - 既存ファイルのバックアップ
+''' - 書き込み失敗時の復旧処理
+''' </remarks>
 Public Function WriteTextFile(ByVal filePath As String, _
                             ByVal content As String, _
                             Optional ByVal append As Boolean = False, _
@@ -127,11 +157,23 @@ ErrorHandler:
         .OccurredAt = Now
     End With
     
-    modCommon.HandleError errInfo
+    modError.HandleError errInfo
     WriteTextFile = False
     Resume CleanUp
 End Function
 
+''' <summary>
+''' バイナリファイルを読み込みます
+''' </summary>
+''' <param name="filePath">ファイルパス</param>
+''' <returns>ファイルのバイトデータ、エラー時は空配列</returns>
+''' <remarks>
+''' エラー処理要件：
+''' - ファイルサイズの検証
+''' - メモリ使用量の監視
+''' - 破損ファイルの検出
+''' - エラー発生時は空配列を返す
+''' </remarks>
 Public Function ReadBinaryFile(ByVal filePath As String) As Byte()
     InitializeIfNeeded
     
@@ -169,10 +211,24 @@ ErrorHandler:
         .OccurredAt = Now
     End With
     
-    modCommon.HandleError errInfo
+    modError.HandleError errInfo
+    ReadBinaryFile = Array()  ' エラー時は空配列を返す
     Resume CleanUp
 End Function
 
+''' <summary>
+''' バイナリファイルに書き込みます
+''' </summary>
+''' <param name="filePath">ファイルパス</param>
+''' <param name="data">書き込むバイトデータ</param>
+''' <returns>成功時True、失敗時False</returns>
+''' <remarks>
+''' エラー処理要件：
+''' - データの整合性チェック
+''' - 部分書き込みの防止
+''' - 書き込み失敗時のロールバック
+''' - エラー発生時はFalseを返す
+''' </remarks>
 Public Function WriteBinaryFile(ByVal filePath As String, _
                               ByRef data() As Byte) As Boolean
     InitializeIfNeeded
@@ -205,7 +261,7 @@ ErrorHandler:
         .OccurredAt = Now
     End With
     
-    modCommon.HandleError errInfo
+    modError.HandleError errInfo
     WriteBinaryFile = False
     Resume CleanUp
 End Function
@@ -234,7 +290,7 @@ ErrorHandler:
         .OccurredAt = Now
     End With
     
-    modCommon.HandleError errInfo
+    modError.HandleError errInfo
     FileExists = False
     Resume CleanUp
 End Function
@@ -263,7 +319,7 @@ ErrorHandler:
         .OccurredAt = Now
     End With
     
-    modCommon.HandleError errInfo
+    modError.HandleError errInfo
     FolderExists = False
     Resume CleanUp
 End Function
@@ -293,7 +349,7 @@ ErrorHandler:
         .OccurredAt = Now
     End With
     
-    modCommon.HandleError errInfo
+    modError.HandleError errInfo
     CreateFolder = False
     Resume CleanUp
 End Function
@@ -323,7 +379,7 @@ ErrorHandler:
     En   .OccurredAt = Now
     End With
     
-    modCommon.HandleError errInfo
+    modError.HandleError errInfo
     DeleteFile = False
     Resume CleanUp
 End Function
@@ -353,7 +409,7 @@ ErrorHandler:
         .OccurredAt = Now
     End With
     
-    modCommon.HandleError errInfo
+    modError.HandleError errInfo
     DeleteFolder = False
     Resume CleanUp
 End Function
@@ -384,7 +440,7 @@ ErrorHandler:
         .OccurredAt = Now
     End With
     
-    modCommon.HandleError errInfo
+    modError.HandleError errInfo
     GetAbsolutePath = ""
     Resume CleanUp
 End Function

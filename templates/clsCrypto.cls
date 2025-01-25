@@ -46,7 +46,7 @@ Private Sub InitializeCrypto()
             .Code = ErrCryptoProviderInitFailed
             .Description = "暗号化プロバイダーの初期化に失敗しました。"
         End With
-        modCommon.HandleError errInfo
+        modError.HandleError errInfo
     End If
 End Sub
 
@@ -78,7 +78,7 @@ Public Function EncryptString(ByVal plainText As String, ByVal key As String) As
             .Source = "clsCrypto"
             .ProcedureName = "EncryptString"
         End With
-        modCommon.HandleError errInfo
+        modError.HandleError errInfo
     End If
     
     result = String$(Len(plainText), 0)
@@ -119,7 +119,7 @@ Public Function DecryptString(ByVal cipherText As String, ByVal key As String) A
             .Source = "clsCrypto"
             .ProcedureName = "DecryptString"
         End With
-        modCommon.HandleError errInfo
+        modError.HandleError errInfo
     End If
     
     result = String$(Len(decoded), 0)
@@ -138,7 +138,7 @@ Public Function GenerateHash(ByVal inputString As String) As String
             .Code = ErrCryptoNotInitialized
             .Description = "暗号化プロバイダーが初期化されていません。"
         End With
-        modCommon.HandleError errInfo
+        modError.HandleError errInfo
     End If
     
     Dim hHash As LongPtr
@@ -153,7 +153,7 @@ Public Function GenerateHash(ByVal inputString As String) As String
             .Code = ErrCryptoHashCreateFailed
             .Description = "ハッシュオブジェクトの作成に失敗しました。"
         End With
-        modCommon.HandleError errInfo
+        modError.HandleError errInfo
     End If
     
     ' データのハッシュ化
@@ -164,7 +164,7 @@ Public Function GenerateHash(ByVal inputString As String) As String
             .Code = ErrCryptoHashDataFailed
             .Description = "データのハッシュ化に失敗しました。"
         End With
-        modCommon.HandleError errInfo
+        modError.HandleError errInfo
     End If
     
     ' ハッシュサイズの取得
@@ -175,7 +175,7 @@ Public Function GenerateHash(ByVal inputString As String) As String
             .Code = ErrCryptoHashDataFailed
             .Description = "ハッシュサイズの取得に失敗しました。"
         End With
-        modCommon.HandleError errInfo
+        modError.HandleError errInfo
     End If
     
     ' ハッシュ値の取得
@@ -187,7 +187,7 @@ Public Function GenerateHash(ByVal inputString As String) As String
             .Code = ErrCryptoHashDataFailed
             .Description = "ハッシュ値の取得に失敗しました。"
         End With
-        modCommon.HandleError errInfo
+        modError.HandleError errInfo
     End If
     
     ' ハッシュオブジェクトの破棄

@@ -47,8 +47,8 @@ Private Function IUserNotifier_Notify(ByRef errorDetail As typErrorDetail, _
     Dim msg As String
     msg = BuildErrorMessage(errorDetail)
     
-    ' メッセージボックスの表示
-    IUserNotifier_Notify = MsgBox(msg, buttons Or icon, title)
+    ' メッセージボックスの表示（NotificationStyleを適用）
+    IUserNotifier_Notify = MsgBox(msg, mNotificationStyle Or buttons Or icon, title)
 End Function
 
 Private Property Let IUserNotifier_NotificationStyle(ByVal style As VbMsgBoxStyle)

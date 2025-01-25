@@ -28,7 +28,7 @@ End Type
 
 Private mLogEntries As Collection
 Private mLogLevel As LogLevelEnum
-Private mLogDestination As LogDestinationEnum
+Private mLogDestination As LogDestination
 
 ' ======================
 ' 初期化・終了処理
@@ -36,7 +36,7 @@ Private mLogDestination As LogDestinationEnum
 Private Sub Class_Initialize()
     Set mLogEntries = New Collection
     mLogLevel = LOG_LEVEL_INFO
-    mLogDestination = LOG_DESTINATION_NONE
+    mLogDestination = DestNone
 End Sub
 
 Private Sub Class_Terminate()
@@ -66,11 +66,11 @@ Private Property Get ILogger_LogLevel() As LogLevelEnum
     ILogger_LogLevel = mLogLevel
 End Property
 
-Private Property Let ILogger_LogDestination(ByVal destination As LogDestinationEnum)
+Private Property Let ILogger_LogDestination(ByVal destination As LogDestination)
     mLogDestination = destination
 End Property
 
-Private Property Get ILogger_LogDestination() As LogDestinationEnum
+Private Property Get ILogger_LogDestination() As LogDestination
     ILogger_LogDestination = mLogDestination
 End Property
 

@@ -25,10 +25,27 @@ Private Shared instance As FileNotFoundErrorHandler
 ' ファクトリメソッド
 ' ======================
 Public Function Create() As FileNotFoundErrorHandler
+    On Error GoTo ErrorHandler
+    
     If instance Is Nothing Then
         Set instance = New FileNotFoundErrorHandler
     End If
     Set Create = instance
+    Exit Function
+
+ErrorHandler:
+    Dim errDetail As typErrorDetail
+    With errDetail
+        .ErrorCode = ERR_UNEXPECTED
+        .Description = "ファイルエラーハンドラの作成中にエラーが発生しました: " & Err.Description
+        .Category = ECFileIO
+        .Source = MODULE_NAME
+        .ProcedureName = "Create"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
+    End With
+    modError.HandleError errDetail
+    Set Create = Nothing
 End Function
 
 ' ======================
@@ -54,6 +71,8 @@ End Function
 ' プライベートメソッド
 ' ======================
 Private Sub LogError(ByRef errorDetail As typErrorDetail)
+    On Error GoTo ErrorHandler
+    
     ' エラーログの出力
     Dim logger As ILogger
     Set logger = New FileLogger  ' または適切なログ実装を使用
@@ -61,12 +80,42 @@ Private Sub LogError(ByRef errorDetail As typErrorDetail)
     logger.Log MODULE_NAME, _
               "ファイルが見つかりません: " & errorDetail.Description, _
               errorDetail.ErrorCode
+    Exit Sub
+
+ErrorHandler:
+    Dim errDetail As typErrorDetail
+    With errDetail
+        .ErrorCode = ERR_UNEXPECTED
+        .Description = "ファイルエラーのログ出力中にエラーが発生しました: " & Err.Description
+        .Category = ECFileIO
+        .Source = MODULE_NAME
+        .ProcedureName = "LogError"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
+    End With
+    modError.HandleError errDetail
 End Sub
 
 Private Sub NotifyUser(ByRef errorDetail As typErrorDetail, ByVal style As VbMsgBoxStyle)
+    On Error GoTo ErrorHandler
+    
     ' ユーザーへの通知
     Dim notifier As IUserNotifier
     Set notifier = New MsgBoxNotifier  ' または適切な通知実装を使用
     
     notifier.Notify errorDetail, style, "ファイルエラー"
+    Exit Sub
+
+ErrorHandler:
+    Dim errDetail As typErrorDetail
+    With errDetail
+        .ErrorCode = ERR_UNEXPECTED
+        .Description = "ファイルエラーの通知中にエラーが発生しました: " & Err.Description
+        .Category = ECFileIO
+        .Source = MODULE_NAME
+        .ProcedureName = "NotifyUser"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
+    End With
+    modError.HandleError errDetail
 End Sub

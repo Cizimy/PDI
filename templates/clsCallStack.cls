@@ -67,8 +67,11 @@ ErrorHandler:
     With errDetail
         .Code = modErrorCodes.ErrUnexpected
         .Description = "Push操作中にエラーが発生しました: " & Err.Description
+        .Category = ECGeneral
         .Source = MODULE_NAME
         .ProcedureName = "Push"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
     End With
     modError.HandleError errDetail
     Resume Next
@@ -99,8 +102,11 @@ ErrorHandler:
     With errDetail
         .Code = modErrorCodes.ErrUnexpected
         .Description = "Pop操作中にエラーが発生しました: " & Err.Description
+        .Category = ECGeneral
         .Source = MODULE_NAME
         .ProcedureName = "Pop"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
     End With
     modError.HandleError errDetail
     Resume Next
@@ -131,8 +137,11 @@ ErrorHandler:
     With errDetail
         .Code = modErrorCodes.ErrUnexpected
         .Description = "スタックトレース取得中にエラーが発生しました: " & Err.Description
+        .Category = ECGeneral
         .Source = MODULE_NAME
         .ProcedureName = "StackTrace"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
     End With
     modError.HandleError errDetail
     Resume Next

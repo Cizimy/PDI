@@ -31,10 +31,27 @@ Private Shared instance As DatabaseConnectionErrorHandler
 ' ファクトリメソッド
 ' ======================
 Public Function Create() As DatabaseConnectionErrorHandler
+    On Error GoTo ErrorHandler
+    
     If instance Is Nothing Then
         Set instance = New DatabaseConnectionErrorHandler
     End If
     Set Create = instance
+    Exit Function
+
+ErrorHandler:
+    Dim errDetail As typErrorDetail
+    With errDetail
+        .ErrorCode = ERR_UNEXPECTED
+        .Description = "データベースエラーハンドラの作成中にエラーが発生しました: " & Err.Description
+        .Category = ECDatabase
+        .Source = MODULE_NAME
+        .ProcedureName = "Create"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
+    End With
+    modError.HandleError errDetail
+    Set Create = Nothing
 End Function
 
 ' ======================
@@ -62,6 +79,8 @@ End Function
 ' プライベートメソッド
 ' ======================
 Private Function AttemptRetry(ByRef errorDetail As typErrorDetail) As Boolean
+    On Error GoTo ErrorHandler
+    
     Dim retryCount As Long
     Dim success As Boolean
     
@@ -83,6 +102,21 @@ Private Function AttemptRetry(ByRef errorDetail As typErrorDetail) As Boolean
     Next retryCount
     
     AttemptRetry = success
+    Exit Function
+
+ErrorHandler:
+    Dim errDetail As typErrorDetail
+    With errDetail
+        .ErrorCode = ERR_UNEXPECTED
+        .Description = "データベース接続のリトライ中にエラーが発生しました: " & Err.Description
+        .Category = ECDatabase
+        .Source = MODULE_NAME
+        .ProcedureName = "AttemptRetry"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
+    End With
+    modError.HandleError errDetail
+    AttemptRetry = False
 End Function
 
 Private Function TryDatabaseConnection() As Boolean
@@ -104,6 +138,8 @@ Private Function TryDatabaseConnection() As Boolean
 End Function
 
 Private Sub LogError(ByRef errorDetail As typErrorDetail)
+    On Error GoTo ErrorHandler
+    
     ' エラーログの出力
     Dim logger As ILogger
     Set logger = New FileLogger
@@ -111,14 +147,44 @@ Private Sub LogError(ByRef errorDetail As typErrorDetail)
     logger.Log MODULE_NAME, _
               "データベース接続エラー: " & errorDetail.Description, _
               errorDetail.ErrorCode
+    Exit Sub
+
+ErrorHandler:
+    Dim errDetail As typErrorDetail
+    With errDetail
+        .ErrorCode = ERR_UNEXPECTED
+        .Description = "データベースエラーのログ出力中にエラーが発生しました: " & Err.Description
+        .Category = ECDatabase
+        .Source = MODULE_NAME
+        .ProcedureName = "LogError"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
+    End With
+    modError.HandleError errDetail
 End Sub
 
 Private Sub NotifyUser(ByRef errorDetail As typErrorDetail, ByVal style As VbMsgBoxStyle)
+    On Error GoTo ErrorHandler
+    
     ' ユーザーへの通知
     Dim notifier As IUserNotifier
     Set notifier = New MsgBoxNotifier
     
     notifier.Notify errorDetail, style, "データベースエラー"
+    Exit Sub
+
+ErrorHandler:
+    Dim errDetail As typErrorDetail
+    With errDetail
+        .ErrorCode = ERR_UNEXPECTED
+        .Description = "データベースエラーの通知中にエラーが発生しました: " & Err.Description
+        .Category = ECDatabase
+        .Source = MODULE_NAME
+        .ProcedureName = "NotifyUser"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
+    End With
+    modError.HandleError errDetail
 End Sub
 
 Private Sub Wait(ByVal milliseconds As Long)

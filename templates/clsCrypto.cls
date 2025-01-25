@@ -45,6 +45,9 @@ Private Sub InitializeCrypto()
         With errInfo
             .Code = ErrCryptoProviderInitFailed
             .Description = "暗号化プロバイダーの初期化に失敗しました。"
+            .Category = ECSecurity
+            .Source = "clsCrypto"
+            .ProcedureName = "InitializeCrypto"
         End With
         modError.HandleError errInfo
     End If
@@ -59,6 +62,9 @@ Public Function EncryptString(ByVal plainText As String, ByVal key As String) As
         With errInfo
             .Code = ErrCryptoNotInitialized
             .Description = "暗号化プロバイダーが初期化されていません。"
+            .Category = ECSecurity
+            .Source = "clsCrypto"
+            .ProcedureName = "EncryptString"
         End With
         modCommon.HandleError errInfo
     End If
@@ -75,6 +81,7 @@ Public Function EncryptString(ByVal plainText As String, ByVal key As String) As
         With errInfo
             .Code = ErrCryptoKeyNotSpecified
             .Description = "空の暗号化キーが指定されました。"
+            .Category = ECSecurity
             .Source = "clsCrypto"
             .ProcedureName = "EncryptString"
         End With
@@ -97,6 +104,9 @@ Public Function DecryptString(ByVal cipherText As String, ByVal key As String) A
         With errInfo
             .Code = ErrCryptoNotInitialized
             .Description = "暗号化プロバイダーが初期化されていません。"
+            .Category = ECSecurity
+            .Source = "clsCrypto"
+            .ProcedureName = "DecryptString"
         End With
         modCommon.HandleError errInfo
     End If
@@ -116,6 +126,7 @@ Public Function DecryptString(ByVal cipherText As String, ByVal key As String) A
         With errInfo
             .Code = ErrCryptoKeyNotSpecified
             .Description = "空の暗号化キーが指定されました。"
+            .Category = ECSecurity
             .Source = "clsCrypto"
             .ProcedureName = "DecryptString"
         End With
@@ -137,6 +148,9 @@ Public Function GenerateHash(ByVal inputString As String) As String
         With errInfo
             .Code = ErrCryptoNotInitialized
             .Description = "暗号化プロバイダーが初期化されていません。"
+            .Category = ECSecurity
+            .Source = "clsCrypto"
+            .ProcedureName = "GenerateHash"
         End With
         modError.HandleError errInfo
     End If
@@ -152,6 +166,9 @@ Public Function GenerateHash(ByVal inputString As String) As String
         With errInfo
             .Code = ErrCryptoHashCreateFailed
             .Description = "ハッシュオブジェクトの作成に失敗しました。"
+            .Category = ECSecurity
+            .Source = "clsCrypto"
+            .ProcedureName = "GenerateHash"
         End With
         modError.HandleError errInfo
     End If
@@ -163,6 +180,9 @@ Public Function GenerateHash(ByVal inputString As String) As String
         With errInfo
             .Code = ErrCryptoHashDataFailed
             .Description = "データのハッシュ化に失敗しました。"
+            .Category = ECSecurity
+            .Source = "clsCrypto"
+            .ProcedureName = "GenerateHash"
         End With
         modError.HandleError errInfo
     End If
@@ -174,6 +194,9 @@ Public Function GenerateHash(ByVal inputString As String) As String
         With errInfo
             .Code = ErrCryptoHashDataFailed
             .Description = "ハッシュサイズの取得に失敗しました。"
+            .Category = ECSecurity
+            .Source = "clsCrypto"
+            .ProcedureName = "GenerateHash"
         End With
         modError.HandleError errInfo
     End If
@@ -186,6 +209,9 @@ Public Function GenerateHash(ByVal inputString As String) As String
         With errInfo
             .Code = ErrCryptoHashDataFailed
             .Description = "ハッシュ値の取得に失敗しました。"
+            .Category = ECSecurity
+            .Source = "clsCrypto"
+            .ProcedureName = "GenerateHash"
         End With
         modError.HandleError errInfo
     End If

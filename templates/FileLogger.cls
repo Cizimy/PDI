@@ -66,8 +66,17 @@ CleanUp:
     Exit Sub
     
 ErrorHandler:
-    ' ログ出力自体のエラーは上位に伝播させない
-    Debug.Print "ログ出力エラー: " & Err.Description
+    Dim errDetail As typErrorDetail
+    With errDetail
+        .ErrorCode = ERR_FILEIO_ACCESS_DENIED
+        .Description = "ログファイルへの書き込み中にエラーが発生しました: " & Err.Description
+        .Category = ECFileIO
+        .Source = MODULE_NAME
+        .ProcedureName = "ILogger_Log"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
+    End With
+    modError.HandleError errDetail
     Resume CleanUp
 End Sub
 

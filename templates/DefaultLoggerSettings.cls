@@ -26,6 +26,8 @@ Private mConnectionString As String
 ' 初期化・終了処理
 ' ======================
 Private Sub Class_Initialize()
+    On Error GoTo ErrorHandler
+    
     ' デフォルト値の設定
     mLogLevel = LOG_LEVEL_INFO
     Set mLogDestination = New FileLogDestination
@@ -34,6 +36,20 @@ Private Sub Class_Initialize()
     mLogEventSource = APPLICATION_NAME
     mTimerInterval = 1000 ' 1秒
     mConnectionString = modConfig.Settings.DatabaseConnectionString
+    Exit Sub
+
+ErrorHandler:
+    Dim errDetail As typErrorDetail
+    With errDetail
+        .ErrorCode = ERR_UNEXPECTED
+        .Description = "ロガー設定の初期化中にエラーが発生しました: " & Err.Description
+        .Category = ECGeneral
+        .Source = "DefaultLoggerSettings"
+        .ProcedureName = "Class_Initialize"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
+    End With
+    modError.HandleError errDetail
 End Sub
 
 Private Sub Class_Terminate()
@@ -113,12 +129,29 @@ End Property
 ''' 詳細なログ出力と高頻度な更新を行う設定を生成します
 ''' </summary>
 Private Function CreateDebugSettings() As DefaultLoggerSettings
+    On Error GoTo ErrorHandler
+    
     Set CreateDebugSettings = New DefaultLoggerSettings
     With CreateDebugSettings
         .LogLevel = LOG_LEVEL_DEBUG
         Set .LogDestination = New ConsoleLogDestination
         .TimerInterval = 100 ' より頻繁な更新
     End With
+    Exit Function
+
+ErrorHandler:
+    Dim errDetail As typErrorDetail
+    With errDetail
+        .ErrorCode = ERR_UNEXPECTED
+        .Description = "デバッグ用ロガー設定の作成中にエラーが発生しました: " & Err.Description
+        .Category = ECGeneral
+        .Source = "DefaultLoggerSettings"
+        .ProcedureName = "CreateDebugSettings"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
+    End With
+    modError.HandleError errDetail
+    Set CreateDebugSettings = Nothing
 End Function
 
 ''' <summary>
@@ -126,12 +159,29 @@ End Function
 ''' 標準的なログレベルと低頻度な更新を行う設定を生成します
 ''' </summary>
 Private Function CreateProductionSettings() As DefaultLoggerSettings
+    On Error GoTo ErrorHandler
+    
     Set CreateProductionSettings = New DefaultLoggerSettings
     With CreateProductionSettings
         .LogLevel = LOG_LEVEL_INFO
         Set .LogDestination = New FileLogDestination
         .TimerInterval = 5000 ' より低頻度な更新
     End With
+    Exit Function
+
+ErrorHandler:
+    Dim errDetail As typErrorDetail
+    With errDetail
+        .ErrorCode = ERR_UNEXPECTED
+        .Description = "本番用ロガー設定の作成中にエラーが発生しました: " & Err.Description
+        .Category = ECGeneral
+        .Source = "DefaultLoggerSettings"
+        .ProcedureName = "CreateProductionSettings"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
+    End With
+    modError.HandleError errDetail
+    Set CreateProductionSettings = Nothing
 End Function
 
 ''' <summary>
@@ -139,6 +189,8 @@ End Function
 ''' データベースへのログ出力に特化した設定を生成します
 ''' </summary>
 Private Function CreateDatabaseSettings() As DefaultLoggerSettings
+    On Error GoTo ErrorHandler
+    
     Set CreateDatabaseSettings = New DefaultLoggerSettings
     With CreateDatabaseSettings
         .LogLevel = LOG_LEVEL_INFO
@@ -146,5 +198,20 @@ Private Function CreateDatabaseSettings() As DefaultLoggerSettings
         .LogTableName = "SystemLog"
         .TimerInterval = 2000
     End With
+    Exit Function
+
+ErrorHandler:
+    Dim errDetail As typErrorDetail
+    With errDetail
+        .ErrorCode = ERR_UNEXPECTED
+        .Description = "データベース用ロガー設定の作成中にエラーが発生しました: " & Err.Description
+        .Category = ECGeneral
+        .Source = "DefaultLoggerSettings"
+        .ProcedureName = "CreateDatabaseSettings"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
+    End With
+    modError.HandleError errDetail
+    Set CreateDatabaseSettings = Nothing
 End Function
 #End If

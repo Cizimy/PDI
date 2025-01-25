@@ -52,6 +52,8 @@ End Sub
 ' ILogger実装
 ' ======================
 Private Sub ILogger_Log(ByVal moduleName As String, ByVal message As String, Optional ByVal errorCode As ErrorCode)
+    On Error GoTo ErrorHandler
+    
     Dim entry As LogEntry
     With entry
         .ModuleName = moduleName
@@ -61,6 +63,20 @@ Private Sub ILogger_Log(ByVal moduleName As String, ByVal message As String, Opt
     End With
     
     mLogEntries.Add entry
+    Exit Sub
+
+ErrorHandler:
+    Dim errDetail As typErrorDetail
+    With errDetail
+        .ErrorCode = ERR_UNEXPECTED
+        .Description = "モックロガーへのログ追加中にエラーが発生しました: " & Err.Description
+        .Category = ECGeneral
+        .Source = MODULE_NAME
+        .ProcedureName = "ILogger_Log"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
+    End With
+    modError.HandleError errDetail
 End Sub
 
 Private Property Let ILogger_LogLevel(ByVal level As LogLevelEnum)
@@ -96,6 +112,8 @@ End Property
 ''' <param name="index">取得するログエントリのインデックス</param>
 ''' <returns>フォーマット済みのログエントリ文字列、無効なインデックスの場合は空文字列</returns>
 Private Function GetLogEntry(ByVal index As Long) As String
+    On Error GoTo ErrorHandler
+    
     If index < 1 Or index > mLogEntries.Count Then
         GetLogEntry = ""
         Exit Function
@@ -108,6 +126,21 @@ Private Function GetLogEntry(ByVal index As Long) As String
                  "[" & entry.ModuleName & "] " & _
                  IIf(entry.ErrorCode <> 0, "(Code: " & entry.ErrorCode & ") ", "") & _
                  entry.Message
+    Exit Function
+
+ErrorHandler:
+    Dim errDetail As typErrorDetail
+    With errDetail
+        .ErrorCode = ERR_UNEXPECTED
+        .Description = "ログエントリの取得中にエラーが発生しました: " & Err.Description
+        .Category = ECGeneral
+        .Source = MODULE_NAME
+        .ProcedureName = "GetLogEntry"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
+    End With
+    modError.HandleError errDetail
+    GetLogEntry = ""
 End Function
 
 ''' <summary>
@@ -123,6 +156,8 @@ End Sub
 ''' <param name="moduleName">対象のモジュール名</param>
 ''' <returns>指定されたモジュールのログエントリ数</returns>
 Private Function GetLogCountForModule(ByVal moduleName As String) As Long
+    On Error GoTo ErrorHandler
+    
     Dim count As Long
     Dim i As Long
     Dim entry As LogEntry
@@ -135,6 +170,21 @@ Private Function GetLogCountForModule(ByVal moduleName As String) As Long
     Next i
     
     GetLogCountForModule = count
+    Exit Function
+
+ErrorHandler:
+    Dim errDetail As typErrorDetail
+    With errDetail
+        .ErrorCode = ERR_UNEXPECTED
+        .Description = "モジュール別ログ数の取得中にエラーが発生しました: " & Err.Description
+        .Category = ECGeneral
+        .Source = MODULE_NAME
+        .ProcedureName = "GetLogCountForModule"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
+    End With
+    modError.HandleError errDetail
+    GetLogCountForModule = 0
 End Function
 
 ''' <summary>
@@ -143,6 +193,8 @@ End Function
 ''' <param name="errorCode">対象のエラーコード</param>
 ''' <returns>指定されたエラーコードのログエントリ数</returns>
 Private Function GetLogCountForErrorCode(ByVal errorCode As ErrorCode) As Long
+    On Error GoTo ErrorHandler
+    
     Dim count As Long
     Dim i As Long
     Dim entry As LogEntry
@@ -155,6 +207,21 @@ Private Function GetLogCountForErrorCode(ByVal errorCode As ErrorCode) As Long
     Next i
     
     GetLogCountForErrorCode = count
+    Exit Function
+
+ErrorHandler:
+    Dim errDetail As typErrorDetail
+    With errDetail
+        .ErrorCode = ERR_UNEXPECTED
+        .Description = "エラーコード別ログ数の取得中にエラーが発生しました: " & Err.Description
+        .Category = ECGeneral
+        .Source = MODULE_NAME
+        .ProcedureName = "GetLogCountForErrorCode"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
+    End With
+    modError.HandleError errDetail
+    GetLogCountForErrorCode = 0
 End Function
 
 ''' <summary>

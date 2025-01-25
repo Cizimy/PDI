@@ -123,8 +123,11 @@ ErrorHandler:
     With errDetail
         .ErrorCode = ERR_UNEXPECTED
         .Description = "文字列の検証中にエラーが発生しました: " & Err.Description
+        .Category = ECGeneral
         .Source = MODULE_NAME
         .ProcedureName = "IValidator_Validate"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
     End With
     modError.HandleError errDetail
     

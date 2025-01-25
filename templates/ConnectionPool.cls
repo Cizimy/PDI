@@ -124,8 +124,11 @@ ErrorHandler:
     With errDetail
         .ErrorCode = ERR_DATABASE_CONNECTION_FAILED
         .Description = "コネクション取得中にエラーが発生しました: " & Err.Description
+        .Category = ECDatabase
         .Source = MODULE_NAME
         .ProcedureName = "GetConnection"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
     End With
     modError.HandleError errDetail
     

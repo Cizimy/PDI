@@ -60,8 +60,11 @@ Public Function SafeDivide(ByVal numerator As Double, ByVal denominator As Doubl
         With errDetail
             .ErrorCode = ERR_DIVISION_BY_ZERO
             .Description = "分母が0のため、デフォルト値" & CStr(defaultValue) & "を返します。(分子: " & CStr(numerator) & ")"
+            .Category = ECGeneral
             .Source = MODULE_NAME
             .ProcedureName = "SafeDivide"
+            .StackTrace = modStackTrace.GetStackTrace()
+            .OccurredAt = Now
         End With
         modError.HandleError errDetail
         
@@ -80,8 +83,11 @@ ErrorHandler:
     With errDetail
         .ErrorCode = ERR_UNEXPECTED
         .Description = "除算中にエラーが発生しました: " & Err.Description
+        .Category = ECGeneral
         .Source = MODULE_NAME
         .ProcedureName = "SafeDivide"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
     End With
     modError.HandleError errDetail
     SafeDivide = defaultValue

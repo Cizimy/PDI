@@ -39,6 +39,8 @@ End Sub
 Private Function IUserNotifier_Notify(ByRef errorDetail As typErrorDetail, _
                                     Optional ByVal buttons As VbMsgBoxStyle = vbOKOnly, _
                                     Optional ByVal title As String = "エラー") As VbMsgBoxResult
+    On Error GoTo ErrorHandler
+    
     ' エラーの重大度に応じてアイコンを設定
     Dim icon As VbMsgBoxStyle
     icon = GetIconForErrorCategory(errorDetail.Category)
@@ -49,6 +51,21 @@ Private Function IUserNotifier_Notify(ByRef errorDetail As typErrorDetail, _
     
     ' メッセージボックスの表示（NotificationStyleを適用）
     IUserNotifier_Notify = MsgBox(msg, mNotificationStyle Or buttons Or icon, title)
+    Exit Function
+
+ErrorHandler:
+    Dim errDetail As typErrorDetail
+    With errDetail
+        .ErrorCode = ERR_UNEXPECTED
+        .Description = "エラー通知の表示中にエラーが発生しました: " & Err.Description
+        .Category = ECGeneral
+        .Source = MODULE_NAME
+        .ProcedureName = "IUserNotifier_Notify"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
+    End With
+    modError.HandleError errDetail
+    IUserNotifier_Notify = vbOK ' エラー時はOKを返す
 End Function
 
 Private Property Let IUserNotifier_NotificationStyle(ByVal style As VbMsgBoxStyle)

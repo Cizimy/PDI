@@ -112,8 +112,11 @@ ErrorHandler:
     With errDetail
         .ErrorCode = ERR_UNEXPECTED
         .Description = "ログ出力中にエラーが発生しました: " & Err.Description
+        .Category = ECGeneral
         .Source = MODULE_NAME
         .ProcedureName = "ILogger_Log"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
     End With
     modError.HandleError errDetail
     Resume Cleanup
@@ -182,8 +185,11 @@ ErrorHandler:
     With errDetail
         .ErrorCode = ERR_UNEXPECTED
         .Description = "ログキュー処理中にエラーが発生しました: " & Err.Description
+        .Category = ECGeneral
         .Source = MODULE_NAME
         .ProcedureName = "ProcessLogQueue"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
     End With
     modError.HandleError errDetail
     Resume Cleanup
@@ -208,8 +214,11 @@ ErrorHandler:
     With errDetail
         .ErrorCode = ERR_FILEIO_ACCESS_DENIED
         .Description = "ファイルへのログ出力に失敗しました: " & Err.Description
+        .Category = ECFileIO
         .Source = MODULE_NAME
         .ProcedureName = "WriteToFile"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
     End With
     modError.HandleError errDetail
 End Sub
@@ -253,8 +262,11 @@ ErrorHandler:
     With errDetail
         .ErrorCode = ERR_DATABASE_QUERY_FAILED
         .Description = "データベースへのログ出力に失敗しました: " & Err.Description
+        .Category = ECDatabase
         .Source = MODULE_NAME
         .ProcedureName = "WriteToDatabase"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
     End With
     modError.HandleError errDetail
 End Sub

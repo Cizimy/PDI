@@ -64,8 +64,11 @@ Public Function GetConnectionString() As String
         With errDetail
             .ErrorCode = ERR_DATABASE_CONNECTION_FAILED
             .Description = "データベース接続文字列が設定されていません。"
+            .Category = ECDatabase
             .Source = MODULE_NAME
             .ProcedureName = "GetConnectionString"
+            .StackTrace = modStackTrace.GetStackTrace()
+            .OccurredAt = Now
         End With
         modError.HandleError errDetail
     End If
@@ -76,8 +79,11 @@ ErrorHandler:
     With errDetail2
         .ErrorCode = ERR_DATABASE_CONNECTION_FAILED
         .Description = "接続文字列の取得中にエラーが発生しました: " & Err.Description
+            .Category = ECDatabase
         .Source = MODULE_NAME
         .ProcedureName = "GetConnectionString"
+            .StackTrace = modStackTrace.GetStackTrace()
+            .OccurredAt = Now
     End With
     modError.HandleError errDetail2
     GetConnectionString = ""
@@ -130,8 +136,11 @@ ErrorHandler:
     With errDetail
         .ErrorCode = ERR_DATABASE_CONNECTION_FAILED
         .Description = "データベース接続の取得中にエラーが発生しました: " & Err.Description
+            .Category = ECDatabase
         .Source = MODULE_NAME
         .ProcedureName = "GetConnection"
+            .StackTrace = modStackTrace.GetStackTrace()
+            .OccurredAt = Now
     End With
     modError.HandleError errDetail
     Set GetConnection = Nothing
@@ -224,8 +233,11 @@ ErrorHandler:
     With errDetail
         .ErrorCode = ERR_DATABASE_QUERY_FAILED
         .Description = "クエリの実行中にエラーが発生しました: " & Err.Description
+            .Category = ECDatabase
         .Source = MODULE_NAME
         .ProcedureName = "ExecuteQuery"
+            .StackTrace = modStackTrace.GetStackTrace()
+            .OccurredAt = Now
     End With
     modError.HandleError errDetail
     Set ExecuteQuery = Nothing

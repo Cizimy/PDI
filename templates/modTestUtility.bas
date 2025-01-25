@@ -51,8 +51,11 @@ ErrorHandler:
     With errDetail
         .ErrorCode = ERR_UNEXPECTED
         .Description = "テストモジュールの初期化中にエラーが発生しました: " & Err.Description
+        .Category = ECGeneral
         .Source = MODULE_NAME
         .ProcedureName = "InitializeTestModule"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
     End With
     modError.HandleError errDetail
     
@@ -92,8 +95,11 @@ ErrorHandler:
     With errDetail
         .ErrorCode = ERR_UNEXPECTED
         .Description = "テスト開始処理中にエラーが発生しました: " & Err.Description
+        .Category = ECGeneral
         .Source = MODULE_NAME
         .ProcedureName = "StartTest"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
     End With
     modError.HandleError errDetail
     
@@ -133,8 +139,11 @@ ErrorHandler:
     With errDetail
         .ErrorCode = ERR_UNEXPECTED
         .Description = "テスト終了処理中にエラーが発生しました: " & Err.Description
+        .Category = ECGeneral
         .Source = MODULE_NAME
         .ProcedureName = "EndTest"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
     End With
     modError.HandleError errDetail
     
@@ -172,8 +181,11 @@ ErrorHandler:
     With errDetail
         .ErrorCode = ERR_UNEXPECTED
         .Description = "AssertEqual実行中にエラーが発生しました: " & Err.Description
+        .Category = ECGeneral
         .Source = MODULE_NAME
         .ProcedureName = "AssertEqual"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
     End With
     modError.HandleError errDetail
     
@@ -202,8 +214,11 @@ ErrorHandler:
     With errDetail
         .ErrorCode = ERR_UNEXPECTED
         .Description = "AssertTrue実行中にエラーが発生しました: " & Err.Description
+        .Category = ECGeneral
         .Source = MODULE_NAME
         .ProcedureName = "AssertTrue"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
     End With
     modError.HandleError errDetail
     
@@ -232,8 +247,11 @@ ErrorHandler:
     With errDetail
         .ErrorCode = ERR_UNEXPECTED
         .Description = "AssertFalse実行中にエラーが発生しました: " & Err.Description
+        .Category = ECGeneral
         .Source = MODULE_NAME
         .ProcedureName = "AssertFalse"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
     End With
     modError.HandleError errDetail
     
@@ -321,8 +339,11 @@ ErrorHandler:
     With errDetail
         .ErrorCode = ERR_UNEXPECTED
         .Description = "テストレポート生成中にエラーが発生しました: " & Err.Description
+        .Category = ECGeneral
         .Source = MODULE_NAME
         .ProcedureName = "GenerateTestReport"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
     End With
     modError.HandleError errDetail
     
@@ -364,8 +385,11 @@ ErrorHandler:
     With errDetail
         .ErrorCode = ERR_UNEXPECTED
         .Description = "テスト実行時間の取得中にエラーが発生しました: " & Err.Description
+        .Category = ECGeneral
         .Source = MODULE_NAME
         .ProcedureName = "GetTestExecutionTime"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
     End With
     modError.HandleError errDetail
     

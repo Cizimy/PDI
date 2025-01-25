@@ -58,6 +58,8 @@ End Sub
 Public Sub StartMeasurement(ByVal description As String)
     If Not mIsEnabled Then Exit Sub
     
+    On Error GoTo ErrorHandler
+    
     Dim perfData As PerformanceData
     Dim memInfo As PROCESS_MEMORY_COUNTERS
     
@@ -74,10 +76,26 @@ Public Sub StartMeasurement(ByVal description As String)
     
     ' コレクションに追加
     mMeasurements.Add perfData, description
+    Exit Sub
+
+ErrorHandler:
+    Dim errDetail As typErrorDetail
+    With errDetail
+        .ErrorCode = ERR_UNEXPECTED
+        .Description = "パフォーマンス測定の開始中にエラーが発生しました: " & Err.Description
+        .Category = ECGeneral
+        .Source = "clsPerformanceMonitor"
+        .ProcedureName = "StartMeasurement"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
+    End With
+    modError.HandleError errDetail
 End Sub
 
 Public Sub EndMeasurement(ByVal description As String)
     If Not mIsEnabled Then Exit Sub
+    
+    On Error GoTo ErrorHandler
     
     Dim perfData As PerformanceData
     Dim memInfo As PROCESS_MEMORY_COUNTERS
@@ -106,6 +124,20 @@ Public Sub EndMeasurement(ByVal description As String)
             End If
         End If
     Next i
+    Exit Sub
+
+ErrorHandler:
+    Dim errDetail As typErrorDetail
+    With errDetail
+        .ErrorCode = ERR_UNEXPECTED
+        .Description = "パフォーマンス測定の終了中にエラーが発生しました: " & Err.Description
+        .Category = ECGeneral
+        .Source = "clsPerformanceMonitor"
+        .ProcedureName = "EndMeasurement"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
+    End With
+    modError.HandleError errDetail
 End Sub
 
 Public Function GetMeasurement(ByVal description As String) As String
@@ -130,6 +162,8 @@ End Function
 Public Function GetAllMeasurements() As String
     If Not mIsEnabled Then Exit Function
     
+    On Error GoTo ErrorHandler
+    
     Dim result As String
     Dim perfData As PerformanceData
     Dim i As Long
@@ -143,6 +177,20 @@ Public Function GetAllMeasurements() As String
     Next i
     
     GetAllMeasurements = result
+    Exit Function
+
+ErrorHandler:
+    Dim errDetail As typErrorDetail
+    With errDetail
+        .ErrorCode = ERR_UNEXPECTED
+        .Description = "パフォーマンス測定データの取得中にエラーが発生しました: " & Err.Description
+        .Category = ECGeneral
+        .Source = "clsPerformanceMonitor"
+        .ProcedureName = "GetAllMeasurements"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
+    End With
+    modError.HandleError errDetail
 End Function
 
 Public Sub ClearMeasurements()

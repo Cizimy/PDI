@@ -89,8 +89,11 @@ ErrorHandler:
     With errDetail
         .ErrorCode = ERR_UNEXPECTED
         .Description = "日付の加算中にエラーが発生しました: " & Err.Description
+        .Category = ECGeneral
         .Source = MODULE_NAME
         .ProcedureName = "DateAdd"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
     End With
     modError.HandleError errDetail
     DateAdd = dateValue
@@ -125,8 +128,11 @@ ErrorHandler:
     With errDetail
         .ErrorCode = ERR_UNEXPECTED
         .Description = "日付の差分計算中にエラーが発生しました: " & Err.Description
+        .Category = ECGeneral
         .Source = MODULE_NAME
         .ProcedureName = "DateDiff"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
     End With
     modError.HandleError errDetail
     DateDiff = 0
@@ -160,8 +166,11 @@ ErrorHandler:
     With errDetail
         .ErrorCode = ERR_UNEXPECTED
         .Description = "日付のフォーマット中にエラーが発生しました: " & Err.Description
+        .Category = ECGeneral
         .Source = MODULE_NAME
         .ProcedureName = "FormatDate"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
     End With
     modError.HandleError errDetail
     FormatDate = Format$(dateValue, DEFAULT_DATE_FORMAT)

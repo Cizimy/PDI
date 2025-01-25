@@ -43,28 +43,57 @@ End Sub
 Public Sub PushStackEntry(ByVal ModuleName As String, ByVal ProcedureName As String)
     If Not mIsInitialized Then InitializeModule
     
-    On Error Resume Next
+    On Error GoTo ErrorHandler
     
     If mStack.Count < MAX_STACK_TRACE_DEPTH Then
         mStack.Add ModuleName & "." & ProcedureName
     End If
+    Exit Sub
+
+ErrorHandler:
+    Dim errInfo As ErrorInfo
+    With errInfo
+        .Code = ErrStackTracePushFailed
+        .Description = "スタックトレースへのエントリ追加に失敗しました。"
+        .Category = ECSystem
+        .Source = MODULE_NAME
+        .ProcedureName = "PushStackEntry"
+        .StackTrace = "モジュール: " & ModuleName & ", プロシージャ: " & ProcedureName
+        .OccurredAt = Now
+    End With
+    modError.HandleError errInfo
 End Sub
 
 Public Function PopStackEntry() As String
     If Not mIsInitialized Then Exit Function
     
-    On Error Resume Next
+    On Error GoTo ErrorHandler
     
+    Dim result As String
     If mStack.Count > 0 Then
-        PopStackEntry = mStack(mStack.Count)
+        result = mStack(mStack.Count)
         mStack.Remove mStack.Count
+        PopStackEntry = result
     End If
+    Exit Function
+
+ErrorHandler:
+    Dim errInfo As ErrorInfo
+    With errInfo
+        .Code = ErrStackTracePopFailed
+        .Description = "スタックトレースからのエントリ取得に失敗しました。"
+        .Category = ECSystem
+        .Source = MODULE_NAME
+        .ProcedureName = "PopStackEntry"
+        .OccurredAt = Now
+    End With
+    modError.HandleError errInfo
 End Function
 
 Public Function GetStackTrace() As String
     If Not mIsInitialized Then Exit Function
     
-    On Error Resume Next
+    On Error GoTo ErrorHandler
     
     Dim i As Long
     Dim trace As String
@@ -74,6 +103,20 @@ Public Function GetStackTrace() As String
     Next i
     
     GetStackTrace = trace
+    Exit Function
+
+ErrorHandler:
+    Dim errInfo As ErrorInfo
+    With errInfo
+        .Code = ErrStackTraceGetFailed
+        .Description = "スタックトレース文字列の生成に失敗しました。"
+        .Category = ECSystem
+        .Source = MODULE_NAME
+        .ProcedureName = "GetStackTrace"
+        .OccurredAt = Now
+    End With
+    modError.HandleError errInfo
+    GetStackTrace = "スタックトレースの取得に失敗しました。"
 End Function
 
 Public Property Get StackDepth() As Long

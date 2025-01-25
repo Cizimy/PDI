@@ -41,13 +41,13 @@ Public Sub AcquireLock()
         With errInfo
             .Code = ErrLockMutexCreateFailed
             .Description = "Mutexの作成に失敗しました。"
-            .Category = ECGeneral
+            .Category = ECSystem
             .Source = "clsLock"
             .ProcedureName = "AcquireLock"
             .StackTrace = modStackTrace.GetStackTrace()
             .OccurredAt = Now
         End With
-        modCommon.HandleError errInfo
+        modError.HandleError errInfo
     End If
     
     ' ロックの取得を試みる
@@ -61,13 +61,13 @@ Public Sub AcquireLock()
         With errInfo
             .Code = ErrLockAcquireFailed
             .Description = "ロックの取得に失敗しました。"
-            .Category = ECGeneral
+            .Category = ECSystem
             .Source = "clsLock"
             .ProcedureName = "AcquireLock"
             .StackTrace = modStackTrace.GetStackTrace()
             .OccurredAt = Now
         End With
-        modCommon.HandleError errInfo
+        modError.HandleError errInfo
     End If
 End Sub
 
@@ -78,13 +78,13 @@ Public Sub ReleaseLock()
             With errInfo
                 .Code = ErrLockReleaseFailed
                 .Description = "ロックの解放に失敗しました。"
-                .Category = ECGeneral
+                .Category = ECSystem
                 .Source = "clsLock"
                 .ProcedureName = "ReleaseLock"
                 .StackTrace = modStackTrace.GetStackTrace()
                 .OccurredAt = Now
             End With
-            modCommon.HandleError errInfo
+            modError.HandleError errInfo
         End If
         mIsLocked = False
     End If

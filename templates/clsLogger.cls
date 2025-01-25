@@ -272,23 +272,54 @@ ErrorHandler:
 End Sub
 
 Private Sub WriteToEventLog(ByVal logEntry As Variant)
-    On Error Resume Next
+    On Error GoTo ErrorHandler
     
     Dim objShell As Object
-    Set objShell = CreateObject("WScript.Shell")
-    
-    Dim eventType As Integer
-    Select Case logEntry(2)
-        Case LOG_LEVEL_ERROR, LOG_LEVEL_FATAL
-            eventType = 1 ' ERROR
-        Case LOG_LEVEL_WARNING
-            eventType = 2 ' WARNING
-        Case Else
-            eventType = 4 ' INFORMATION
-    End Select
-    
-    objShell.LogEvent eventType, logEntry(1), mSettings.LogEventSource
     Set objShell = Nothing
+    
+    Try:
+        ' WScript.Shellオブジェクトの作成
+        Set objShell = CreateObject("WScript.Shell")
+        If objShell Is Nothing Then
+            Err.Raise ErrEventLogCreateFailed, "WriteToEventLog", "WScript.Shellオブジェクトの作成に失敗しました。"
+        End If
+        
+        ' イベントの種別を決定
+        Dim eventType As Integer
+        Select Case logEntry(2)
+            Case LOG_LEVEL_ERROR, LOG_LEVEL_FATAL
+                eventType = 1 ' ERROR
+            Case LOG_LEVEL_WARNING
+                eventType = 2 ' WARNING
+            Case Else
+                eventType = 4 ' INFORMATION
+        End Select
+    
+    
+        ' イベントログへの書き込み
+        If Len(mSettings.LogEventSource) = 0 Then
+            Err.Raise ErrEventLogSourceInvalid, "WriteToEventLog", "イベントログソースが指定されていません。"
+        End If
+        
+        objShell.LogEvent eventType, logEntry(1), mSettings.LogEventSource
+    
+    Cleanup:
+        If Not objShell Is Nothing Then Set objShell = Nothing
+        Exit Sub
+    
+    ErrorHandler:
+        Dim errDetail As typErrorDetail
+        With errDetail
+            .ErrorCode = IIf(Err.Number = ErrEventLogCreateFailed, ErrEventLogCreateFailed, ErrEventLogWriteFailed)
+            .Description = "イベントログへの書き込みに失敗しました: " & Err.Description
+            .Category = ECSystem
+            .Source = MODULE_NAME
+            .ProcedureName = "WriteToEventLog"
+            .StackTrace = modStackTrace.GetStackTrace()
+            .OccurredAt = Now
+        End With
+        modError.HandleError errDetail
+        Resume Cleanup
 End Sub
 
 Private Sub WriteToConsole(ByVal logEntry As Variant)

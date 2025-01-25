@@ -54,6 +54,16 @@ Public Enum ErrorCode
     ErrLockMutexCreateFailed = vbObjectError + 7100     ' Mutexの作成失敗
     ErrLockAcquireFailed = vbObjectError + 7101         ' ロックの取得失敗
     ErrLockReleaseFailed = vbObjectError + 7102         ' ロックの解放失敗
+    
+    ' スタックトレース関連エラー (7200-7299)
+    ErrStackTracePushFailed = vbObjectError + 7200      ' スタックトレースへの追加失敗
+    ErrStackTracePopFailed = vbObjectError + 7201       ' スタックトレースからの取得失敗
+    ErrStackTraceGetFailed = vbObjectError + 7202       ' スタックトレース文字列の生成失敗
+    
+    ' イベントログ関連エラー (7300-7399)
+    ErrEventLogCreateFailed = vbObjectError + 7300      ' イベントログオブジェクトの作成失敗
+    ErrEventLogWriteFailed = vbObjectError + 7301       ' イベントログへの書き込み失敗
+    ErrEventLogSourceInvalid = vbObjectError + 7302     ' イベントログソースが無効
 End Enum
 
 ' ======================

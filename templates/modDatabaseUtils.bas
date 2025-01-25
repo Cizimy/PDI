@@ -16,6 +16,7 @@ Private Const RETRY_INTERVAL_MS As Long = 1000
 ' ======================
 Private mPerformanceMonitor As clsPerformanceMonitor
 Private mIsInitialized As Boolean
+Private mLock As clsLock
 Private mDefaultConnection As Object ' ADODB.Connection
 
 ' ======================
@@ -25,6 +26,7 @@ Public Sub InitializeModule()
     If mIsInitialized Then Exit Sub
     
     Set mPerformanceMonitor = New clsPerformanceMonitor
+    Set mLock = New clsLock
     mIsInitialized = True
 End Sub
 
@@ -33,6 +35,7 @@ Public Sub TerminateModule()
     
     CloseConnection
     Set mPerformanceMonitor = Nothing
+    Set mLock = Nothing
     mIsInitialized = False
 End Sub
 
@@ -49,8 +52,12 @@ Public Function GetConnectionString() As String
     
     On Error GoTo ErrorHandler
     
+    mLock.AcquireLock
+    
     ' 設定から接続文字列を取得
     GetConnectionString = modConfig.Settings.DatabaseConnectionString
+
+    mLock.ReleaseLock
     
     If GetConnectionString = "" Then
         Dim errDetail As typErrorDetail
@@ -89,6 +96,8 @@ Public Function GetConnection() As Object ' ADODB.Connection
     
     On Error GoTo ErrorHandler
     
+    mLock.AcquireLock
+    
     ' 既存の接続を確認
     If Not mDefaultConnection Is Nothing Then
         If mDefaultConnection.State = 1 Then ' adStateOpen
@@ -107,6 +116,8 @@ Public Function GetConnection() As Object ' ADODB.Connection
     mDefaultConnection.Open
     
     Set GetConnection = mDefaultConnection
+
+    mLock.ReleaseLock
     
 CleanExit:
     If Not mPerformanceMonitor Is Nothing Then
@@ -131,11 +142,15 @@ End Function
 ''' </summary>
 Public Sub CloseConnection()
     If Not mDefaultConnection Is Nothing Then
+        mLock.AcquireLock
+        
         On Error Resume Next
         If mDefaultConnection.State = 1 Then ' adStateOpen
             mDefaultConnection.Close
         End If
         Set mDefaultConnection = Nothing
+        
+        mLock.ReleaseLock
         On Error GoTo 0
     End If
 End Sub

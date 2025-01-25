@@ -217,8 +217,11 @@ End Sub
 Private Sub WriteToDatabase(ByVal logEntry As Variant)
     On Error GoTo ErrorHandler
     
+    mLock.AcquireLock
+    
     Dim conn As Object
     Set conn = mConnectionPool.GetConnection()
+    mLock.ReleaseLock
     
     If Not conn Is Nothing Then
         Dim cmd As Object
@@ -233,12 +236,18 @@ Private Sub WriteToDatabase(ByVal logEntry As Variant)
             .Execute
         End With
         
+        mLock.AcquireLock
         mConnectionPool.ReleaseConnection conn
+        mLock.ReleaseLock
     End If
     Exit Sub
     
 ErrorHandler:
-    If Not conn Is Nothing Then mConnectionPool.ReleaseConnection conn
+    If Not conn Is Nothing Then
+        mLock.AcquireLock
+        mConnectionPool.ReleaseConnection conn
+        mLock.ReleaseLock
+    End If
     
     Dim errDetail As typErrorDetail
     With errDetail

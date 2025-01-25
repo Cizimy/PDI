@@ -1,0 +1,204 @@
+Option Explicit
+
+' ======================
+' モジュール情報
+' ======================
+Private Const MODULE_NAME As String = "modDateUtils"
+
+' ======================
+' 定数定義
+' ======================
+Private Const DEFAULT_DATE_FORMAT As String = "yyyy/mm/dd"
+Private Const DEFAULT_TIME_FORMAT As String = "hh:nn:ss"
+Private Const DEFAULT_DATETIME_FORMAT As String = "yyyy/mm/dd hh:nn:ss"
+
+' ======================
+' プライベート変数
+' ======================
+Private mPerformanceMonitor As clsPerformanceMonitor
+Private mIsInitialized As Boolean
+
+' ======================
+' 初期化・終了処理
+' ======================
+Public Sub InitializeModule()
+    If mIsInitialized Then Exit Sub
+    
+    Set mPerformanceMonitor = New clsPerformanceMonitor
+    mIsInitialized = True
+End Sub
+
+Public Sub TerminateModule()
+    If Not mIsInitialized Then Exit Sub
+    
+    Set mPerformanceMonitor = Nothing
+    mIsInitialized = False
+End Sub
+
+' ======================
+' 公開関数
+' ======================
+
+''' <summary>
+''' 日付の妥当性を確認します
+''' </summary>
+''' <param name="testDate">確認する日付</param>
+''' <returns>有効な日付の場合True</returns>
+Public Function IsValidDate(ByVal testDate As Variant) As Boolean
+    If Not mIsInitialized Then InitializeModule
+    
+    If Not mPerformanceMonitor Is Nothing Then
+        mPerformanceMonitor.StartMeasurement "IsValidDate"
+    End If
+    
+    On Error Resume Next
+    IsValidDate = IsDate(testDate)
+    On Error GoTo 0
+    
+    If Not mPerformanceMonitor Is Nothing Then
+        mPerformanceMonitor.EndMeasurement "IsValidDate"
+    End If
+End Function
+
+''' <summary>
+''' 日付に指定された期間を加算します
+''' </summary>
+''' <param name="interval">期間の単位</param>
+''' <param name="number">加算する数</param>
+''' <param name="dateValue">対象の日付</param>
+''' <returns>加算後の日付</returns>
+Public Function DateAdd(ByVal interval As String, ByVal number As Double, _
+                      ByVal dateValue As Date) As Date
+    If Not mIsInitialized Then InitializeModule
+    
+    If Not mPerformanceMonitor Is Nothing Then
+        mPerformanceMonitor.StartMeasurement "DateAdd"
+    End If
+    
+    On Error GoTo ErrorHandler
+    
+    DateAdd = VBA.DateAdd(interval, number, dateValue)
+    
+    If Not mPerformanceMonitor Is Nothing Then
+        mPerformanceMonitor.EndMeasurement "DateAdd"
+    End If
+    Exit Function
+
+ErrorHandler:
+    Dim errDetail As typErrorDetail
+    With errDetail
+        .ErrorCode = ERR_UNEXPECTED
+        .Description = "日付の加算中にエラーが発生しました: " & Err.Description
+        .Source = MODULE_NAME
+        .ProcedureName = "DateAdd"
+    End With
+    modError.HandleError errDetail
+    DateAdd = dateValue
+End Function
+
+''' <summary>
+''' 2つの日付の差分を計算します
+''' </summary>
+''' <param name="interval">期間の単位</param>
+''' <param name="date1">日付1</param>
+''' <param name="date2">日付2</param>
+''' <returns>日付の差分</returns>
+Public Function DateDiff(ByVal interval As String, ByVal date1 As Date, _
+                       ByVal date2 As Date) As Long
+    If Not mIsInitialized Then InitializeModule
+    
+    If Not mPerformanceMonitor Is Nothing Then
+        mPerformanceMonitor.StartMeasurement "DateDiff"
+    End If
+    
+    On Error GoTo ErrorHandler
+    
+    DateDiff = VBA.DateDiff(interval, date1, date2)
+    
+    If Not mPerformanceMonitor Is Nothing Then
+        mPerformanceMonitor.EndMeasurement "DateDiff"
+    End If
+    Exit Function
+
+ErrorHandler:
+    Dim errDetail As typErrorDetail
+    With errDetail
+        .ErrorCode = ERR_UNEXPECTED
+        .Description = "日付の差分計算中にエラーが発生しました: " & Err.Description
+        .Source = MODULE_NAME
+        .ProcedureName = "DateDiff"
+    End With
+    modError.HandleError errDetail
+    DateDiff = 0
+End Function
+
+''' <summary>
+''' 日付を指定された形式でフォーマットします
+''' </summary>
+''' <param name="dateValue">対象の日付</param>
+''' <param name="format">フォーマット文字列（オプション）</param>
+''' <returns>フォーマットされた日付文字列</returns>
+Public Function FormatDate(ByVal dateValue As Date, _
+                         Optional ByVal format As String = DEFAULT_DATE_FORMAT) As String
+    If Not mIsInitialized Then InitializeModule
+    
+    If Not mPerformanceMonitor Is Nothing Then
+        mPerformanceMonitor.StartMeasurement "FormatDate"
+    End If
+    
+    On Error GoTo ErrorHandler
+    
+    FormatDate = Format$(dateValue, format)
+    
+    If Not mPerformanceMonitor Is Nothing Then
+        mPerformanceMonitor.EndMeasurement "FormatDate"
+    End If
+    Exit Function
+
+ErrorHandler:
+    Dim errDetail As typErrorDetail
+    With errDetail
+        .ErrorCode = ERR_UNEXPECTED
+        .Description = "日付のフォーマット中にエラーが発生しました: " & Err.Description
+        .Source = MODULE_NAME
+        .ProcedureName = "FormatDate"
+    End With
+    modError.HandleError errDetail
+    FormatDate = Format$(dateValue, DEFAULT_DATE_FORMAT)
+End Function
+
+''' <summary>
+''' 現在の日時を取得します
+''' </summary>
+''' <returns>現在の日時</returns>
+Public Function GetCurrentDateTime() As Date
+    If Not mIsInitialized Then InitializeModule
+    GetCurrentDateTime = Now
+End Function
+
+''' <summary>
+''' 指定された日付が営業日かどうかを確認します
+''' </summary>
+''' <param name="dateValue">確認する日付</param>
+''' <returns>営業日の場合True</returns>
+Public Function IsBusinessDay(ByVal dateValue As Date) As Boolean
+    If Not mIsInitialized Then InitializeModule
+    
+    ' 土曜日(7)または日曜日(1)の場合はFalse
+    IsBusinessDay = Not (Weekday(dateValue, vbSunday) = 1 Or _
+                        Weekday(dateValue, vbSunday) = 7)
+End Function
+
+' ======================
+' テストサポート機能
+' ======================
+#If DEBUG Then
+    Public Sub ResetModule()
+        TerminateModule
+        InitializeModule
+    End Sub
+    
+    Public Function GetPerformanceMonitor() As clsPerformanceMonitor
+        Set GetPerformanceMonitor = mPerformanceMonitor
+    End Function
+#End If

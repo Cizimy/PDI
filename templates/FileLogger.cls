@@ -26,6 +26,7 @@ Private mLogLevel As LogLevel
 Private mLogDestination As LogDestination
 Private mLogFilePath As String
 Private mLock As clsLock
+Private mPerformanceMonitor As clsPerformanceMonitor
 
 ' ======================
 ' 初期化・終了処理
@@ -35,10 +36,12 @@ Private Sub Class_Initialize()
     mLogDestination = DestFile
     mLogFilePath = modConfig.Settings.LogFilePath
     Set mLock = New clsLock
+    Set mPerformanceMonitor = New clsPerformanceMonitor
 End Sub
 
 Private Sub Class_Terminate()
     Set mLock = Nothing
+    Set mPerformanceMonitor = Nothing
 End Sub
 
 ' ======================
@@ -58,11 +61,15 @@ Private Sub ILogger_Log(ByVal moduleName As String, _
     Dim logMessage As String
     logMessage = BuildLogMessage(moduleName, message, errorCode)
     
+    mPerformanceMonitor.StartMeasurement "File Write Operation"
     ' modFileIOを使用してファイルに書き込み
     modFileIO.WriteTextFile mLogFilePath, logMessage & vbCrLf, True
     
 CleanUp:
     mLock.ReleaseLock
+    If Not mPerformanceMonitor Is Nothing Then
+        mPerformanceMonitor.EndMeasurement "File Write Operation"
+    End If
     Exit Sub
     
 ErrorHandler:
@@ -77,6 +84,9 @@ ErrorHandler:
         .OccurredAt = Now
     End With
     modError.HandleError errDetail
+    If Not mPerformanceMonitor Is Nothing Then
+        mPerformanceMonitor.EndMeasurement "File Write Operation"
+    End If
     Resume CleanUp
 End Sub
 

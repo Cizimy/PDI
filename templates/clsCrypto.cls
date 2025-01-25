@@ -20,11 +20,13 @@ Private Const HP_HASHSIZE As Long = 4
 ' メンバ変数
 Private mCryptoProvider As LongPtr
 Private mInitialized As Boolean
+Private mPerformanceMonitor As clsPerformanceMonitor
 
 ' ======================
 ' 初期化・終了処理
 ' ======================
 Private Sub Class_Initialize()
+    Set mPerformanceMonitor = New clsPerformanceMonitor
     InitializeCrypto
 End Sub
 
@@ -32,6 +34,7 @@ Private Sub Class_Terminate()
     If mInitialized Then
         CryptReleaseContext mCryptoProvider, 0
     End If
+    Set mPerformanceMonitor = Nothing
 End Sub
 
 ' ======================
@@ -57,6 +60,8 @@ End Sub
 ' パブリックメソッド
 ' ======================
 Public Function EncryptString(ByVal plainText As String, ByVal key As String) As String
+    mPerformanceMonitor.StartMeasurement "String Encryption"
+    
     If Not mInitialized Then
         Dim errInfo As ErrorInfo
         With errInfo
@@ -67,6 +72,7 @@ Public Function EncryptString(ByVal plainText As String, ByVal key As String) As
             .ProcedureName = "EncryptString"
         End With
         modError.HandleError errInfo
+        mPerformanceMonitor.EndMeasurement "String Encryption"
     End If
     
     ' 単純なXOR暗号化（実際のプロダクションでは、より強力な暗号化アルゴリズムを使用すべき）
@@ -86,6 +92,7 @@ Public Function EncryptString(ByVal plainText As String, ByVal key As String) As
             .ProcedureName = "EncryptString"
         End With
         modError.HandleError errInfo
+        mPerformanceMonitor.EndMeasurement "String Encryption"
     End If
     
     result = String$(Len(plainText), 0)
@@ -95,10 +102,13 @@ Public Function EncryptString(ByVal plainText As String, ByVal key As String) As
     Next i
     
     ' Base64エンコード
+    mPerformanceMonitor.EndMeasurement "String Encryption"
     EncryptString = Base64Encode(result)
 End Function
 
 Public Function DecryptString(ByVal cipherText As String, ByVal key As String) As String
+    mPerformanceMonitor.StartMeasurement "String Decryption"
+    
     If Not mInitialized Then
         Dim errInfo As ErrorInfo
         With errInfo
@@ -109,6 +119,7 @@ Public Function DecryptString(ByVal cipherText As String, ByVal key As String) A
             .ProcedureName = "DecryptString"
         End With
         modError.HandleError errInfo
+        mPerformanceMonitor.EndMeasurement "String Decryption"
     End If
     
     ' Base64デコード
@@ -131,6 +142,7 @@ Public Function DecryptString(ByVal cipherText As String, ByVal key As String) A
             .ProcedureName = "DecryptString"
         End With
         modError.HandleError errInfo
+        mPerformanceMonitor.EndMeasurement "String Decryption"
     End If
     
     result = String$(Len(decoded), 0)
@@ -139,10 +151,13 @@ Public Function DecryptString(ByVal cipherText As String, ByVal key As String) A
         Mid$(result, i, 1) = Chr$(Asc(Mid$(decoded, i, 1)) Xor Asc(Mid$(key, j, 1)))
     Next i
     
+    mPerformanceMonitor.EndMeasurement "String Decryption"
     DecryptString = result
 End Function
 
 Public Function GenerateHash(ByVal inputString As String) As String
+    mPerformanceMonitor.StartMeasurement "Hash Generation"
+    
     If Not mInitialized Then
         Dim errInfo As ErrorInfo
         With errInfo
@@ -153,6 +168,7 @@ Public Function GenerateHash(ByVal inputString As String) As String
             .ProcedureName = "GenerateHash"
         End With
         modError.HandleError errInfo
+        mPerformanceMonitor.EndMeasurement "Hash Generation"
     End If
     
     Dim hHash As LongPtr
@@ -171,6 +187,7 @@ Public Function GenerateHash(ByVal inputString As String) As String
             .ProcedureName = "GenerateHash"
         End With
         modError.HandleError errInfo
+        mPerformanceMonitor.EndMeasurement "Hash Generation"
     End If
     
     ' データのハッシュ化
@@ -185,6 +202,7 @@ Public Function GenerateHash(ByVal inputString As String) As String
             .ProcedureName = "GenerateHash"
         End With
         modError.HandleError errInfo
+        mPerformanceMonitor.EndMeasurement "Hash Generation"
     End If
     
     ' ハッシュサイズの取得
@@ -199,6 +217,7 @@ Public Function GenerateHash(ByVal inputString As String) As String
             .ProcedureName = "GenerateHash"
         End With
         modError.HandleError errInfo
+        mPerformanceMonitor.EndMeasurement "Hash Generation"
     End If
     
     ' ハッシュ値の取得
@@ -214,6 +233,7 @@ Public Function GenerateHash(ByVal inputString As String) As String
             .ProcedureName = "GenerateHash"
         End With
         modError.HandleError errInfo
+        mPerformanceMonitor.EndMeasurement "Hash Generation"
     End If
     
     ' ハッシュオブジェクトの破棄
@@ -226,6 +246,7 @@ Public Function GenerateHash(ByVal inputString As String) As String
         result = result & Right$("0" & Hex$(hashValue(i)), 2)
     Next i
     
+    mPerformanceMonitor.EndMeasurement "Hash Generation"
     GenerateHash = result
 End Function
 

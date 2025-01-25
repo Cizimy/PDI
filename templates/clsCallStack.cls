@@ -17,20 +17,17 @@ Private Const MODULE_NAME As String = "clsCallStack"
 ' ======================
 ' メンバ変数
 ' ======================
-Private mPerformanceMonitor As clsPerformanceMonitor
 Private mIsInitialized As Boolean
 
 ' ======================
 ' 初期化・終了処理
 ' ======================
 Private Sub Class_Initialize()
-    Set mPerformanceMonitor = New clsPerformanceMonitor
     modStackTrace.InitializeModule
     mIsInitialized = True
 End Sub
 
 Private Sub Class_Terminate()
-    Set mPerformanceMonitor = Nothing
     mIsInitialized = False
 End Sub
 
@@ -49,17 +46,10 @@ End Sub
 Public Sub Push(ByVal ModuleName As String, ByVal ProcedureName As String)
     If Not mIsInitialized Then Exit Sub
     
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.StartMeasurement "CallStack_Push"
-    End If
-    
     On Error GoTo ErrorHandler
     
     modStackTrace.PushStackEntry ModuleName, ProcedureName
     
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.EndMeasurement "CallStack_Push"
-    End If
     Exit Sub
 
 ErrorHandler:
@@ -84,17 +74,10 @@ End Sub
 Public Function Pop() As String
     If Not mIsInitialized Then Exit Function
     
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.StartMeasurement "CallStack_Pop"
-    End If
-    
     On Error GoTo ErrorHandler
     
     Pop = modStackTrace.PopStackEntry()
     
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.EndMeasurement "CallStack_Pop"
-    End If
     Exit Function
 
 ErrorHandler:
@@ -119,17 +102,10 @@ End Function
 Public Property Get StackTrace() As String
     If Not mIsInitialized Then Exit Property
     
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.StartMeasurement "CallStack_GetTrace"
-    End If
-    
     On Error GoTo ErrorHandler
     
     StackTrace = modStackTrace.GetStackTrace()
     
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.EndMeasurement "CallStack_GetTrace"
-    End If
     Exit Property
 
 ErrorHandler:
@@ -177,20 +153,10 @@ End Property
     End Sub
     
     ''' <summary>
-    ''' パフォーマンスモニターの参照を取得（テスト用）
-    ''' </summary>
-    Private Function GetPerformanceMonitor() As clsPerformanceMonitor
-        Set GetPerformanceMonitor = mPerformanceMonitor
-    End Function
-    
-    ''' <summary>
     ''' モジュールをリセット（テスト用）
     ''' </summary>
     Private Sub ResetModule()
-        Set mPerformanceMonitor = Nothing
         mIsInitialized = False
-        
-        Set mPerformanceMonitor = New clsPerformanceMonitor
         modStackTrace.ResetModule
         mIsInitialized = True
     End Sub

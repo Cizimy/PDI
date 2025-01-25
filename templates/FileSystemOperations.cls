@@ -24,6 +24,7 @@ Implements IFileOperations
 ' ======================
 Private mLock As clsLock
 Private mIsInitialized As Boolean
+Private mPerformanceMonitor As clsPerformanceMonitor
 
 ' ======================
 ' 初期化・終了処理
@@ -35,11 +36,13 @@ Private Sub Class_Initialize()
     End If
     
     Set mLock = New clsLock
+    Set mPerformanceMonitor = New clsPerformanceMonitor
     mIsInitialized = True
 End Sub
 
 Private Sub Class_Terminate()
     Set mLock = Nothing
+    Set mPerformanceMonitor = Nothing
     mIsInitialized = False
 End Sub
 
@@ -55,7 +58,14 @@ End Sub
 Private Function IFileOperations_ReadTextFile(ByVal filePath As String, _
                                             Optional ByVal encoding As String) As String
     InitializeIfNeeded
+    mPerformanceMonitor.StartMeasurement "Read Text File"
+    On Error GoTo ErrorHandler
     IFileOperations_ReadTextFile = modFileIO.ReadTextFile(filePath, encoding)
+    mPerformanceMonitor.EndMeasurement "Read Text File"
+    Exit Function
+ErrorHandler:
+    mPerformanceMonitor.EndMeasurement "Read Text File"
+    Err.Raise Err.Number, Err.Source, Err.Description
 End Function
 
 Private Function IFileOperations_WriteTextFile(ByVal filePath As String, _
@@ -63,18 +73,39 @@ Private Function IFileOperations_WriteTextFile(ByVal filePath As String, _
                                              Optional ByVal append As Boolean = False, _
                                              Optional ByVal encoding As String) As Boolean
     InitializeIfNeeded
+    mPerformanceMonitor.StartMeasurement "Write Text File"
+    On Error GoTo ErrorHandler
     IFileOperations_WriteTextFile = modFileIO.WriteTextFile(filePath, content, append, encoding)
+    mPerformanceMonitor.EndMeasurement "Write Text File"
+    Exit Function
+ErrorHandler:
+    mPerformanceMonitor.EndMeasurement "Write Text File"
+    Err.Raise Err.Number, Err.Source, Err.Description
 End Function
 
 Private Function IFileOperations_ReadBinaryFile(ByVal filePath As String) As Byte()
     InitializeIfNeeded
+    mPerformanceMonitor.StartMeasurement "Read Binary File"
+    On Error GoTo ErrorHandler
     IFileOperations_ReadBinaryFile = modFileIO.ReadBinaryFile(filePath)
+    mPerformanceMonitor.EndMeasurement "Read Binary File"
+    Exit Function
+ErrorHandler:
+    mPerformanceMonitor.EndMeasurement "Read Binary File"
+    Err.Raise Err.Number, Err.Source, Err.Description
 End Function
 
 Private Function IFileOperations_WriteBinaryFile(ByVal filePath As String, _
                                                ByRef data() As Byte) As Boolean
     InitializeIfNeeded
+    mPerformanceMonitor.StartMeasurement "Write Binary File"
+    On Error GoTo ErrorHandler
     IFileOperations_WriteBinaryFile = modFileIO.WriteBinaryFile(filePath, data)
+    mPerformanceMonitor.EndMeasurement "Write Binary File"
+    Exit Function
+ErrorHandler:
+    mPerformanceMonitor.EndMeasurement "Write Binary File"
+    Err.Raise Err.Number, Err.Source, Err.Description
 End Function
 
 Private Function IFileOperations_FileExists(ByVal filePath As String) As Boolean
@@ -89,17 +120,38 @@ End Function
 
 Private Function IFileOperations_CreateFolder(ByVal folderPath As String) As Boolean
     InitializeIfNeeded
+    mPerformanceMonitor.StartMeasurement "Create Folder"
+    On Error GoTo ErrorHandler
     IFileOperations_CreateFolder = modFileIO.CreateFolder(folderPath)
+    mPerformanceMonitor.EndMeasurement "Create Folder"
+    Exit Function
+ErrorHandler:
+    mPerformanceMonitor.EndMeasurement "Create Folder"
+    Err.Raise Err.Number, Err.Source, Err.Description
 End Function
 
 Private Function IFileOperations_DeleteFile(ByVal filePath As String) As Boolean
     InitializeIfNeeded
+    mPerformanceMonitor.StartMeasurement "Delete File"
+    On Error GoTo ErrorHandler
     IFileOperations_DeleteFile = modFileIO.DeleteFile(filePath)
+    mPerformanceMonitor.EndMeasurement "Delete File"
+    Exit Function
+ErrorHandler:
+    mPerformanceMonitor.EndMeasurement "Delete File"
+    Err.Raise Err.Number, Err.Source, Err.Description
 End Function
 
 Private Function IFileOperations_DeleteFolder(ByVal folderPath As String) As Boolean
     InitializeIfNeeded
+    mPerformanceMonitor.StartMeasurement "Delete Folder"
+    On Error GoTo ErrorHandler
     IFileOperations_DeleteFolder = modFileIO.DeleteFolder(folderPath)
+    mPerformanceMonitor.EndMeasurement "Delete Folder"
+    Exit Function
+ErrorHandler:
+    mPerformanceMonitor.EndMeasurement "Delete Folder"
+    Err.Raise Err.Number, Err.Source, Err.Description
 End Function
 
 Private Function IFileOperations_GetAbsolutePath(ByVal relativePath As String, _

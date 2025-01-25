@@ -69,6 +69,7 @@ Public Function ReadTextFile(ByVal filePath As String, _
     InitializeIfNeeded
     
     mLock.AcquireLock
+    mPerformanceMonitor.StartMeasurement "Read Text File"
     On Error GoTo ErrorHandler
     
     If Not FileExists(filePath) Then
@@ -84,6 +85,7 @@ Public Function ReadTextFile(ByVal filePath As String, _
     
 CleanUp:
     mLock.ReleaseLock
+    mPerformanceMonitor.EndMeasurement "Read Text File"
     Exit Function
     
 ErrorHandler:
@@ -125,6 +127,7 @@ Public Function WriteTextFile(ByVal filePath As String, _
     InitializeIfNeeded
     
     mLock.AcquireLock
+    mPerformanceMonitor.StartMeasurement "Write Text File"
     On Error GoTo ErrorHandler
     
     Dim fileNum As Integer
@@ -143,6 +146,7 @@ Public Function WriteTextFile(ByVal filePath As String, _
     
 CleanUp:
     mLock.ReleaseLock
+    mPerformanceMonitor.EndMeasurement "Write Text File"
     Exit Function
     
 ErrorHandler:
@@ -178,6 +182,7 @@ Public Function ReadBinaryFile(ByVal filePath As String) As Byte()
     InitializeIfNeeded
     
     mLock.AcquireLock
+    mPerformanceMonitor.StartMeasurement "Read Binary File"
     On Error GoTo ErrorHandler
     
     If Not FileExists(filePath) Then
@@ -197,6 +202,7 @@ Public Function ReadBinaryFile(ByVal filePath As String) As Byte()
     
 CleanUp:
     mLock.ReleaseLock
+    mPerformanceMonitor.EndMeasurement "Read Binary File"
     Exit Function
     
 ErrorHandler:
@@ -234,6 +240,7 @@ Public Function WriteBinaryFile(ByVal filePath As String, _
     InitializeIfNeeded
     
     mLock.AcquireLock
+    mPerformanceMonitor.StartMeasurement "Write Binary File"
     On Error GoTo ErrorHandler
     
     Dim fileNum As Integer
@@ -247,6 +254,7 @@ Public Function WriteBinaryFile(ByVal filePath As String, _
     
 CleanUp:
     mLock.ReleaseLock
+    mPerformanceMonitor.EndMeasurement "Write Binary File"
     Exit Function
     
 ErrorHandler:
@@ -276,6 +284,7 @@ Public Function FileExists(ByVal filePath As String) As Boolean
     
 CleanUp:
     mLock.ReleaseLock
+    mPerformanceMonitor.EndMeasurement "Create Folder"
     Exit Function
     
 ErrorHandler:
@@ -305,6 +314,7 @@ Public Function FolderExists(ByVal folderPath As String) As Boolean
     
 CleanUp:
     mLock.ReleaseLock
+    mPerformanceMonitor.EndMeasurement "Delete File"
     Exit Function
     
 ErrorHandler:
@@ -328,6 +338,7 @@ Public Function CreateFolder(ByVal folderPath As String) As Boolean
     InitializeIfNeeded
     
     mLock.AcquireLock
+    mPerformanceMonitor.StartMeasurement "Create Folder"
     On Error GoTo ErrorHandler
     
     MkDir folderPath
@@ -335,6 +346,7 @@ Public Function CreateFolder(ByVal folderPath As String) As Boolean
     
 CleanUp:
     mLock.ReleaseLock
+    mPerformanceMonitor.EndMeasurement "Delete Folder"
     Exit Function
     
 ErrorHandler:
@@ -358,6 +370,7 @@ Public Function DeleteFile(ByVal filePath As String) As Boolean
     InitializeIfNeeded
     
     mLock.AcquireLock
+    mPerformanceMonitor.StartMeasurement "Delete File"
     On Error GoTo ErrorHandler
     
     Kill filePath
@@ -388,6 +401,7 @@ Public Function DeleteFolder(ByVal folderPath As String) As Boolean
     InitializeIfNeeded
     
     mLock.AcquireLock
+    mPerformanceMonitor.StartMeasurement "Delete Folder"
     On Error GoTo ErrorHandler
     
     RmDir folderPath

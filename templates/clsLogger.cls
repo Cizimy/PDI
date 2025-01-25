@@ -228,11 +228,14 @@ Private Sub WriteToDatabase(ByVal logEntry As Variant)
     
     mLock.AcquireLock
     
+    mPerformanceMonitor.StartMeasurement "Database Connection"
     Dim conn As Object
     Set conn = mConnectionPool.GetConnection()
     mLock.ReleaseLock
     
     If Not conn Is Nothing Then
+        mPerformanceMonitor.EndMeasurement "Database Connection"
+        mPerformanceMonitor.StartMeasurement "Database Insert"
         Dim cmd As Object
         Set cmd = CreateObject("ADODB.Command")
         With cmd
@@ -248,12 +251,15 @@ Private Sub WriteToDatabase(ByVal logEntry As Variant)
         mLock.AcquireLock
         mConnectionPool.ReleaseConnection conn
         mLock.ReleaseLock
+        mPerformanceMonitor.EndMeasurement "Database Insert"
     End If
     Exit Sub
     
 ErrorHandler:
     If Not conn Is Nothing Then
         mLock.AcquireLock
+        mPerformanceMonitor.EndMeasurement "Database Connection"
+        mPerformanceMonitor.EndMeasurement "Database Insert"
         mConnectionPool.ReleaseConnection conn
         mLock.ReleaseLock
     End If

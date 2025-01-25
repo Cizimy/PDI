@@ -33,6 +33,7 @@ Private mConnections() As ConnectionInfo
 Private mConnectionString As String
 Private mPoolSize As Long
 Private mLock As clsLock
+Private mPerformanceMonitor As clsPerformanceMonitor
 
 ' ======================
 ' 初期化・終了処理
@@ -41,6 +42,7 @@ Private Sub Class_Initialize()
     ReDim mConnections(1 To MAX_POOL_SIZE)
     mPoolSize = 0
     Set mLock = New clsLock
+    Set mPerformanceMonitor = New clsPerformanceMonitor
 End Sub
 
 Private Sub Class_Terminate()
@@ -54,6 +56,7 @@ Private Sub Class_Terminate()
         End If
     Next i
     Set mLock = Nothing
+    Set mPerformanceMonitor = Nothing
 End Sub
 
 ' ======================
@@ -74,6 +77,7 @@ End Sub
 ''' <returns>データベース接続オブジェクト</returns>
 Public Function GetConnection() As Object
     On Error GoTo ErrorHandler
+    mPerformanceMonitor.StartMeasurement "Get Database Connection"
     
     mLock.AcquireLock
     
@@ -117,6 +121,7 @@ Public Function GetConnection() As Object
     
 Cleanup:
     mLock.ReleaseLock
+    mPerformanceMonitor.EndMeasurement "Get Database Connection"
     Exit Function
     
 ErrorHandler:
@@ -133,6 +138,7 @@ ErrorHandler:
     modError.HandleError errDetail
     
     If Not mLock Is Nothing Then mLock.ReleaseLock
+    mPerformanceMonitor.EndMeasurement "Get Database Connection"
     Set GetConnection = Nothing
 End Function
 
@@ -166,11 +172,13 @@ End Sub
 ''' </summary>
 Private Function CreateNewConnection() As Object
     On Error GoTo ErrorHandler
+    mPerformanceMonitor.StartMeasurement "Create Database Connection"
     
     Dim conn As Object
     Set conn = CreateObject("ADODB.Connection")
     conn.ConnectionString = mConnectionString
     conn.ConnectionTimeout = CONNECTION_TIMEOUT
+    ' データベース接続の作成
     conn.Open
     
     Set CreateNewConnection = conn
@@ -178,6 +186,7 @@ Private Function CreateNewConnection() As Object
     
 ErrorHandler:
     Set CreateNewConnection = Nothing
+    mPerformanceMonitor.EndMeasurement "Create Database Connection"
 End Function
 
 ''' <summary>

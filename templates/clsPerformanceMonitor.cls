@@ -9,12 +9,6 @@ Attribute VB_PredefinedId = False
 Attribute VB_Exposed = False
 Option Explicit
 
-' Windows API宣言
-Private Declare PtrSafe Function QueryPerformanceCounter Lib "kernel32" (lpPerformanceCount As Currency) As Long
-Private Declare PtrSafe Function QueryPerformanceFrequency Lib "kernel32" (lpFrequency As Currency) As Long
-Private Declare PtrSafe Function GetProcessMemoryInfo Lib "psapi.dll" (ByVal Process As LongPtr, ByRef ppsmemCounters As PROCESS_MEMORY_COUNTERS, ByVal cb As Long) As Long
-Private Declare PtrSafe Function GetCurrentProcess Lib "kernel32" () As LongPtr
-
 ' メモリ情報構造体
 Private Type PROCESS_MEMORY_COUNTERS
     cb As Long
@@ -49,7 +43,7 @@ Private mCurrentOperation As String
 ' 初期化・終了処理
 ' ======================
 Private Sub Class_Initialize()
-    QueryPerformanceFrequency mFrequency
+    modWindowsAPI.QueryPerformanceFrequency mFrequency
     Set mMeasurements = New Collection
     mIsEnabled = True
 End Sub
@@ -68,11 +62,11 @@ Public Sub StartMeasurement(ByVal description As String)
     Dim memInfo As PROCESS_MEMORY_COUNTERS
     
     ' 現在の時刻を取得
-    QueryPerformanceCounter perfData.StartTime
+    modWindowsAPI.QueryPerformanceCounter perfData.StartTime
     
     ' メモリ使用量を取得
     memInfo.cb = LenB(memInfo)
-    GetProcessMemoryInfo GetCurrentProcess(), memInfo, LenB(memInfo)
+    modWindowsAPI.GetProcessMemoryInfo modWindowsAPI.GetCurrentProcess(), memInfo, LenB(memInfo)
     perfData.MemoryUsage = memInfo.WorkingSetSize
     
     perfData.Description = description
@@ -95,11 +89,11 @@ Public Sub EndMeasurement(ByVal description As String)
             perfData = mMeasurements(i)
             If perfData.Description = description Then
                 ' 終了時刻を記録
-                QueryPerformanceCounter perfData.EndTime
+                modWindowsAPI.QueryPerformanceCounter perfData.EndTime
                 
                 ' メモリ情報を更新
                 memInfo.cb = LenB(memInfo)
-                GetProcessMemoryInfo GetCurrentProcess(), memInfo, LenB(memInfo)
+                modWindowsAPI.GetProcessMemoryInfo modWindowsAPI.GetCurrentProcess(), memInfo, LenB(memInfo)
                 perfData.PeakMemoryUsage = memInfo.PeakWorkingSetSize
                 
                 ' 経過時間を計算（ミリ秒単位）
@@ -176,7 +170,7 @@ End Property
 #If DEBUG Then
     Public Function ValidatePerformanceCounter() As Boolean
         Dim counter As Currency
-        ValidatePerformanceCounter = (QueryPerformanceCounter(counter) <> 0) And (mFrequency <> 0)
+        ValidatePerformanceCounter = (modWindowsAPI.QueryPerformanceCounter(counter) <> 0) And (mFrequency <> 0)
     End Function
     
     Public Function GetMeasurementCount() As Long

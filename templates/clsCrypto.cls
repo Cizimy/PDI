@@ -9,41 +9,6 @@ Attribute VB_PredefinedId = False
 Attribute VB_Exposed = False
 Option Explicit
 
-' Windows API宣言
-Private Declare PtrSafe Function CryptAcquireContext Lib "advapi32.dll" Alias "CryptAcquireContextA" ( _
-    ByRef phProv As LongPtr, _
-    ByVal pszContainer As String, _
-    ByVal pszProvider As String, _
-    ByVal dwProvType As Long, _
-    ByVal dwFlags As Long) As Long
-
-Private Declare PtrSafe Function CryptCreateHash Lib "advapi32.dll" ( _
-    ByVal hProv As LongPtr, _
-    ByVal Algid As Long, _
-    ByVal hKey As LongPtr, _
-    ByVal dwFlags As Long, _
-    ByRef phHash As LongPtr) As Long
-
-Private Declare PtrSafe Function CryptHashData Lib "advapi32.dll" ( _
-    ByVal hHash As LongPtr, _
-    ByRef pbData As Any, _
-    ByVal dwDataLen As Long, _
-    ByVal dwFlags As Long) As Long
-
-Private Declare PtrSafe Function CryptGetHashParam Lib "advapi32.dll" ( _
-    ByVal hHash As LongPtr, _
-    ByVal dwParam As Long, _
-    ByRef pbData As Any, _
-    ByRef pdwDataLen As Long, _
-    ByVal dwFlags As Long) As Long
-
-Private Declare PtrSafe Function CryptDestroyHash Lib "advapi32.dll" ( _
-    ByVal hHash As LongPtr) As Long
-
-Private Declare PtrSafe Function CryptReleaseContext Lib "advapi32.dll" ( _
-    ByVal hProv As LongPtr, _
-    ByVal dwFlags As Long) As Long
-
 ' 定数定義
 Private Const MS_ENHANCED_PROV As String = "Microsoft Enhanced Cryptographic Provider v1.0"
 Private Const PROV_RSA_FULL As Long = 1
@@ -73,7 +38,7 @@ End Sub
 ' 内部メソッド
 ' ======================
 Private Sub InitializeCrypto()
-    If CryptAcquireContext(mCryptoProvider, vbNullString, MS_ENHANCED_PROV, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT) <> 0 Then
+    If modWindowsAPI.CryptAcquireContext(mCryptoProvider, vbNullString, MS_ENHANCED_PROV, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT) <> 0 Then
         mInitialized = True
     Else
         Err.Raise vbObjectError + 1, "clsCrypto", "暗号化プロバイダーの初期化に失敗しました。"
@@ -147,31 +112,31 @@ Public Function GenerateHash(ByVal inputString As String) As String
     Dim result As String
     
     ' ハッシュオブジェクトの作成
-    If CryptCreateHash(mCryptoProvider, CALG_SHA_256, 0, 0, hHash) = 0 Then
+    If modWindowsAPI.CryptCreateHash(mCryptoProvider, CALG_SHA_256, 0, 0, hHash) = 0 Then
         Err.Raise vbObjectError + 4, "clsCrypto", "ハッシュオブジェクトの作成に失敗しました。"
     End If
     
     ' データのハッシュ化
-    If CryptHashData(hHash, ByVal inputString, Len(inputString), 0) = 0 Then
-        CryptDestroyHash hHash
+    If modWindowsAPI.CryptHashData(hHash, ByVal inputString, Len(inputString), 0) = 0 Then
+        modWindowsAPI.CryptDestroyHash hHash
         Err.Raise vbObjectError + 5, "clsCrypto", "データのハッシュ化に失敗しました。"
     End If
     
     ' ハッシュサイズの取得
-    If CryptGetHashParam(hHash, HP_HASHSIZE, hashLen, 4, 0) = 0 Then
-        CryptDestroyHash hHash
+    If modWindowsAPI.CryptGetHashParam(hHash, HP_HASHSIZE, hashLen, 4, 0) = 0 Then
+        modWindowsAPI.CryptDestroyHash hHash
         Err.Raise vbObjectError + 6, "clsCrypto", "ハッシュサイズの取得に失敗しました。"
     End If
     
     ' ハッシュ値の取得
     ReDim hashValue(0 To hashLen - 1)
-    If CryptGetHashParam(hHash, HP_HASHVAL, hashValue(0), hashLen, 0) = 0 Then
-        CryptDestroyHash hHash
+    If modWindowsAPI.CryptGetHashParam(hHash, HP_HASHVAL, hashValue(0), hashLen, 0) = 0 Then
+        modWindowsAPI.CryptDestroyHash hHash
         Err.Raise vbObjectError + 7, "clsCrypto", "ハッシュ値の取得に失敗しました。"
     End If
     
     ' ハッシュオブジェクトの破棄
-    CryptDestroyHash hHash
+    modWindowsAPI.CryptDestroyHash hHash
     
     ' バイト配列を16進数文字列に変換
     result = ""

@@ -9,12 +9,6 @@ Attribute VB_PredefinedId = False
 Attribute VB_Exposed = False
 Option Explicit
 
-' Windows API宣言
-Private Declare PtrSafe Function CreateMutex Lib "kernel32" Alias "CreateMutexA" (ByVal lpMutexAttributes As LongPtr, ByVal bInitialOwner As Long, ByVal lpName As String) As LongPtr
-Private Declare PtrSafe Function ReleaseMutex Lib "kernel32" (ByVal hMutex As LongPtr) As Long
-Private Declare PtrSafe Function CloseHandle Lib "kernel32" (ByVal hObject As LongPtr) As Long
-Private Declare PtrSafe Function WaitForSingleObject Lib "kernel32" (ByVal hHandle As LongPtr, ByVal dwMilliseconds As Long) As Long
-
 ' 定数定義
 Private Const INFINITE As Long = -1
 Private Const WAIT_OBJECT_0 As Long = 0
@@ -29,13 +23,13 @@ Private mIsLocked As Boolean
 ' 初期化・終了処理
 ' ======================
 Private Sub Class_Initialize()
-    mMutexHandle = CreateMutex(0&, 0&, MUTEX_NAME)
+    mMutexHandle = modWindowsAPI.CreateMutex(0&, 0&, MUTEX_NAME)
     mIsLocked = False
 End Sub
 
 Private Sub Class_Terminate()
-    If mIsLocked Then ReleaseMutex mMutexHandle
-    If mMutexHandle <> 0 Then CloseHandle mMutexHandle
+    If mIsLocked Then modWindowsAPI.ReleaseMutex mMutexHandle
+    If mMutexHandle <> 0 Then modWindowsAPI.CloseHandle mMutexHandle
 End Sub
 
 ' ======================
@@ -48,7 +42,7 @@ Public Sub AcquireLock()
     
     ' ロックの取得を試みる
     Dim result As Long
-    result = WaitForSingleObject(mMutexHandle, INFINITE)
+    result = modWindowsAPI.WaitForSingleObject(mMutexHandle, INFINITE)
     
     If result = WAIT_OBJECT_0 Then
         mIsLocked = True
@@ -59,7 +53,7 @@ End Sub
 
 Public Sub ReleaseLock()
     If mIsLocked Then
-        If ReleaseMutex(mMutexHandle) = 0 Then
+        If modWindowsAPI.ReleaseMutex(mMutexHandle) = 0 Then
             Err.Raise vbObjectError + 3, "clsLock", "ロックの解放に失敗しました。"
         End If
         mIsLocked = False
@@ -83,8 +77,8 @@ End Property
     
     Public Sub ForceRelease()
         If mMutexHandle <> 0 Then
-            If mIsLocked Then ReleaseMutex mMutexHandle
-            CloseHandle mMutexHandle
+            If mIsLocked Then modWindowsAPI.ReleaseMutex mMutexHandle
+            modWindowsAPI.CloseHandle mMutexHandle
             mMutexHandle = 0
             mIsLocked = False
         End If

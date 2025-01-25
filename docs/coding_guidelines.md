@@ -33,6 +33,36 @@ Type typCustomerData
 End Type
 ```
 
+### グローバル変数の使用制限
+```vb
+' 悪い例：グローバル変数の乱用
+Public gCurrentUser As String
+Public gIsProcessing As Boolean
+
+' 良い例：プロパティを使用
+Private mCurrentUser As String
+Public Property Get CurrentUser() As String
+    CurrentUser = mCurrentUser
+End Property
+Public Property Let CurrentUser(ByVal value As String)
+    mCurrentUser = value
+End Property
+
+' 良い例：引数による値の受け渡し
+Public Sub ProcessData(ByVal userName As String)
+    ' 処理内容
+End Sub
+
+' やむを得ずグローバル変数を使用する場合のコメント例
+''' <summary>
+''' アプリケーション全体で共有する設定情報
+''' グローバル変数として定義する理由：
+''' - 複数フォーム間での設定共有が必要
+''' - 頻繁なアクセスが発生するため、パフォーマンスを考慮
+''' </summary>
+Public gAppSettings As typAppSettings
+```
+
 ### イベントハンドラ
 ```vb
 ' コントロール種別＋操作内容＋イベント種別
@@ -78,8 +108,66 @@ End Enum
 ### 必須宣言
 ```vb
 Option Explicit  ' 全モジュールで必須
-Option Base 1    ' 明示的な指定を推奨
-Option Compare Binary  ' 文字列比較は厳密なバイナリ比較を使用
+```
+
+### マジックナンバーの回避
+```vb
+' 悪い例：マジックナンバーの使用
+If status = 1 Then
+    MsgBox "処理が完了しました"
+ElseIf status = 2 Then
+    MsgBox "エラーが発生しました"
+End If
+
+' 良い例：定数の使用
+Private Const STATUS_SUCCESS As Long = 1
+Private Const STATUS_ERROR As Long = 2
+
+If status = STATUS_SUCCESS Then
+    MsgBox "処理が完了しました"
+ElseIf status = STATUS_ERROR Then
+    MsgBox "エラーが発生しました"
+End If
+
+' 良い例：列挙型の使用
+Public Enum ProcessStatus
+    Success = 1
+    Error = 2
+    Pending = 3
+End Enum
+
+If status = ProcessStatus.Success Then
+    MsgBox "処理が完了しました"
+ElseIf status = ProcessStatus.Error Then
+    MsgBox "エラーが発生しました"
+End If
+```
+
+### GoTo文の使用制限
+```vb
+' 悪い例：制御フローにGoToを使用
+If condition Then
+    GoTo ProcessData
+End If
+' 処理
+ProcessData:
+    ' データ処理
+
+' 良い例：構造化された制御フロー
+If condition Then
+    ProcessData
+Else
+    SkipProcessing
+End If
+
+' 例外：エラー処理での適切なGoTo使用
+On Error GoTo ErrorHandler
+    ' 処理内容
+Exit Sub
+
+ErrorHandler:
+    ' エラー処理
+    Resume Next
 ```
 
 ### 型安全な宣言
@@ -276,6 +364,73 @@ End Sub
 6. イベントハンドラ
 7. パブリックメソッド
 8. プライベートメソッド
+
+### 単一責任の原則（SRP）
+```vb
+' 悪い例：複数の責務を持つクラス
+Public Class clsCustomerManager
+    Public Sub SaveCustomer()
+        ' 顧客データの保存処理
+    End Sub
+    
+    Public Sub GenerateInvoice()
+        ' 請求書生成処理
+    End Sub
+    
+    Public Sub SendEmail()
+        ' メール送信処理
+    End Sub
+End Class
+
+' 良い例：責務を分割した設計
+Public Class clsCustomerRepository
+    Public Sub SaveCustomer()
+        ' 顧客データの保存処理のみを担当
+    End Sub
+End Class
+
+Public Class clsInvoiceGenerator
+    Public Sub GenerateInvoice()
+        ' 請求書生成処理のみを担当
+    End Sub
+End Class
+
+Public Class clsEmailService
+    Public Sub SendEmail()
+        ' メール送信処理のみを担当
+    End Sub
+End Class
+
+' 良い例：複雑なプロシージャの分割
+' 悪い例：長大な処理を1つのプロシージャに記述
+Public Sub ProcessOrder()
+    ' 100行以上の処理...
+End Sub
+
+' 良い例：機能ごとに分割
+Public Sub ProcessOrder()
+    ValidateOrder
+    CalculateTotal
+    UpdateInventory
+    SendConfirmation
+End Sub
+
+Private Sub ValidateOrder()
+    ' 注文の検証処理
+End Sub
+
+Private Sub CalculateTotal()
+    ' 合計金額の計算
+End Sub
+
+Private Sub UpdateInventory()
+    ' 在庫の更新
+End Sub
+
+Private Sub SendConfirmation()
+    ' 確認メールの送信
+End Sub
+```
 
 ### インデント
 - 4スペースを使用

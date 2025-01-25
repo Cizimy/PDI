@@ -37,7 +37,12 @@ End Sub
 ' ======================
 Public Sub AcquireLock()
     If mMutexHandle = 0 Then
-        Err.Raise vbObjectError + 1, "clsLock", "Mutexの作成に失敗しました。"
+        Dim errInfo As ErrorInfo
+        With errInfo
+            .Code = ErrLockMutexCreateFailed
+            .Description = "Mutexの作成に失敗しました。"
+        End With
+        modCommon.HandleError errInfo
     End If
     
     ' ロックの取得を試みる
@@ -47,14 +52,24 @@ Public Sub AcquireLock()
     If result = WAIT_OBJECT_0 Then
         mIsLocked = True
     Else
-        Err.Raise vbObjectError + 2, "clsLock", "ロックの取得に失敗しました。"
+        Dim errInfo As ErrorInfo
+        With errInfo
+            .Code = ErrLockAcquireFailed
+            .Description = "ロックの取得に失敗しました。"
+        End With
+        modCommon.HandleError errInfo
     End If
 End Sub
 
 Public Sub ReleaseLock()
     If mIsLocked Then
         If modWindowsAPI.ReleaseMutex(mMutexHandle) = 0 Then
-            Err.Raise vbObjectError + 3, "clsLock", "ロックの解放に失敗しました。"
+            Dim errInfo As ErrorInfo
+            With errInfo
+                .Code = ErrLockReleaseFailed
+                .Description = "ロックの解放に失敗しました。"
+            End With
+            modCommon.HandleError errInfo
         End If
         mIsLocked = False
     End If

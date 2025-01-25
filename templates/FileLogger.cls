@@ -114,7 +114,7 @@ Private Function BuildLogMessage(ByVal moduleName As String, _
     Dim builder As String
     
     ' タイムスタンプ
-    builder = Format$(Now, DEFAULT_DATE_FORMAT) & " "
+    builder = Format$(Now, DEFAULT_DATETIME_FORMAT) & " "
     
     ' ログレベル
     builder = builder & "[" & GetLogLevelText(errorCode) & "] "

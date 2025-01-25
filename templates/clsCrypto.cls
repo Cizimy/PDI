@@ -41,7 +41,12 @@ Private Sub InitializeCrypto()
     If modWindowsAPI.CryptAcquireContext(mCryptoProvider, vbNullString, MS_ENHANCED_PROV, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT) <> 0 Then
         mInitialized = True
     Else
-        Err.Raise vbObjectError + 1, "clsCrypto", "暗号化プロバイダーの初期化に失敗しました。"
+        Dim errInfo As ErrorInfo
+        With errInfo
+            .Code = ErrCryptoProviderInitFailed
+            .Description = "暗号化プロバイダーの初期化に失敗しました。"
+        End With
+        modCommon.HandleError errInfo
     End If
 End Sub
 
@@ -50,7 +55,12 @@ End Sub
 ' ======================
 Public Function EncryptString(ByVal plainText As String, ByVal key As String) As String
     If Not mInitialized Then
-        Err.Raise vbObjectError + 2, "clsCrypto", "暗号化プロバイダーが初期化されていません。"
+        Dim errInfo As ErrorInfo
+        With errInfo
+            .Code = ErrCryptoNotInitialized
+            .Description = "暗号化プロバイダーが初期化されていません。"
+        End With
+        modCommon.HandleError errInfo
     End If
     
     ' 単純なXOR暗号化（実際のプロダクションでは、より強力な暗号化アルゴリズムを使用すべき）
@@ -60,7 +70,12 @@ Public Function EncryptString(ByVal plainText As String, ByVal key As String) As
     
     keyLen = Len(key)
     If keyLen = 0 Then
-        Err.Raise vbObjectError + 3, "clsCrypto", "暗号化キーが指定されていません。"
+        Dim errInfo As ErrorInfo
+        With errInfo
+            .Code = ErrCryptoKeyNotSpecified
+            .Description = "暗号化キーが指定されていません。"
+        End With
+        modCommon.HandleError errInfo
     End If
     
     result = String$(Len(plainText), 0)
@@ -75,7 +90,12 @@ End Function
 
 Public Function DecryptString(ByVal cipherText As String, ByVal key As String) As String
     If Not mInitialized Then
-        Err.Raise vbObjectError + 2, "clsCrypto", "暗号化プロバイダーが初期化されていません。"
+        Dim errInfo As ErrorInfo
+        With errInfo
+            .Code = ErrCryptoNotInitialized
+            .Description = "暗号化プロバイダーが初期化されていません。"
+        End With
+        modCommon.HandleError errInfo
     End If
     
     ' Base64デコード
@@ -89,7 +109,12 @@ Public Function DecryptString(ByVal cipherText As String, ByVal key As String) A
     
     keyLen = Len(key)
     If keyLen = 0 Then
-        Err.Raise vbObjectError + 3, "clsCrypto", "暗号化キーが指定されていません。"
+        Dim errInfo As ErrorInfo
+        With errInfo
+            .Code = ErrCryptoKeyNotSpecified
+            .Description = "暗号化キーが指定されていません。"
+        End With
+        modCommon.HandleError errInfo
     End If
     
     result = String$(Len(decoded), 0)
@@ -103,7 +128,12 @@ End Function
 
 Public Function GenerateHash(ByVal inputString As String) As String
     If Not mInitialized Then
-        Err.Raise vbObjectError + 2, "clsCrypto", "暗号化プロバイダーが初期化されていません。"
+        Dim errInfo As ErrorInfo
+        With errInfo
+            .Code = ErrCryptoNotInitialized
+            .Description = "暗号化プロバイダーが初期化されていません。"
+        End With
+        modCommon.HandleError errInfo
     End If
     
     Dim hHash As LongPtr
@@ -113,26 +143,46 @@ Public Function GenerateHash(ByVal inputString As String) As String
     
     ' ハッシュオブジェクトの作成
     If modWindowsAPI.CryptCreateHash(mCryptoProvider, CALG_SHA_256, 0, 0, hHash) = 0 Then
-        Err.Raise vbObjectError + 4, "clsCrypto", "ハッシュオブジェクトの作成に失敗しました。"
+        Dim errInfo As ErrorInfo
+        With errInfo
+            .Code = ErrCryptoHashCreateFailed
+            .Description = "ハッシュオブジェクトの作成に失敗しました。"
+        End With
+        modCommon.HandleError errInfo
     End If
     
     ' データのハッシュ化
     If modWindowsAPI.CryptHashData(hHash, ByVal inputString, Len(inputString), 0) = 0 Then
         modWindowsAPI.CryptDestroyHash hHash
-        Err.Raise vbObjectError + 5, "clsCrypto", "データのハッシュ化に失敗しました。"
+        Dim errInfo As ErrorInfo
+        With errInfo
+            .Code = ErrCryptoHashDataFailed
+            .Description = "データのハッシュ化に失敗しました。"
+        End With
+        modCommon.HandleError errInfo
     End If
     
     ' ハッシュサイズの取得
     If modWindowsAPI.CryptGetHashParam(hHash, HP_HASHSIZE, hashLen, 4, 0) = 0 Then
         modWindowsAPI.CryptDestroyHash hHash
-        Err.Raise vbObjectError + 6, "clsCrypto", "ハッシュサイズの取得に失敗しました。"
+        Dim errInfo As ErrorInfo
+        With errInfo
+            .Code = ErrCryptoHashDataFailed
+            .Description = "ハッシュサイズの取得に失敗しました。"
+        End With
+        modCommon.HandleError errInfo
     End If
     
     ' ハッシュ値の取得
     ReDim hashValue(0 To hashLen - 1)
     If modWindowsAPI.CryptGetHashParam(hHash, HP_HASHVAL, hashValue(0), hashLen, 0) = 0 Then
         modWindowsAPI.CryptDestroyHash hHash
-        Err.Raise vbObjectError + 7, "clsCrypto", "ハッシュ値の取得に失敗しました。"
+        Dim errInfo As ErrorInfo
+        With errInfo
+            .Code = ErrCryptoHashDataFailed
+            .Description = "ハッシュ値の取得に失敗しました。"
+        End With
+        modCommon.HandleError errInfo
     End If
     
     ' ハッシュオブジェクトの破棄

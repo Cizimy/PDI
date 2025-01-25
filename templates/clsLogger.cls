@@ -30,7 +30,7 @@ Private mIsInitialized As Boolean
 ' ======================
 ' イベント
 ' ======================
-Public Event Logged(ByVal logMessage As String, ByVal logLevel As LogLevelEnum)
+Public Event Logged(ByVal logMessage As String, ByVal logLevel As LogLevel)
 
 ' ======================
 ' 初期化・終了処理
@@ -119,13 +119,13 @@ ErrorHandler:
     Resume Cleanup
 End Sub
 
-Private Property Let ILogger_LogLevel(ByVal level As LogLevelEnum)
+Private Property Let ILogger_LogLevel(ByVal level As LogLevel)
     If Not mSettings Is Nothing Then
         mSettings.LogLevel = level
     End If
 End Property
 
-Private Property Get ILogger_LogLevel() As LogLevelEnum
+Private Property Get ILogger_LogLevel() As LogLevel
     If Not mSettings Is Nothing Then
         ILogger_LogLevel = mSettings.LogLevel
     End If

@@ -12,6 +12,7 @@ Public Const APPLICATION_NAME As String = "MyApp"
 Public Const APPLICATION_VERSION As String = "1.0.0"
 Public Const DEFAULT_LOG_FILE As String = "app.log"
 Public Const DEFAULT_DATE_FORMAT As String = "yyyy/MM/dd"
+Public Const DEFAULT_DATETIME_FORMAT As String = "yyyy/MM/dd HH:nn:ss"
 Public Const MAX_RETRY_COUNT As Integer = 3
 
 ' ======================
@@ -51,6 +52,18 @@ Public Enum ErrorCode
     ' セキュリティエラー (6000-6999)
     ErrSecurityAccessDenied = vbObjectError + 6000  ' セキュリティアクセス拒否
     ErrSecurityInvalidCredentials = vbObjectError + 6001 ' 無効な認証情報
+    
+    ' 暗号化エラー (7000-7099)
+    ErrCryptoProviderInitFailed = vbObjectError + 7000  ' 暗号化プロバイダーの初期化失敗
+    ErrCryptoNotInitialized = vbObjectError + 7001      ' 暗号化プロバイダー未初期化
+    ErrCryptoKeyNotSpecified = vbObjectError + 7002     ' 暗号化キー未指定
+    ErrCryptoHashCreateFailed = vbObjectError + 7003    ' ハッシュオブジェクト作成失敗
+    ErrCryptoHashDataFailed = vbObjectError + 7004      ' データハッシュ化失敗
+    
+    ' ロック関連エラー (7100-7199)
+    ErrLockMutexCreateFailed = vbObjectError + 7100     ' Mutexの作成失敗
+    ErrLockAcquireFailed = vbObjectError + 7101         ' ロックの取得失敗
+    ErrLockReleaseFailed = vbObjectError + 7102         ' ロックの解放失敗
 End Enum
 
 ' ======================

@@ -21,6 +21,14 @@ Private mIsInitialized As Boolean
 ' ======================
 ' 初期化・終了処理
 ' ======================
+Public Property Get IsInitialized() As Boolean
+    IsInitialized = mIsInitialized
+End Property
+
+Private Sub InitializeIfNeeded()
+    If Not mIsInitialized Then InitializeModule
+End Sub
+
 Public Sub InitializeModule()
     If mIsInitialized Then Exit Sub
     
@@ -44,13 +52,13 @@ End Sub
 ' ======================
 Public Function ReadTextFile(ByVal filePath As String, _
                            Optional ByVal encoding As String = DEFAULT_ENCODING) As String
-    If Not mIsInitialized Then InitializeModule
+    InitializeIfNeeded
     
     mLock.AcquireLock
     On Error GoTo ErrorHandler
     
     If Not FileExists(filePath) Then
-        RaiseFileError ErrFileNotFound, "ファイルが見つかりません: " & filePath
+        RaiseFileError modErrorCodes.ErrFileNotFound, "ファイルが見つかりません: " & filePath
     End If
     
     Dim fileNum As Integer
@@ -68,15 +76,15 @@ ErrorHandler:
     Dim errInfo As ErrorInfo
     With errInfo
         .Code = GetFileErrorCode(Err.Number)
-        .Category = ECFileIO
+        .Category = modErrorCodes.ECFileIO
         .Description = Err.Description
         .Source = MODULE_NAME
         .ProcedureName = "ReadTextFile"
-        .StackTrace = GetCurrentCallStack
+        .StackTrace = modStackTrace.GetStackTrace()
         .OccurredAt = Now
     End With
     
-    HandleError errInfo
+    modCommon.HandleError errInfo
     Resume CleanUp
 End Function
 
@@ -84,7 +92,7 @@ Public Function WriteTextFile(ByVal filePath As String, _
                             ByVal content As String, _
                             Optional ByVal append As Boolean = False, _
                             Optional ByVal encoding As String = DEFAULT_ENCODING) As Boolean
-    If Not mIsInitialized Then InitializeModule
+    InitializeIfNeeded
     
     mLock.AcquireLock
     On Error GoTo ErrorHandler
@@ -111,27 +119,27 @@ ErrorHandler:
     Dim errInfo As ErrorInfo
     With errInfo
         .Code = GetFileErrorCode(Err.Number)
-        .Category = ECFileIO
+        .Category = modErrorCodes.ECFileIO
         .Description = Err.Description
         .Source = MODULE_NAME
         .ProcedureName = "WriteTextFile"
-        .StackTrace = GetCurrentCallStack
+        .StackTrace = modStackTrace.GetStackTrace()
         .OccurredAt = Now
     End With
     
-    HandleError errInfo
+    modCommon.HandleError errInfo
     WriteTextFile = False
     Resume CleanUp
 End Function
 
 Public Function ReadBinaryFile(ByVal filePath As String) As Byte()
-    If Not mIsInitialized Then InitializeModule
+    InitializeIfNeeded
     
     mLock.AcquireLock
     On Error GoTo ErrorHandler
     
     If Not FileExists(filePath) Then
-        RaiseFileError ErrFileNotFound, "ファイルが見つかりません: " & filePath
+        RaiseFileError modErrorCodes.ErrFileNotFound, "ファイルが見つかりません: " & filePath
     End If
     
     Dim fileNum As Integer
@@ -153,21 +161,21 @@ ErrorHandler:
     Dim errInfo As ErrorInfo
     With errInfo
         .Code = GetFileErrorCode(Err.Number)
-        .Category = ECFileIO
+        .Category = modErrorCodes.ECFileIO
         .Description = Err.Description
         .Source = MODULE_NAME
         .ProcedureName = "ReadBinaryFile"
-        .StackTrace = GetCurrentCallStack
+        .StackTrace = modStackTrace.GetStackTrace()
         .OccurredAt = Now
     End With
     
-    HandleError errInfo
+    modCommon.HandleError errInfo
     Resume CleanUp
 End Function
 
 Public Function WriteBinaryFile(ByVal filePath As String, _
                               ByRef data() As Byte) As Boolean
-    If Not mIsInitialized Then InitializeModule
+    InitializeIfNeeded
     
     mLock.AcquireLock
     On Error GoTo ErrorHandler
@@ -189,15 +197,15 @@ ErrorHandler:
     Dim errInfo As ErrorInfo
     With errInfo
         .Code = GetFileErrorCode(Err.Number)
-        .Category = ECFileIO
+        .Category = modErrorCodes.ECFileIO
         .Description = Err.Description
         .Source = MODULE_NAME
         .ProcedureName = "WriteBinaryFile"
-        .StackTrace = GetCurrentCallStack
+        .StackTrace = modStackTrace.GetStackTrace()
         .OccurredAt = Now
     End With
     
-    HandleError errInfo
+    modCommon.HandleError errInfo
     WriteBinaryFile = False
     Resume CleanUp
 End Function
@@ -247,25 +255,19 @@ End Function
 Private Function GetFileErrorCode(ByVal errNumber As Long) As ErrorCode
     Select Case errNumber
         Case 53 ' File not found
-            GetFileErrorCode = ErrFileNotFound
+            GetFileErrorCode = modErrorCodes.ErrFileNotFound
         Case 70 ' Permission denied
-            GetFileErrorCode = ErrFileAccessDenied
+            GetFileErrorCode = modErrorCodes.ErrFileAccessDenied
         Case 75, 76 ' Path/File access error
-            GetFileErrorCode = ErrFileAccessDenied
+            GetFileErrorCode = modErrorCodes.ErrFileAccessDenied
         Case Else
-            GetFileErrorCode = ErrUnexpected
+            GetFileErrorCode = modErrorCodes.ErrUnexpected
     End Select
 End Function
 
 Private Sub RaiseFileError(ByVal errorCode As ErrorCode, ByVal description As String)
     Err.Raise errorCode, MODULE_NAME, description
 End Sub
-
-Private Function GetCurrentCallStack() As String
-    Dim callStack As New clsCallStack
-    callStack.Push MODULE_NAME, "GetCurrentCallStack"
-    GetCurrentCallStack = callStack.StackTrace
-End Function
 
 ' ======================
 ' テストサポート機能

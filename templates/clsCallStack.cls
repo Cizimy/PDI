@@ -15,14 +15,8 @@ Option Explicit
 Private Const MODULE_NAME As String = "clsCallStack"
 
 ' ======================
-' 定数定義
-' ======================
-Private Const MAX_STACK_TRACE_DEPTH As Long = 10 ' スタックトレースの最大深さ
-
-' ======================
 ' メンバ変数
 ' ======================
-Private mStack As Collection
 Private mPerformanceMonitor As clsPerformanceMonitor
 Private mIsInitialized As Boolean
 
@@ -30,13 +24,12 @@ Private mIsInitialized As Boolean
 ' 初期化・終了処理
 ' ======================
 Private Sub Class_Initialize()
-    Set mStack = New Collection
     Set mPerformanceMonitor = New clsPerformanceMonitor
+    modStackTrace.InitializeModule
     mIsInitialized = True
 End Sub
 
 Private Sub Class_Terminate()
-    Set mStack = Nothing
     Set mPerformanceMonitor = Nothing
     mIsInitialized = False
 End Sub
@@ -62,9 +55,7 @@ Public Sub Push(ByVal ModuleName As String, ByVal ProcedureName As String)
     
     On Error GoTo ErrorHandler
     
-    If mStack.Count < MAX_STACK_TRACE_DEPTH Then
-        mStack.Add ModuleName & "." & ProcedureName
-    End If
+    modStackTrace.PushStackEntry ModuleName, ProcedureName
     
     If Not mPerformanceMonitor Is Nothing Then
         mPerformanceMonitor.EndMeasurement "CallStack_Push"
@@ -72,9 +63,9 @@ Public Sub Push(ByVal ModuleName As String, ByVal ProcedureName As String)
     Exit Sub
 
 ErrorHandler:
-    Dim errDetail As typErrorDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_UNEXPECTED
+        .Code = modErrorCodes.ErrUnexpected
         .Description = "Push操作中にエラーが発生しました: " & Err.Description
         .Source = MODULE_NAME
         .ProcedureName = "Push"
@@ -96,10 +87,7 @@ Public Function Pop() As String
     
     On Error GoTo ErrorHandler
     
-    If mStack.Count > 0 Then
-        Pop = mStack(mStack.Count)
-        mStack.Remove mStack.Count
-    End If
+    Pop = modStackTrace.PopStackEntry()
     
     If Not mPerformanceMonitor Is Nothing Then
         mPerformanceMonitor.EndMeasurement "CallStack_Pop"
@@ -107,9 +95,9 @@ Public Function Pop() As String
     Exit Function
 
 ErrorHandler:
-    Dim errDetail As typErrorDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_UNEXPECTED
+        .Code = modErrorCodes.ErrUnexpected
         .Description = "Pop操作中にエラーが発生しました: " & Err.Description
         .Source = MODULE_NAME
         .ProcedureName = "Pop"
@@ -131,14 +119,7 @@ Public Property Get StackTrace() As String
     
     On Error GoTo ErrorHandler
     
-    Dim i As Long
-    Dim trace As String
-    
-    For i = mStack.Count To 1 Step -1
-        trace = trace & "  " & mStack(i) & vbCrLf
-    Next i
-    
-    StackTrace = trace
+    StackTrace = modStackTrace.GetStackTrace()
     
     If Not mPerformanceMonitor Is Nothing Then
         mPerformanceMonitor.EndMeasurement "CallStack_GetTrace"
@@ -146,9 +127,9 @@ Public Property Get StackTrace() As String
     Exit Property
 
 ErrorHandler:
-    Dim errDetail As typErrorDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_UNEXPECTED
+        .Code = modErrorCodes.ErrUnexpected
         .Description = "スタックトレース取得中にエラーが発生しました: " & Err.Description
         .Source = MODULE_NAME
         .ProcedureName = "StackTrace"
@@ -162,7 +143,7 @@ End Property
 ''' </summary>
 ''' <returns>現在のスタックの深さ</returns>
 Public Property Get Count() As Long
-    Count = mStack.Count
+    Count = modStackTrace.StackDepth
 End Property
 
 ' ======================
@@ -174,14 +155,14 @@ End Property
     ''' </summary>
     ''' <returns>スタックが有効な状態の場合True</returns>
     Public Function ValidateStackState() As Boolean
-        ValidateStackState = (mStack.Count <= MAX_STACK_TRACE_DEPTH)
+        ValidateStackState = modStackTrace.ValidateStackState()
     End Function
     
     ''' <summary>
     ''' スタックをクリア
     ''' </summary>
     Public Sub ClearStack()
-        Set mStack = New Collection
+        modStackTrace.ClearStack
     End Sub
     
     ''' <summary>
@@ -195,12 +176,11 @@ End Property
     ''' モジュールをリセット
     ''' </summary>
     Public Sub ResetModule()
-        Set mStack = Nothing
         Set mPerformanceMonitor = Nothing
         mIsInitialized = False
         
-        Set mStack = New Collection
         Set mPerformanceMonitor = New clsPerformanceMonitor
+        modStackTrace.ResetModule
         mIsInitialized = True
     End Sub
 #End If

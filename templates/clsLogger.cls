@@ -131,13 +131,13 @@ Private Property Get ILogger_LogLevel() As LogLevel
     End If
 End Property
 
-Private Property Let ILogger_LogDestination(ByVal destination As LogDestinationEnum)
+Private Property Let ILogger_LogDestination(ByVal destination As LogDestination)
     If Not mSettings Is Nothing Then
         mSettings.LogDestination = destination
     End If
 End Property
 
-Private Property Get ILogger_LogDestination() As LogDestinationEnum
+Private Property Get ILogger_LogDestination() As LogDestination
     If Not mSettings Is Nothing Then
         ILogger_LogDestination = mSettings.LogDestination
     End If

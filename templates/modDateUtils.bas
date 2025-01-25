@@ -96,6 +96,9 @@ ErrorHandler:
         .OccurredAt = Now
     End With
     modError.HandleError errDetail
+    If Not mPerformanceMonitor Is Nothing Then
+        mPerformanceMonitor.EndMeasurement "DateAdd"
+    End If
     DateAdd = dateValue
 End Function
 
@@ -135,6 +138,9 @@ ErrorHandler:
         .OccurredAt = Now
     End With
     modError.HandleError errDetail
+    If Not mPerformanceMonitor Is Nothing Then
+        mPerformanceMonitor.EndMeasurement "DateDiff"
+    End If
     DateDiff = 0
 End Function
 
@@ -173,6 +179,9 @@ ErrorHandler:
         .OccurredAt = Now
     End With
     modError.HandleError errDetail
+    If Not mPerformanceMonitor Is Nothing Then
+        mPerformanceMonitor.EndMeasurement "FormatDate"
+    End If
     FormatDate = Format$(dateValue, DEFAULT_DATE_FORMAT)
 End Function
 

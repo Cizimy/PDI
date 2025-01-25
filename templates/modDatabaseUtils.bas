@@ -51,6 +51,10 @@ Public Function GetConnectionString() As String
     If Not mIsInitialized Then InitializeModule
     
     On Error GoTo ErrorHandler
+
+    If Not mPerformanceMonitor Is Nothing Then
+        mPerformanceMonitor.StartMeasurement "GetConnectionString"
+    End If
     
     mLock.AcquireLock
     
@@ -71,6 +75,13 @@ Public Function GetConnectionString() As String
             .OccurredAt = Now
         End With
         modError.HandleError errDetail
+        If Not mPerformanceMonitor Is Nothing Then
+            mPerformanceMonitor.EndMeasurement "GetConnectionString"
+        End If
+    End If
+    
+    If Not mPerformanceMonitor Is Nothing Then
+        mPerformanceMonitor.EndMeasurement "GetConnectionString"
     End If
     Exit Function
 
@@ -86,6 +97,9 @@ ErrorHandler:
             .OccurredAt = Now
     End With
     modError.HandleError errDetail2
+    If Not mPerformanceMonitor Is Nothing Then
+        mPerformanceMonitor.EndMeasurement "GetConnectionString"
+    End If
     GetConnectionString = ""
 End Function
 
@@ -108,7 +122,7 @@ Public Function GetConnection() As Object ' ADODB.Connection
     If Not mDefaultConnection Is Nothing Then
         If mDefaultConnection.State = 1 Then ' adStateOpen
             Set GetConnection = mDefaultConnection
-            GoTo CleanExit
+            GoTo CleanupAndExit
         End If
     End If
     
@@ -123,13 +137,7 @@ Public Function GetConnection() As Object ' ADODB.Connection
     
     Set GetConnection = mDefaultConnection
 
-    mLock.ReleaseLock
-    
-CleanExit:
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.EndMeasurement "GetConnection"
-    End If
-    Exit Function
+    GoTo CleanupAndExit
 
 ErrorHandler:
     Dim errDetail As typErrorDetail
@@ -144,6 +152,14 @@ ErrorHandler:
     End With
     modError.HandleError errDetail
     Set GetConnection = Nothing
+
+CleanupAndExit:
+    mLock.ReleaseLock
+    If Not mPerformanceMonitor Is Nothing Then
+        mPerformanceMonitor.EndMeasurement "GetConnection"
+    End If
+    Exit Function
+
 End Function
 
 ''' <summary>
@@ -240,6 +256,9 @@ ErrorHandler:
             .OccurredAt = Now
     End With
     modError.HandleError errDetail
+    If Not mPerformanceMonitor Is Nothing Then
+        mPerformanceMonitor.EndMeasurement "ExecuteQuery"
+    End If
     Set ExecuteQuery = Nothing
 End Function
 

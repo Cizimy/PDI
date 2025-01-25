@@ -90,6 +90,9 @@ ErrorHandler:
         .OccurredAt = Now
     End With
     modError.HandleError errDetail
+    If Not mPerformanceMonitor Is Nothing Then
+        mPerformanceMonitor.EndMeasurement "SafeDivide"
+    End If
     SafeDivide = defaultValue
 End Function
 

@@ -278,13 +278,14 @@ Public Function FileExists(ByVal filePath As String) As Boolean
     InitializeIfNeeded
     
     mLock.AcquireLock
+    mPerformanceMonitor.StartMeasurement "FileExists"
     On Error GoTo ErrorHandler
     
     FileExists = (Dir(filePath) <> "")
     
 CleanUp:
     mLock.ReleaseLock
-    mPerformanceMonitor.EndMeasurement "Create Folder"
+    mPerformanceMonitor.EndMeasurement "FileExists"
     Exit Function
     
 ErrorHandler:
@@ -308,13 +309,14 @@ Public Function FolderExists(ByVal folderPath As String) As Boolean
     InitializeIfNeeded
     
     mLock.AcquireLock
+    mPerformanceMonitor.StartMeasurement "FolderExists"
     On Error GoTo ErrorHandler
     
     FolderExists = (Dir(folderPath, vbDirectory) <> "")
     
 CleanUp:
     mLock.ReleaseLock
-    mPerformanceMonitor.EndMeasurement "Delete File"
+    mPerformanceMonitor.EndMeasurement "FolderExists"
     Exit Function
     
 ErrorHandler:
@@ -346,7 +348,7 @@ Public Function CreateFolder(ByVal folderPath As String) As Boolean
     
 CleanUp:
     mLock.ReleaseLock
-    mPerformanceMonitor.EndMeasurement "Delete Folder"
+    mPerformanceMonitor.EndMeasurement "Create Folder"
     Exit Function
     
 ErrorHandler:
@@ -378,6 +380,7 @@ Public Function DeleteFile(ByVal filePath As String) As Boolean
     
 CleanUp:
     mLock.ReleaseLock
+    mPerformanceMonitor.EndMeasurement "Delete File"
     Exit Function
     
 ErrorHandler:
@@ -409,6 +412,7 @@ Public Function DeleteFolder(ByVal folderPath As String) As Boolean
     
 CleanUp:
     mLock.ReleaseLock
+    mPerformanceMonitor.EndMeasurement "Delete Folder"
     Exit Function
     
 ErrorHandler:
@@ -434,12 +438,14 @@ Public Function GetAbsolutePath(ByVal relativePath As String, _
     
     mLock.AcquireLock
     On Error GoTo ErrorHandler
+    mPerformanceMonitor.StartMeasurement "GetAbsolutePath"
     
     If Len(basePath) = 0 Then basePath = CurDir
     GetAbsolutePath = CreateObject("Scripting.FileSystemObject").GetAbsolutePathName(basePath & "\" & relativePath)
     
 CleanUp:
     mLock.ReleaseLock
+    mPerformanceMonitor.EndMeasurement "GetAbsolutePath"
     Exit Function
     
 ErrorHandler:

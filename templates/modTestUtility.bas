@@ -103,6 +103,10 @@ ErrorHandler:
     End With
     modError.HandleError errDetail
     
+    ' エラー発生時は現在のテストのパフォーマンス計測を終了
+    If Not mPerformanceMonitor Is Nothing Then
+        mPerformanceMonitor.EndMeasurement testName
+    End If
     ' エラー発生時はテストをエラー状態で終了
     EndTest ResultError, "テスト開始処理中にエラーが発生: " & Err.Description
 End Sub

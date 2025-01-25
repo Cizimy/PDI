@@ -72,6 +72,9 @@ ErrorHandler:
         .OccurredAt = Now
     End With
     modError.HandleError errDetail
+    If Not mPerformanceMonitor Is Nothing Then
+        mPerformanceMonitor.EndMeasurement "PadLeft"
+    End If
     PadLeft = baseStr
 End Function
 
@@ -115,6 +118,9 @@ ErrorHandler:
         .OccurredAt = Now
     End With
     modError.HandleError errDetail
+    If Not mPerformanceMonitor Is Nothing Then
+        mPerformanceMonitor.EndMeasurement "PadRight"
+    End If
     PadRight = baseStr
 End Function
 
@@ -163,6 +169,9 @@ ErrorHandler:
         .OccurredAt = Now
     End With
     modError.HandleError errDetail
+    If Not mPerformanceMonitor Is Nothing Then
+        mPerformanceMonitor.EndMeasurement "SplitString"
+    End If
     SplitString = Array()
 End Function
 
@@ -200,6 +209,9 @@ ErrorHandler:
         .OccurredAt = Now
     End With
     modError.HandleError errDetail
+    If Not mPerformanceMonitor Is Nothing Then
+        mPerformanceMonitor.EndMeasurement "JoinStrings"
+    End If
     JoinStrings = ""
 End Function
 

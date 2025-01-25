@@ -73,6 +73,7 @@ Public Function EncryptString(ByVal plainText As String, ByVal key As String) As
         End With
         modError.HandleError errInfo
         mPerformanceMonitor.EndMeasurement "String Encryption"
+        Exit Function
     End If
     
     ' 単純なXOR暗号化（実際のプロダクションでは、より強力な暗号化アルゴリズムを使用すべき）
@@ -93,6 +94,7 @@ Public Function EncryptString(ByVal plainText As String, ByVal key As String) As
         End With
         modError.HandleError errInfo
         mPerformanceMonitor.EndMeasurement "String Encryption"
+        Exit Function
     End If
     
     result = String$(Len(plainText), 0)
@@ -120,6 +122,7 @@ Public Function DecryptString(ByVal cipherText As String, ByVal key As String) A
         End With
         modError.HandleError errInfo
         mPerformanceMonitor.EndMeasurement "String Decryption"
+        Exit Function
     End If
     
     ' Base64デコード
@@ -143,6 +146,7 @@ Public Function DecryptString(ByVal cipherText As String, ByVal key As String) A
         End With
         modError.HandleError errInfo
         mPerformanceMonitor.EndMeasurement "String Decryption"
+        Exit Function
     End If
     
     result = String$(Len(decoded), 0)
@@ -169,6 +173,7 @@ Public Function GenerateHash(ByVal inputString As String) As String
         End With
         modError.HandleError errInfo
         mPerformanceMonitor.EndMeasurement "Hash Generation"
+        Exit Function
     End If
     
     Dim hHash As LongPtr
@@ -188,6 +193,7 @@ Public Function GenerateHash(ByVal inputString As String) As String
         End With
         modError.HandleError errInfo
         mPerformanceMonitor.EndMeasurement "Hash Generation"
+        Exit Function
     End If
     
     ' データのハッシュ化
@@ -203,6 +209,7 @@ Public Function GenerateHash(ByVal inputString As String) As String
         End With
         modError.HandleError errInfo
         mPerformanceMonitor.EndMeasurement "Hash Generation"
+        Exit Function
     End If
     
     ' ハッシュサイズの取得
@@ -218,6 +225,7 @@ Public Function GenerateHash(ByVal inputString As String) As String
         End With
         modError.HandleError errInfo
         mPerformanceMonitor.EndMeasurement "Hash Generation"
+        Exit Function
     End If
     
     ' ハッシュ値の取得
@@ -234,6 +242,7 @@ Public Function GenerateHash(ByVal inputString As String) As String
         End With
         modError.HandleError errInfo
         mPerformanceMonitor.EndMeasurement "Hash Generation"
+        Exit Function
     End If
     
     ' ハッシュオブジェクトの破棄

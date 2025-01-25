@@ -31,13 +31,33 @@ End Type
 Private mTestCases As Collection
 Private mPerformanceMonitor As clsPerformanceMonitor
 Private mCurrentTestCase As TestCase
+Private mIsInitialized As Boolean
 
 ' ======================
 ' 初期化処理
 ' ======================
 Public Sub InitializeTestModule()
+    If mIsInitialized Then Exit Sub
+    
+    On Error GoTo ErrorHandler
+    
     Set mTestCases = New Collection
     Set mPerformanceMonitor = New clsPerformanceMonitor
+    mIsInitialized = True
+    Exit Sub
+
+ErrorHandler:
+    Dim errDetail As typErrorDetail
+    With errDetail
+        .ErrorCode = ERR_UNEXPECTED
+        .Description = "テストモジュールの初期化中にエラーが発生しました: " & Err.Description
+        .Source = MODULE_NAME
+        .ProcedureName = "InitializeTestModule"
+    End With
+    modError.HandleError errDetail
+    
+    ' 初期化失敗時は例外を再スロー
+    Err.Raise errDetail.Code, errDetail.Source, errDetail.Description
 End Sub
 
 ' ======================
@@ -46,6 +66,9 @@ End Sub
 Public Sub StartTest(ByVal testName As String, ByVal description As String, _
                     Optional ByVal category As String = "General", _
                     Optional ByVal priority As Integer = 1)
+                    
+    If Not mIsInitialized Then InitializeTestModule
+    On Error GoTo ErrorHandler
     
     ' 新しいテストケースを初期化
     With mCurrentTestCase
@@ -62,9 +85,29 @@ Public Sub StartTest(ByVal testName As String, ByVal description As String, _
     
     ' ログにテスト開始を記録
     LogTestEvent "テスト開始: " & testName & " (" & description & ")"
+    Exit Sub
+
+ErrorHandler:
+    Dim errDetail As typErrorDetail
+    With errDetail
+        .ErrorCode = ERR_UNEXPECTED
+        .Description = "テスト開始処理中にエラーが発生しました: " & Err.Description
+        .Source = MODULE_NAME
+        .ProcedureName = "StartTest"
+    End With
+    modError.HandleError errDetail
+    
+    ' エラー発生時はテストをエラー状態で終了
+    EndTest ResultError, "テスト開始処理中にエラーが発生: " & Err.Description
 End Sub
 
 Public Sub EndTest(ByVal result As TestResult, Optional ByVal errorMessage As String = "")
+    If Not mIsInitialized Then Exit Sub
+    On Error GoTo ErrorHandler
+    
+    Dim originalResult As TestResult
+    originalResult = result
+    
     ' パフォーマンス計測終了
     mPerformanceMonitor.EndMeasurement mCurrentTestCase.Name
     
@@ -83,6 +126,23 @@ Public Sub EndTest(ByVal result As TestResult, Optional ByVal errorMessage As St
     If errorMessage <> "" Then
         LogTestEvent "エラー詳細: " & errorMessage
     End If
+    Exit Sub
+
+ErrorHandler:
+    Dim errDetail As typErrorDetail
+    With errDetail
+        .ErrorCode = ERR_UNEXPECTED
+        .Description = "テスト終了処理中にエラーが発生しました: " & Err.Description
+        .Source = MODULE_NAME
+        .ProcedureName = "EndTest"
+    End With
+    modError.HandleError errDetail
+    
+    ' エラー発生時は元のテスト結果を保持しつつ、エラーメッセージを追加
+    With mCurrentTestCase
+        .Result = originalResult
+        .ErrorMessage = .ErrorMessage & vbCrLf & "テスト終了処理中にエラーが発生: " & Err.Description
+    End With
 End Sub
 
 ' ======================
@@ -90,6 +150,9 @@ End Sub
 ' ======================
 Public Sub AssertEqual(ByVal expected As Variant, ByVal actual As Variant, _
                       Optional ByVal message As String = "")
+    If Not mIsInitialized Then InitializeTestModule
+    On Error GoTo ErrorHandler
+    
     If expected <> actual Then
         Dim errorMsg As String
         errorMsg = "AssertEqual失敗: " & vbCrLf & _
@@ -102,9 +165,26 @@ Public Sub AssertEqual(ByVal expected As Variant, ByVal actual As Variant, _
         EndTest ResultFail, errorMsg
         Exit Sub
     End If
+    Exit Sub
+
+ErrorHandler:
+    Dim errDetail As typErrorDetail
+    With errDetail
+        .ErrorCode = ERR_UNEXPECTED
+        .Description = "AssertEqual実行中にエラーが発生しました: " & Err.Description
+        .Source = MODULE_NAME
+        .ProcedureName = "AssertEqual"
+    End With
+    modError.HandleError errDetail
+    
+    ' アサーション実行中のエラーはテストを失敗として扱う
+    EndTest ResultFail, "アサーション実行中にエラーが発生: " & Err.Description
 End Sub
 
 Public Sub AssertTrue(ByVal condition As Boolean, Optional ByVal message As String = "")
+    If Not mIsInitialized Then InitializeTestModule
+    On Error GoTo ErrorHandler
+    
     If Not condition Then
         Dim errorMsg As String
         errorMsg = "AssertTrue失敗"
@@ -115,9 +195,26 @@ Public Sub AssertTrue(ByVal condition As Boolean, Optional ByVal message As Stri
         EndTest ResultFail, errorMsg
         Exit Sub
     End If
+    Exit Sub
+
+ErrorHandler:
+    Dim errDetail As typErrorDetail
+    With errDetail
+        .ErrorCode = ERR_UNEXPECTED
+        .Description = "AssertTrue実行中にエラーが発生しました: " & Err.Description
+        .Source = MODULE_NAME
+        .ProcedureName = "AssertTrue"
+    End With
+    modError.HandleError errDetail
+    
+    ' アサーション実行中のエラーはテストを失敗として扱う
+    EndTest ResultFail, "アサーション実行中にエラーが発生: " & Err.Description
 End Sub
 
 Public Sub AssertFalse(ByVal condition As Boolean, Optional ByVal message As String = "")
+    If Not mIsInitialized Then InitializeTestModule
+    On Error GoTo ErrorHandler
+    
     If condition Then
         Dim errorMsg As String
         errorMsg = "AssertFalse失敗"
@@ -128,12 +225,29 @@ Public Sub AssertFalse(ByVal condition As Boolean, Optional ByVal message As Str
         EndTest ResultFail, errorMsg
         Exit Sub
     End If
+    Exit Sub
+
+ErrorHandler:
+    Dim errDetail As typErrorDetail
+    With errDetail
+        .ErrorCode = ERR_UNEXPECTED
+        .Description = "AssertFalse実行中にエラーが発生しました: " & Err.Description
+        .Source = MODULE_NAME
+        .ProcedureName = "AssertFalse"
+    End With
+    modError.HandleError errDetail
+    
+    ' アサーション実行中のエラーはテストを失敗として扱う
+    EndTest ResultFail, "アサーション実行中にエラーが発生: " & Err.Description
 End Sub
 
 ' ======================
 ' テスト結果レポート
 ' ======================
 Public Function GenerateTestReport() As String
+    If Not mIsInitialized Then InitializeTestModule
+    On Error GoTo ErrorHandler
+    
     Dim report As String
     Dim testCase As TestCase
     Dim i As Long
@@ -157,7 +271,7 @@ Public Function GenerateTestReport() As String
         ' カテゴリの追加
         On Error Resume Next
         categories.Add testCase.Category, testCase.Category
-        On Error GoTo 0
+        On Error GoTo ErrorHandler
         
         ' 全体の集計
         totalTests = totalTests + 1
@@ -200,6 +314,22 @@ Public Function GenerateTestReport() As String
     Next category
     
     GenerateTestReport = report
+    Exit Function
+
+ErrorHandler:
+    Dim errDetail As typErrorDetail
+    With errDetail
+        .ErrorCode = ERR_UNEXPECTED
+        .Description = "テストレポート生成中にエラーが発生しました: " & Err.Description
+        .Source = MODULE_NAME
+        .ProcedureName = "GenerateTestReport"
+    End With
+    modError.HandleError errDetail
+    
+    ' レポート生成エラー時は基本情報のみ返す
+    GenerateTestReport = "テストレポート生成中にエラーが発生しました。" & vbCrLf & _
+                        "エラー詳細: " & Err.Description & vbCrLf & _
+                        "実行日時: " & Now
 End Function
 
 ' ======================
@@ -216,6 +346,8 @@ Private Function GetResultText(ByVal result As TestResult) As String
 End Function
 
 Private Function GetTestExecutionTime(ByVal testName As String) As Double
+    On Error GoTo ErrorHandler
+    
     Dim perfData As String
     perfData = mPerformanceMonitor.GetMeasurement(testName)
     
@@ -225,6 +357,20 @@ Private Function GetTestExecutionTime(ByVal testName As String) As Double
     If pos > 0 Then
         GetTestExecutionTime = Val(Mid$(perfData, pos + 14))
     End If
+    Exit Function
+
+ErrorHandler:
+    Dim errDetail As typErrorDetail
+    With errDetail
+        .ErrorCode = ERR_UNEXPECTED
+        .Description = "テスト実行時間の取得中にエラーが発生しました: " & Err.Description
+        .Source = MODULE_NAME
+        .ProcedureName = "GetTestExecutionTime"
+    End With
+    modError.HandleError errDetail
+    
+    ' エラー時は0を返す
+    GetTestExecutionTime = 0
 End Function
 
 Private Sub LogTestEvent(ByVal message As String)
@@ -232,9 +378,22 @@ Private Sub LogTestEvent(ByVal message As String)
     fileNum = FreeFile
     
     On Error Resume Next
+    
+    ' ファイルが開けない場合は作成を試みる
+    If Dir(TEST_RESULTS_FILE) = "" Then
+        Open TEST_RESULTS_FILE For Output As #fileNum
+        Close #fileNum
+    End If
+    
     Open TEST_RESULTS_FILE For Append As #fileNum
     Print #fileNum, Format$(Now, "yyyy/mm/dd hh:nn:ss") & " - " & message
     Close #fileNum
+    
+    If Err.Number <> 0 Then
+        Debug.Print "ログ出力エラー: " & Err.Description
+        Err.Clear
+    End If
+    
     On Error GoTo 0
 End Sub
 
@@ -242,6 +401,15 @@ End Sub
 ' クリーンアップ
 ' ======================
 Public Sub CleanupTestModule()
+    If Not mIsInitialized Then Exit Sub
+    
+    On Error Resume Next
     Set mTestCases = Nothing
     Set mPerformanceMonitor = Nothing
+    mIsInitialized = False
+    
+    If Err.Number <> 0 Then
+        Debug.Print "クリーンアップ中にエラーが発生: " & Err.Description
+        Err.Clear
+    End If
 End Sub

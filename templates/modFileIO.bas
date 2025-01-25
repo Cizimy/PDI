@@ -211,42 +211,182 @@ ErrorHandler:
 End Function
 
 Public Function FileExists(ByVal filePath As String) As Boolean
-    On Error Resume Next
+    InitializeIfNeeded
+    
+    mLock.AcquireLock
+    On Error GoTo ErrorHandler
+    
     FileExists = (Dir(filePath) <> "")
-    On Error GoTo 0
+    
+CleanUp:
+    mLock.ReleaseLock
+    Exit Function
+    
+ErrorHandler:
+    Dim errInfo As ErrorInfo
+    With errInfo
+        .Code = GetFileErrorCode(Err.Number)
+        .Category = modErrorCodes.ECFileIO
+        .Description = "ファイルの存在確認中にエラーが発生しました: " & filePath & vbCrLf & Err.Description
+        .Source = MODULE_NAME
+        .ProcedureName = "FileExists"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
+    End With
+    
+    modCommon.HandleError errInfo
+    FileExists = False
+    Resume CleanUp
 End Function
-
+ 
 Public Function FolderExists(ByVal folderPath As String) As Boolean
-    On Error Resume Next
+    InitializeIfNeeded
+    
+    mLock.AcquireLock
+    On Error GoTo ErrorHandler
+    
     FolderExists = (Dir(folderPath, vbDirectory) <> "")
-    On Error GoTo 0
+    
+CleanUp:
+    mLock.ReleaseLock
+    Exit Function
+    
+ErrorHandler:
+    Dim errInfo As ErrorInfo
+    With errInfo
+        .Code = GetFileErrorCode(Err.Number)
+        .Category = modErrorCodes.ECFileIO
+        .Description = "フォルダの存在確認中にエラーが発生しました: " & folderPath & vbCrLf & Err.Description
+        .Source = MODULE_NAME
+        .ProcedureName = "FolderExists"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
+    End With
+    
+    modCommon.HandleError errInfo
+    FolderExists = False
+    Resume CleanUp
 End Function
-
+ 
 Public Function CreateFolder(ByVal folderPath As String) As Boolean
-    On Error Resume Next
+    InitializeIfNeeded
+    
+    mLock.AcquireLock
+    On Error GoTo ErrorHandler
+    
     MkDir folderPath
-    CreateFolder = (Err.Number = 0)
-    On Error GoTo 0
+    CreateFolder = True
+    
+CleanUp:
+    mLock.ReleaseLock
+    Exit Function
+    
+ErrorHandler:
+    Dim errInfo As ErrorInfo
+    With errInfo
+        .Code = GetFileErrorCode(Err.Number)
+        .Category = modErrorCodes.ECFileIO
+        .Description = "フォルダの作成中にエラーが発生しました: " & folderPath & vbCrLf & Err.Description
+        .Source = MODULE_NAME
+        .ProcedureName = "CreateFolder"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
+    End With
+    
+    modCommon.HandleError errInfo
+    CreateFolder = False
+    Resume CleanUp
 End Function
-
+ 
 Public Function DeleteFile(ByVal filePath As String) As Boolean
-    On Error Resume Next
+    InitializeIfNeeded
+    
+    mLock.AcquireLock
+    On Error GoTo ErrorHandler
+    
     Kill filePath
-    DeleteFile = (Err.Number = 0)
-    On Error GoTo 0
+    DeleteFile = True
+    
+CleanUp:
+    mLock.ReleaseLock
+    Exit Function
+    
+ErrorHandler:
+    Dim errInfo As ErrorInfo
+    With errInfo
+        .Code = GetFileErrorCode(Err.Number)
+        .Category = modErrorCodes.ECFileIO
+        .Description = "ファイルの削除中にエラーが発生しました: " & filePath & vbCrLf & Err.Description
+        .Source = MODULE_NAME
+        .ProcedureName = "DeleteFile"
+        .StackTrace = modStackTrace.GetStackTrace()
+    En   .OccurredAt = Now
+    End With
+    
+    modCommon.HandleError errInfo
+    DeleteFile = False
+    Resume CleanUp
 End Function
-
+ 
 Public Function DeleteFolder(ByVal folderPath As String) As Boolean
-    On Error Resume Next
+    InitializeIfNeeded
+    
+    mLock.AcquireLock
+    On Error GoTo ErrorHandler
+    
     RmDir folderPath
-    DeleteFolder = (Err.Number = 0)
-    On Error GoTo 0
+    DeleteFolder = True
+    
+CleanUp:
+    mLock.ReleaseLock
+    Exit Function
+    
+ErrorHandler:
+    Dim errInfo As ErrorInfo
+    With errInfo
+        .Code = GetFileErrorCode(Err.Number)
+        .Category = modErrorCodes.ECFileIO
+        .Description = "フォルダの削除中にエラーが発生しました: " & folderPath & vbCrLf & Err.Description
+        .Source = MODULE_NAME
+        .ProcedureName = "DeleteFolder"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
+    End With
+    
+    modCommon.HandleError errInfo
+    DeleteFolder = False
+    Resume CleanUp
 End Function
 
 Public Function GetAbsolutePath(ByVal relativePath As String, _
                               Optional ByVal basePath As String) As String
+    InitializeIfNeeded
+    
+    mLock.AcquireLock
+    On Error GoTo ErrorHandler
+    
     If Len(basePath) = 0 Then basePath = CurDir
     GetAbsolutePath = CreateObject("Scripting.FileSystemObject").GetAbsolutePathName(basePath & "\" & relativePath)
+    
+CleanUp:
+    mLock.ReleaseLock
+    Exit Function
+    
+ErrorHandler:
+    Dim errInfo As ErrorInfo
+    With errInfo
+        .Code = GetFileErrorCode(Err.Number)
+        .Category = modErrorCodes.ECFileIO
+        .Description = "絶対パスの取得中にエラーが発生しました: " & relativePath & vbCrLf & Err.Description
+        .Source = MODULE_NAME
+        .ProcedureName = "GetAbsolutePath"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
+    End With
+    
+    modCommon.HandleError errInfo
+    GetAbsolutePath = ""
+    Resume CleanUp
 End Function
 
 ' ======================

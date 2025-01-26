@@ -13,6 +13,7 @@ Private isInitialized As Boolean
 Private mLock As clsLock
 Private Const MAX_ERROR_RECURSION As Long = 3
 Private errorRecursionCount As Long
+Private mPerformanceMonitor As clsPerformanceMonitor
 
 ' ======================
 ' 初期化・終了処理
@@ -26,6 +27,7 @@ Public Sub InitializeModule()
     
     Set errorHandlers = New Collection
     Set mLock = New clsLock
+    Set mPerformanceMonitor = New clsPerformanceMonitor
     errorRecursionCount = 0
     RegisterDefaultHandlers
     
@@ -37,6 +39,7 @@ Public Sub TerminateModule()
     
     Set errorHandlers = Nothing
     Set mLock = Nothing
+    Set mPerformanceMonitor = Nothing
     errorRecursionCount = 0
     isInitialized = False
 End Sub
@@ -44,46 +47,103 @@ End Sub
 ' ======================
 ' エラーハンドリング
 ' ======================
-Public Sub HandleError(ByRef errInfo As ErrorInfo)
-    If Not isInitialized Then InitializeModule
-    
-    ' エラーの再帰を防ぐ
-    errorRecursionCount = errorRecursionCount + 1
-    If errorRecursionCount > MAX_ERROR_RECURSION Then
-        EmergencyErrorLog "エラー処理の再帰回数が上限を超えました。処理を中断します。"
-        Exit Sub
-    End If
-    mLock.AcquireLock
+Private Type ErrorContext
+    Info As ErrorInfo
+    Handler As IErrorHandler
+    IsLocked As Boolean
+    IsEmergency As Boolean
+End Type
+
+Private Function TryHandleError(ByRef context As ErrorContext) As Boolean
     On Error GoTo ErrorHandler
     
+    ' パフォーマンス計測開始
+    If Not mPerformanceMonitor Is Nothing Then
+        mPerformanceMonitor.StartMeasurement "TryHandleError"
+    End If
+    
     ' エラー情報の補完
-    With errInfo
+    With context.Info
         If .OccurredAt = #12:00:00 AM# Then .OccurredAt = Now
         If .Category = 0 Then .Category = modErrorCodes.GetErrorCategory(.Code)
         If Len(.StackTrace) = 0 Then .StackTrace = modStackTrace.GetStackTrace()
     End With
     
     ' エラーハンドラの取得
-    Dim handler As IErrorHandler
-    Set handler = GetErrorHandler(errInfo.Code)
+    Set context.Handler = GetErrorHandler(context.Info.Code)
     
-    mLock.ReleaseLock
-    
-    ' エラーハンドラによる処理
-    Dim proceed As Boolean
-    proceed = handler.HandleError(errInfo)
-    
-    ' エラー処理の結果に基づいて処理を継続するかどうかを判断
-    If Not proceed Then
-        Err.Raise errInfo.Code, errInfo.Source, errInfo.Description
+    ' パフォーマンス計測終了
+    If Not mPerformanceMonitor Is Nothing Then
+        mPerformanceMonitor.EndMeasurement "TryHandleError"
     End If
-    errorRecursionCount = errorRecursionCount - 1
-    Exit Sub
-
+    
+    TryHandleError = True
+    Exit Function
+    
 ErrorHandler:
-    If Not mLock Is Nothing Then mLock.ReleaseLock
-    EmergencyErrorLog "HandleError中にエラーが発生しました: " & Err.Description
-    Exit Sub
+    If Not mPerformanceMonitor Is Nothing Then
+        mPerformanceMonitor.EndMeasurement "TryHandleError"
+    End If
+    TryHandleError = False
+End Function
+
+Public Sub HandleError(ByRef errInfo As ErrorInfo)
+    If Not isInitialized Then InitializeModule
+    
+    ' パフォーマンス計測開始
+    If Not mPerformanceMonitor Is Nothing Then
+        mPerformanceMonitor.StartMeasurement "HandleError"
+    End If
+    
+    Dim context As ErrorContext
+    context.Info = errInfo
+    
+    ' エラーの再帰を防ぐ
+    errorRecursionCount = errorRecursionCount + 1
+    If errorRecursionCount > MAX_ERROR_RECURSION Then
+        EmergencyErrorLog "エラー処理の再帰回数が上限を超えました。処理を中断します。"
+        context.IsEmergency = True
+        GoTo Cleanup
+    End If
+
+    ' ロック取得
+    On Error Resume Next
+    mLock.AcquireLock
+    context.IsLocked = (Err.Number = 0)
+    On Error GoTo 0
+
+    ' エラー処理のメイン部分
+    If TryHandleError(context) Then
+        If Not context.Handler Is Nothing Then
+            Dim proceed As Boolean
+            proceed = context.Handler.HandleError(context.Info)
+            
+            ' エラー処理の結果に基づいて処理を継続するかどうかを判断
+            If Not proceed Then
+                context.IsEmergency = True
+                GoTo Cleanup
+            End If
+        End If
+    Else
+        context.IsEmergency = True
+    End If
+
+Cleanup:
+    ' クリーンアップ処理
+    If context.IsLocked Then
+        mLock.ReleaseLock
+    End If
+
+    If context.IsEmergency Then
+        EmergencyErrorLog "HandleError中にエラーが発生しました: " & Err.Description
+    End If
+    
+    ' パフォーマンス計測終了
+    If Not mPerformanceMonitor Is Nothing Then
+        mPerformanceMonitor.EndMeasurement "HandleError"
+    End If
+
+    errorRecursionCount = errorRecursionCount - 1
 End Sub
 
 ' ======================
@@ -151,11 +211,100 @@ Public Sub UnregisterErrorHandler(ByVal errorCode As ErrorCode)
 End Sub
 
 ' ======================
-' テストサポート機能（開発環境専用）
-' 警告: これらのメソッドは開発時のテスト目的でのみ使用し、
-' 本番環境では使用しないでください。
+' テストサポート機能
 ' ======================
 #If DEBUG Then
+    ' === エラー処理テスト ===
+    Public Sub TestErrorHandling()
+        Dim testError As ErrorInfo
+        With testError
+            .Code = ErrUnexpected
+            .Description = "テスト用エラー"
+            .Category = ECGeneral
+            .Source = MODULE_NAME
+            .ProcedureName = "TestErrorHandling"
+            .StackTrace = ""
+            .OccurredAt = Now
+        End With
+        
+        mPerformanceMonitor.StartMeasurement "ErrorHandlingTest"
+        HandleError testError
+        mPerformanceMonitor.EndMeasurement "ErrorHandlingTest"
+        
+        Debug.Print "テスト実行時間: " & _
+                   mPerformanceMonitor.GetMeasurement("ErrorHandlingTest")
+    End Sub
+    
+    ' === 再帰制御テスト ===
+    Public Sub TestErrorRecursion()
+        Dim i As Long
+        For i = 1 To MAX_ERROR_RECURSION + 1
+            Dim testError As ErrorInfo
+            With testError
+                .Code = ErrUnexpected
+                .Description = "再帰テスト" & i
+                .Category = ECGeneral
+                .Source = MODULE_NAME
+                .ProcedureName = "TestErrorRecursion"
+                .StackTrace = ""
+                .OccurredAt = Now
+            End With
+            
+            mPerformanceMonitor.StartMeasurement "RecursionTest_" & i
+            HandleError testError
+            mPerformanceMonitor.EndMeasurement "RecursionTest_" & i
+            
+            Debug.Print "再帰テスト" & i & "実行時間: " & _
+                       mPerformanceMonitor.GetMeasurement("RecursionTest_" & i)
+        Next i
+    End Sub
+    
+    ' === リソース管理テスト ===
+    Public Sub TestResourceManagement()
+        Dim lockCountBefore As Long
+        lockCountBefore = GetActiveLockCount()
+        
+        Dim testError As ErrorInfo
+        With testError
+            .Code = ErrUnexpected
+            .Description = "リソース管理テスト"
+            .Category = ECGeneral
+            .Source = MODULE_NAME
+            .ProcedureName = "TestResourceManagement"
+            .StackTrace = ""
+            .OccurredAt = Now
+        End With
+        
+        mPerformanceMonitor.StartMeasurement "ResourceTest"
+        
+        On Error Resume Next
+        HandleError testError
+        
+        mPerformanceMonitor.EndMeasurement "ResourceTest"
+        
+        Dim lockCountAfter As Long
+        lockCountAfter = GetActiveLockCount()
+        
+        Debug.Print "リソース管理テスト実行時間: " & _
+                   mPerformanceMonitor.GetMeasurement("ResourceTest")
+        
+        If lockCountBefore <> lockCountAfter Then
+            Debug.Print "警告: リソースリークの可能性があります"
+            Debug.Print "ロック数 Before: " & lockCountBefore & _
+                       ", After: " & lockCountAfter
+        End If
+    End Sub
+    
+    ' === パフォーマンスレポート ===
+    Public Function GetPerformanceReport() As String
+        If Not mPerformanceMonitor Is Nothing Then
+            GetPerformanceReport = mPerformanceMonitor.GetAllMeasurements()
+        Else
+            GetPerformanceReport = "パフォーマンスモニターが初期化されていません。"
+        End If
+    End Function
+    
+    ' === 内部状態取得 ===
     Private Function GetRegisteredHandlerCount() As Long
         mLock.AcquireLock
         GetRegisteredHandlerCount = errorHandlers.Count
@@ -172,6 +321,19 @@ End Sub
         TerminateModule
         InitializeModule
     End Sub
+    
+    Private Function GetActiveLockCount() As Long
+        Dim result As Long
+        result = 0
+        
+        If Not mLock Is Nothing Then
+            If mLock.IsLocked Then
+                result = result + 1
+            End If
+        End If
+        
+        GetActiveLockCount = result
+    End Function
 #End If
 
 ' ======================

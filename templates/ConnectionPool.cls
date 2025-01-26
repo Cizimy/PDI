@@ -128,9 +128,9 @@ Cleanup:
     Exit Function
     
 ErrorHandler:
-    Dim errDetail As typErrorDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_DATABASE_CONNECTION_FAILED
+        .Code = ErrDatabaseConnectionFailed
         .Description = "コネクション取得中にエラーが発生しました: " & Err.Description
         .Category = ECDatabase
         .Source = MODULE_NAME

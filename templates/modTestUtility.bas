@@ -47,9 +47,9 @@ Public Sub InitializeTestModule()
     Exit Sub
 
 ErrorHandler:
-    Dim errDetail As typErrorDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_UNEXPECTED
+        .Code = ErrUnexpected
         .Description = "テストモジュールの初期化中にエラーが発生しました: " & Err.Description
         .Category = ECGeneral
         .Source = MODULE_NAME
@@ -91,9 +91,9 @@ Public Sub StartTest(ByVal testName As String, ByVal description As String, _
     Exit Sub
 
 ErrorHandler:
-    Dim errDetail As typErrorDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_UNEXPECTED
+        .Code = ErrUnexpected
         .Description = "テスト開始処理中にエラーが発生しました: " & Err.Description
         .Category = ECGeneral
         .Source = MODULE_NAME
@@ -139,9 +139,9 @@ Public Sub EndTest(ByVal result As TestResult, Optional ByVal errorMessage As St
     Exit Sub
 
 ErrorHandler:
-    Dim errDetail As typErrorDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_UNEXPECTED
+        .Code = ErrUnexpected
         .Description = "テスト終了処理中にエラーが発生しました: " & Err.Description
         .Category = ECGeneral
         .Source = MODULE_NAME
@@ -181,9 +181,9 @@ Public Sub AssertEqual(ByVal expected As Variant, ByVal actual As Variant, _
     Exit Sub
 
 ErrorHandler:
-    Dim errDetail As typErrorDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_UNEXPECTED
+        .Code = ErrUnexpected
         .Description = "AssertEqual実行中にエラーが発生しました: " & Err.Description
         .Category = ECGeneral
         .Source = MODULE_NAME
@@ -214,9 +214,9 @@ Public Sub AssertTrue(ByVal condition As Boolean, Optional ByVal message As Stri
     Exit Sub
 
 ErrorHandler:
-    Dim errDetail As typErrorDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_UNEXPECTED
+        .Code = ErrUnexpected
         .Description = "AssertTrue実行中にエラーが発生しました: " & Err.Description
         .Category = ECGeneral
         .Source = MODULE_NAME
@@ -247,9 +247,9 @@ Public Sub AssertFalse(ByVal condition As Boolean, Optional ByVal message As Str
     Exit Sub
 
 ErrorHandler:
-    Dim errDetail As typErrorDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_UNEXPECTED
+        .Code = ErrUnexpected
         .Description = "AssertFalse実行中にエラーが発生しました: " & Err.Description
         .Category = ECGeneral
         .Source = MODULE_NAME
@@ -339,9 +339,9 @@ Public Function GenerateTestReport() As String
     Exit Function
 
 ErrorHandler:
-    Dim errDetail As typErrorDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_UNEXPECTED
+        .Code = ErrUnexpected
         .Description = "テストレポート生成中にエラーが発生しました: " & Err.Description
         .Category = ECGeneral
         .Source = MODULE_NAME
@@ -385,9 +385,9 @@ Private Function GetTestExecutionTime(ByVal testName As String) As Double
     Exit Function
 
 ErrorHandler:
-    Dim errDetail As typErrorDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_UNEXPECTED
+        .Code = ErrUnexpected
         .Description = "テスト実行時間の取得中にエラーが発生しました: " & Err.Description
         .Category = ECGeneral
         .Source = MODULE_NAME

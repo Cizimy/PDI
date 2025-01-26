@@ -35,7 +35,7 @@ End Type
 Private Type LogOperationResult
     Success As Boolean
     Value As Variant
-    ErrorDetail As typErrorDetail
+    ErrorDetail As ErrorInfo
 End Type
 
 Private mLogEntries As Collection
@@ -78,9 +78,9 @@ Private Sub ILogger_Log(ByVal moduleName As String, ByVal message As String, Opt
     Exit Sub
 
 ErrorHandler:
-    Dim errDetail As typErrorDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_UNEXPECTED
+        .Code = ErrUnexpected
         .Description = "モックロガーへのログ追加中にエラーが発生しました: " & Err.Description
         .Category = ECGeneral
         .Source = MODULE_NAME
@@ -136,7 +136,7 @@ Private Function GetLogEntry(ByVal index As Long) As LogOperationResult
     If index < 1 Or index > mLogEntries.Count Then
         result.Success = False
         With result.ErrorDetail
-            .ErrorCode = ERR_INVALID_PARAMETER
+            .Code = ErrInvalidParameter
             .Description = "無効なインデックスが指定されました: " & index
             .Category = ECValidation
             .Source = MODULE_NAME
@@ -163,7 +163,7 @@ Private Function GetLogEntry(ByVal index As Long) As LogOperationResult
 ErrorHandler:
     result.Success = False
     With result.ErrorDetail
-        .ErrorCode = ERR_UNEXPECTED
+        .Code = ErrUnexpected
         .Description = "ログエントリの取得中にエラーが発生しました: " & Err.Description
         .Category = ECGeneral
         .Source = MODULE_NAME
@@ -215,7 +215,7 @@ Private Function GetLogCountForModule(ByVal moduleName As String) As LogOperatio
 ErrorHandler:
     result.Success = False
     With result.ErrorDetail
-        .ErrorCode = ERR_UNEXPECTED
+        .Code = ErrUnexpected
         .Description = "モジュール別ログ数の取得中にエラーが発生しました: " & Err.Description
         .Category = ECGeneral
         .Source = MODULE_NAME
@@ -258,7 +258,7 @@ Private Function GetLogCountForErrorCode(ByVal errorCode As ErrorCode) As LogOpe
 ErrorHandler:
     result.Success = False
     With result.ErrorDetail
-        .ErrorCode = ERR_UNEXPECTED
+        .Code = ErrUnexpected
         .Description = "エラーコード別ログ数の取得中にエラーが発生しました: " & Err.Description
         .Category = ECGeneral
         .Source = MODULE_NAME
@@ -284,7 +284,7 @@ Private Function GetLastLogEntry() As LogOperationResult
     If mLogEntries.Count = 0 Then
         result.Success = False
         With result.ErrorDetail
-            .ErrorCode = ERR_NO_DATA
+            .Code = ErrNoData
             .Description = "ログエントリが存在しません"
             .Category = ECValidation
             .Source = MODULE_NAME
@@ -304,7 +304,7 @@ Private Function GetLastLogEntry() As LogOperationResult
 ErrorHandler:
     result.Success = False
     With result.ErrorDetail
-        .ErrorCode = ERR_UNEXPECTED
+        .Code = ErrUnexpected
         .Description = "最後のログエントリの取得中にエラーが発生しました: " & Err.Description
         .Category = ECGeneral
         .Source = MODULE_NAME

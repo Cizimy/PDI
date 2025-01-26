@@ -42,7 +42,7 @@ End Sub
 ' ======================
 ' IUserNotifier実装
 ' ======================
-Private Function IUserNotifier_Notify(ByRef errorDetail As typErrorDetail, _
+Private Function IUserNotifier_Notify(ByRef errorDetail As ErrorInfo, _
                                     Optional ByVal buttons As VbMsgBoxStyle = vbOKOnly, _
                                     Optional ByVal title As String = "エラー") As VbMsgBoxResult
     On Error GoTo ErrorHandler
@@ -66,9 +66,9 @@ Cleanup:
 
     
 ErrorHandler:
-    Dim errDetail As typErrorDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_UNEXPECTED
+        .Code = ErrUnexpected
         .Description = "エラー通知の表示中にエラーが発生しました: " & Err.Description
         .Category = ECGeneral
         .Source = MODULE_NAME
@@ -124,7 +124,7 @@ Private Function GetIconForErrorCategory(ByVal category As ErrorCodeCategory) As
     End Select
 End Function
 
-Private Function BuildErrorMessage(ByRef errorDetail As typErrorDetail) As String
+Private Function BuildErrorMessage(ByRef errorDetail As ErrorInfo) As String
     Dim msg As String
     
     msg = "エラーが発生しました。" & vbCrLf & vbCrLf & _

@@ -89,9 +89,9 @@ Public Function GetConnectionString() As String
     Exit Function
 
 ErrorHandler:
-    Dim errDetail2 As typErrorDetail
+    Dim errDetail2 As ErrorInfo
     With errDetail2
-        .ErrorCode = ERR_DATABASE_CONNECTION_FAILED
+        .Code = ErrDatabaseConnectionFailed
         .Description = "接続文字列の取得中にエラーが発生しました: " & Err.Description
         .Category = ECDatabase
         .Source = MODULE_NAME
@@ -142,9 +142,9 @@ Public Function GetConnection() As Object ' ADODB.Connection
     GoTo CleanupAndExit
 
 ErrorHandler:
-    Dim errDetail As typErrorDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_DATABASE_CONNECTION_FAILED
+        .Code = ErrDatabaseConnectionFailed
         .Description = "データベース接続の取得中にエラーが発生しました: " & Err.Description
         .Category = ECDatabase
         .Source = MODULE_NAME
@@ -262,9 +262,9 @@ Public Function ExecuteQuery(ByVal sql As String, _
     Exit Function
 
 ErrorHandler:
-    Dim errDetail As typErrorDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_DATABASE_QUERY_FAILED
+        .Code = ErrDatabaseQueryFailed
         .Description = "クエリの実行中にエラーが発生しました: " & Err.Description
         .Category = ECDatabase
         .Source = MODULE_NAME
@@ -317,9 +317,9 @@ Private Sub ValidateParameters(ByRef params As Variant)
 End Sub
 
 Private Sub LogWarning(ByVal message As String, ByVal procedureName As String)
-    Dim errDetail As typErrorDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_DATABASE_WARNING
+        .Code = ErrDatabaseWarning
         .Description = message
         .Category = ECDatabase
         .Source = MODULE_NAME

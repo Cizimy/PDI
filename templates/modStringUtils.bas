@@ -61,9 +61,9 @@ Public Function PadLeft(ByVal baseStr As String, ByVal totalWidth As Long, _
     Exit Function
 
 ErrorHandler:
-    Dim errDetail As typErrorDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_UNEXPECTED
+        .Code = ErrUnexpected
         .Description = "文字列のパディング中にエラーが発生しました: " & Err.Description
         .Category = ECGeneral
         .Source = MODULE_NAME
@@ -107,9 +107,9 @@ Public Function PadRight(ByVal baseStr As String, ByVal totalWidth As Long, _
     Exit Function
 
 ErrorHandler:
-    Dim errDetail As typErrorDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_UNEXPECTED
+        .Code = ErrUnexpected
         .Description = "文字列のパディング中にエラーが発生しました: " & Err.Description
         .Category = ECGeneral
         .Source = MODULE_NAME
@@ -158,9 +158,9 @@ Public Function SplitString(ByVal str As String, ByVal delimiter As String) As V
     Exit Function
 
 ErrorHandler:
-    Dim errDetail As typErrorDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_UNEXPECTED
+        .Code = ErrUnexpected
         .Description = "文字列の分割中にエラーが発生しました: " & Err.Description
         .Category = ECGeneral
         .Source = MODULE_NAME
@@ -198,9 +198,9 @@ Public Function JoinStrings(ByRef arr As Variant, Optional ByVal delimiter As St
     Exit Function
 
 ErrorHandler:
-    Dim errDetail As typErrorDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_UNEXPECTED
+        .Code = ErrUnexpected
         .Description = "文字列の結合中にエラーが発生しました: " & Err.Description
         .Category = ECGeneral
         .Source = MODULE_NAME

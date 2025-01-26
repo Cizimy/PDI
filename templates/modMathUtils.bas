@@ -56,9 +56,9 @@ Public Function SafeDivide(ByVal numerator As Double, ByVal denominator As Doubl
     
     If Abs(denominator) < EPSILON Then
         ' 分母が0の場合の警告を出力
-        Dim errDetail As typErrorDetail
+        Dim errDetail As ErrorInfo
         With errDetail
-            .ErrorCode = ERR_DIVISION_BY_ZERO
+            .Code = ErrDivisionByZero
             .Description = "分母が0のため、デフォルト値" & CStr(defaultValue) & "を返します。(分子: " & CStr(numerator) & ")"
             .Category = ECGeneral
             .Source = MODULE_NAME
@@ -79,9 +79,9 @@ Public Function SafeDivide(ByVal numerator As Double, ByVal denominator As Doubl
     Exit Function
 
 ErrorHandler:
-    Dim errDetail As typErrorDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_UNEXPECTED
+        .Code = ErrUnexpected
         .Description = "除算中にエラーが発生しました: " & Err.Description
         .Category = ECGeneral
         .Source = MODULE_NAME

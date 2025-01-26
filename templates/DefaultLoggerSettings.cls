@@ -54,9 +54,9 @@ Public Sub Initialize(ByVal connectionString As String, _
     Exit Sub
 
 ErrorHandler:
-    Dim errDetail As typErrorDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_UNEXPECTED
+        .Code = ErrUnexpected
         .Description = "ロガー設定の初期化中にエラーが発生しました: " & Err.Description
         .Category = ECGeneral
         .Source = "DefaultLoggerSettings"
@@ -160,9 +160,9 @@ Private Function CreateDebugSettings() As DefaultLoggerSettings
     Exit Function
 
 ErrorHandler:
-    Dim errDetail As typErrorDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_UNEXPECTED
+        .Code = ErrUnexpected
         .Description = "デバッグ用ロガー設定の作成中にエラーが発生しました: " & Err.Description
         .Category = ECGeneral
         .Source = "DefaultLoggerSettings"
@@ -190,9 +190,9 @@ Private Function CreateProductionSettings() As DefaultLoggerSettings
     Exit Function
 
 ErrorHandler:
-    Dim errDetail As typErrorDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_UNEXPECTED
+        .Code = ErrUnexpected
         .Description = "本番用ロガー設定の作成中にエラーが発生しました: " & Err.Description
         .Category = ECGeneral
         .Source = "DefaultLoggerSettings"
@@ -221,9 +221,9 @@ Private Function CreateDatabaseSettings() As DefaultLoggerSettings
     Exit Function
 
 ErrorHandler:
-    Dim errDetail As typErrorDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_UNEXPECTED
+        .Code = ErrUnexpected
         .Description = "データベース用ロガー設定の作成中にエラーが発生しました: " & Err.Description
         .Category = ECGeneral
         .Source = "DefaultLoggerSettings"

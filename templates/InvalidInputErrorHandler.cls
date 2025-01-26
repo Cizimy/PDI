@@ -46,9 +46,9 @@ Public Function Create() As InvalidInputErrorHandler
     Exit Function
 
 ErrorHandler:
-    Dim errDetail As typErrorDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_UNEXPECTED
+        .Code = ErrUnexpected
         .Description = "入力エラーハンドラの作成中にエラーが発生しました: " & Err.Description
         .Category = ECGeneral
         .Source = MODULE_NAME
@@ -63,7 +63,7 @@ End Function
 ' ======================
 ' IErrorHandler実装
 ' ======================
-Private Function IErrorHandler_HandleError(ByRef errorDetail As typErrorDetail) As Boolean
+Private Function IErrorHandler_HandleError(ByRef errorDetail As ErrorInfo) As Boolean
     Dim proceed As Boolean
     proceed = False  ' 入力エラーは基本的に処理を中断
     
@@ -85,7 +85,7 @@ End Function
 ' ======================
 ' プライベートメソッド
 ' ======================
-Private Sub LogError(ByRef errorDetail As typErrorDetail)
+Private Sub LogError(ByRef errorDetail As ErrorInfo)
     On Error GoTo ErrorHandler
     
     mLock.AcquireLock
@@ -96,16 +96,16 @@ Private Sub LogError(ByRef errorDetail As typErrorDetail)
     
         .Log MODULE_NAME, _
              "無効な入力: " & errorDetail.Description, _
-             errorDetail.ErrorCode
+             errorDetail.Code
     End With
     
     mLock.ReleaseLock
     Exit Sub
 
 ErrorHandler:
-    Dim errDetail As typErrorDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_UNEXPECTED
+        .Code = ErrUnexpected
         .Description = "入力エラーのログ出力中にエラーが発生しました: " & Err.Description
         .Category = ECGeneral
         .Source = MODULE_NAME
@@ -116,7 +116,7 @@ ErrorHandler:
     modError.HandleError errDetail
 End Sub
 
-Private Sub NotifyUser(ByRef errorDetail As typErrorDetail, ByVal style As VbMsgBoxStyle)
+Private Sub NotifyUser(ByRef errorDetail As ErrorInfo, ByVal style As VbMsgBoxStyle)
     On Error GoTo ErrorHandler
     
     ' ユーザーへの通知
@@ -127,9 +127,9 @@ Private Sub NotifyUser(ByRef errorDetail As typErrorDetail, ByVal style As VbMsg
     Exit Sub
 
 ErrorHandler:
-    Dim errDetail As typErrorDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_UNEXPECTED
+        .Code = ErrUnexpected
         .Description = "入力エラーの通知中にエラーが発生しました: " & Err.Description
         .Category = ECGeneral
         .Source = MODULE_NAME
@@ -160,9 +160,9 @@ Public Function ValidateNumericRange(ByVal value As Variant, _
     Exit Function
 
 ErrorHandler:
-    Dim errDetail As typErrorDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_INVALID_INPUT
+        .Code = ErrInvalidInput
         .Description = "数値範囲の検証中にエラーが発生しました: " & Err.Description
         .Category = ECGeneral
         .Source = MODULE_NAME

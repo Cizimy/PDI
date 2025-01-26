@@ -58,6 +58,8 @@ Private Sub InitializeCrypto()
             .Category = ECSecurity
             .Source = "clsCrypto"
             .ProcedureName = "InitializeCrypto"
+            .StackTrace = modStackTrace.GetStackTrace()
+            .OccurredAt = Now
         End With
         modError.HandleError errInfo
     End If
@@ -115,6 +117,8 @@ ErrorHandler:
         .Category = ECSecurity
         .Source = "clsCrypto"
         .ProcedureName = "DeriveAESKey"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
     End With
     modError.HandleError errInfo
     DeriveAESKey = False
@@ -137,6 +141,8 @@ Public Function EncryptString(ByVal plainText As String, ByVal key As String) As
             .Category = ECSecurity
             .Source = "clsCrypto"
             .ProcedureName = "EncryptString"
+            .StackTrace = modStackTrace.GetStackTrace()
+            .OccurredAt = Now
         End With
         modError.HandleError errInfo
         mPerformanceMonitor.EndMeasurement "String Encryption"
@@ -153,6 +159,8 @@ Public Function EncryptString(ByVal plainText As String, ByVal key As String) As
             .Category = ECSecurity
             .Source = "clsCrypto"
             .ProcedureName = "EncryptString"
+            .StackTrace = modStackTrace.GetStackTrace()
+            .OccurredAt = Now
         End With
         modError.HandleError errInfo
         mPerformanceMonitor.EndMeasurement "String Encryption"
@@ -192,6 +200,8 @@ Public Function EncryptString(ByVal plainText As String, ByVal key As String) As
             .Category = ECSecurity
             .Source = "clsCrypto"
             .ProcedureName = "EncryptString"
+            .StackTrace = modStackTrace.GetStackTrace()
+            .OccurredAt = Now
         End With
         modError.HandleError errInfo
         mPerformanceMonitor.EndMeasurement "String Encryption"
@@ -219,6 +229,8 @@ mLock.AcquireLock
             .Category = ECSecurity
             .Source = "clsCrypto"
             .ProcedureName = "DecryptString"
+            .StackTrace = modStackTrace.GetStackTrace()
+            .OccurredAt = Now
         End With
         modError.HandleError errInfo
         mPerformanceMonitor.EndMeasurement "String Decryption"
@@ -235,6 +247,8 @@ mLock.AcquireLock
             .Category = ECSecurity
             .Source = "clsCrypto"
             .ProcedureName = "DecryptString"
+            .StackTrace = modStackTrace.GetStackTrace()
+            .OccurredAt = Now
         End With
         modError.HandleError errInfo
         mPerformanceMonitor.EndMeasurement "String Decryption"
@@ -265,6 +279,8 @@ mLock.AcquireLock
             .Category = ECSecurity
             .Source = "clsCrypto"
             .ProcedureName = "DecryptString"
+            .StackTrace = modStackTrace.GetStackTrace()
+            .OccurredAt = Now
         End With
         modError.HandleError errInfo
         mPerformanceMonitor.EndMeasurement "String Decryption"
@@ -292,6 +308,8 @@ Public Function GenerateHash(ByVal inputString As String) As String
             .Category = ECSecurity
             .Source = "clsCrypto"
             .ProcedureName = "GenerateHash"
+            .StackTrace = modStackTrace.GetStackTrace()
+            .OccurredAt = Now
         End With
         modError.HandleError errInfo
         mPerformanceMonitor.EndMeasurement "Hash Generation"
@@ -313,6 +331,8 @@ Public Function GenerateHash(ByVal inputString As String) As String
             .Category = ECSecurity
             .Source = "clsCrypto"
             .ProcedureName = "GenerateHash"
+            .StackTrace = modStackTrace.GetStackTrace()
+            .OccurredAt = Now
         End With
         modError.HandleError errInfo
         mPerformanceMonitor.EndMeasurement "Hash Generation"
@@ -330,6 +350,8 @@ Public Function GenerateHash(ByVal inputString As String) As String
             .Category = ECSecurity
             .Source = "clsCrypto"
             .ProcedureName = "GenerateHash"
+            .StackTrace = modStackTrace.GetStackTrace()
+            .OccurredAt = Now
         End With
         modError.HandleError errInfo
         mPerformanceMonitor.EndMeasurement "Hash Generation"
@@ -347,6 +369,8 @@ Public Function GenerateHash(ByVal inputString As String) As String
             .Category = ECSecurity
             .Source = "clsCrypto"
             .ProcedureName = "GenerateHash"
+            .StackTrace = modStackTrace.GetStackTrace()
+            .OccurredAt = Now
         End With
         modError.HandleError errInfo
         mPerformanceMonitor.EndMeasurement "Hash Generation"
@@ -365,6 +389,8 @@ Public Function GenerateHash(ByVal inputString As String) As String
             .Category = ECSecurity
             .Source = "clsCrypto"
             .ProcedureName = "GenerateHash"
+            .StackTrace = modStackTrace.GetStackTrace()
+            .OccurredAt = Now
         End With
         modError.HandleError errInfo
         mPerformanceMonitor.EndMeasurement "Hash Generation"

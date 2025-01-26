@@ -85,9 +85,9 @@ Public Sub StartMeasurement(ByVal description As String)
     Exit Sub
 
 ErrorHandler:
-    Dim errDetail As typErrorDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_UNEXPECTED
+        .Code = ErrUnexpected
         .Description = "パフォーマンス測定の開始中にエラーが発生しました: " & Err.Description
         .Category = ECGeneral
         .Source = "clsPerformanceMonitor"
@@ -137,9 +137,9 @@ Public Sub EndMeasurement(ByVal description As String)
     Exit Sub
 
 ErrorHandler:
-    Dim errDetail As typErrorDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_UNEXPECTED
+        .Code = ErrUnexpected
         .Description = "パフォーマンス測定の終了中にエラーが発生しました: " & Err.Description
         .Category = ECGeneral
         .Source = "clsPerformanceMonitor"
@@ -196,9 +196,9 @@ Public Function GetAllMeasurements() As String
     Exit Function
 
 ErrorHandler:
-    Dim errDetail As typErrorDetail
+    Dim errDetail As ErrorInfo
     With errDetail
-        .ErrorCode = ERR_UNEXPECTED
+        .Code = ErrUnexpected
         .Description = "パフォーマンス測定データの取得中にエラーが発生しました: " & Err.Description
         .Category = ECGeneral
         .Source = "clsPerformanceMonitor"

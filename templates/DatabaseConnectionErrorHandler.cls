@@ -160,22 +160,58 @@ Cleanup:
 End Function
 
 Private Function TryDatabaseConnection() As Boolean
-    On Error Resume Next
+    On Error GoTo ErrorHandler
     
     Dim conn As Object
     Set conn = CreateObject("ADODB.Connection")
+       conn.Open mConnectionString
     
-    ' 接続文字列は設定から取得
-    conn.Open mConnectionString
-    
-    If Err.Number = 0 Then
+    ' 接続テストのためのシンプルなクエリを実行
+        conn.Execute "SELECT 1"
+        
         conn.Close
         TryDatabaseConnection = True
+        Exit Function
+        
+    ErrorHandler:
+        Dim errNum As Long
+        errNum = Err.Number
+        
+        ' エラー種別に応じた処理
+        Select Case errNum
+            Case -2147467259  ' ネットワークエラー
+                LogSpecificError "ネットワーク接続エラー: サーバーに接続できません。", ECNetwork
+            Case -2147217843  ' タイムアウト
+                LogSpecificError "データベース接続がタイムアウトしました。", ECNetwork
+            Case -2147217865  ' 認証エラー
+                LogSpecificError "データベース認証エラー: ユーザー名またはパスワードが無効です。", ECSecurity
+            Case Else
+                LogSpecificError "データベース接続エラー: " & Err.Description, ECDatabase
+        End Select
+        
+        If Not conn Is Nothing Then
+            If conn.State = 1 Then  ' adStateOpen
+                conn.Close
+            End If
     End If
-    
     Set conn = Nothing
-    On Error GoTo 0
-End Function
+    TryDatabaseConnection = False
+        Exit Function
+    End Function
+    
+    Private Sub LogSpecificError(ByVal message As String, ByVal category As ErrorCodeCategory)
+        Dim errDetail As ErrorInfo
+        With errDetail
+            .Code = ErrDbConnectionFailed
+            .Description = message
+            .Category = category
+            .Source = MODULE_NAME
+            .ProcedureName = "TryDatabaseConnection"
+            .StackTrace = modStackTrace.GetStackTrace()
+            .OccurredAt = Now
+        End With
+        modError.HandleError errDetail
+    End Sub
 
 Private Sub LogError(ByRef errorDetail As ErrorInfo)
     On Error GoTo ErrorHandler

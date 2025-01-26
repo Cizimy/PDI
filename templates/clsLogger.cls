@@ -336,8 +336,7 @@ Private Sub WriteToEventLog(ByVal logEntry As Variant)
             .OccurredAt = Now
         End With
         modError.HandleError errDetail
-        mLock.ReleaseLock
-        Resume Cleanup
+        GoTo Cleanup
 End Sub
 
 Private Sub WriteToConsole(ByVal logEntry As Variant)

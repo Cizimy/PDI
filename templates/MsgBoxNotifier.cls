@@ -77,7 +77,20 @@ ErrorHandler:
         .OccurredAt = Now
     End With
     modError.HandleError errDetail
-    IUserNotifier_Notify = vbOK ' エラー時はOKを返す
+    
+        ' エラーの種類に応じて適切な戻り値を設定
+        Select Case errDetail.Category
+            Case ECSystem, ECSecurity
+                ' システムエラーやセキュリティエラーの場合は中断を示すvbCancelを返す
+                IUserNotifier_Notify = vbCancel
+            Case ECDatabase, ECNetwork
+                ' データベースやネットワークエラーの場合はリトライを促すvbRetryを返す
+                IUserNotifier_Notify = vbRetry
+            Case Else
+                ' その他のエラーの場合は一般的なvbAbortを返す
+                IUserNotifier_Notify = vbAbort
+        End Select
+        
     Resume Cleanup
 End Function
 

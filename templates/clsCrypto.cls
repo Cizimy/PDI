@@ -21,16 +21,27 @@ Private Const HP_HASHSIZE As Long = 4
 Private mCryptoProvider As LongPtr
 Private mInitialized As Boolean
 Private mAesKey As LongPtr
-Private mPerformanceMonitor As clsPerformanceMonitor
-Private mLock As clsLock
+Private mPerformanceMonitor As IPerformanceMonitor
+Private mLock As ILock
+Private mCryptography As ICryptography
+Private mKeyDerivation As IKeyDerivationStrategy
 
 ' ======================
-' 初期化・終了処理
+' コンストラクタ
 ' ======================
-Private Sub Class_Initialize()
-    Set mPerformanceMonitor = New clsPerformanceMonitor
-    Set mLock = New clsLock
+Public Sub Initialize(ByVal performanceMonitor As IPerformanceMonitor, _
+                     ByVal lock As ILock, _
+                     ByVal cryptography As ICryptography, _
+                     ByVal keyDerivation As IKeyDerivationStrategy)
+    Set mPerformanceMonitor = performanceMonitor
+    Set mLock = lock
+    Set mCryptography = cryptography
+    Set mKeyDerivation = keyDerivation
     InitializeCrypto
+End Sub
+
+Private Sub Class_Initialize()
+    ' 依存性は Initialize メソッドで注入される
 End Sub
 
 Private Sub Class_Terminate()
@@ -48,7 +59,7 @@ End Sub
 ' 内部メソッド
 ' ======================
 Private Sub InitializeCrypto()
-    If modWindowsAPI.CryptAcquireContext(mCryptoProvider, vbNullString, MS_ENHANCED_PROV, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT) <> 0 Then
+    If mCryptography.CryptAcquireContext(vbNullString, MS_ENHANCED_PROV, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT) Then
         mInitialized = True
     Else
         Dim errInfo As ErrorInfo
@@ -76,34 +87,16 @@ Private Function DeriveAESKey(ByVal key As String) As Boolean
         mAesKey = 0
     End If
     
-    ' キーのハッシュを作成
-    Dim hHash As LongPtr
-    If CryptCreateHash(mCryptoProvider, CALG_SHA_256, 0, 0, hHash) = 0 Then
+    ' キー導出戦略を使用してキーを生成
+    Dim salt() As Byte
+    ReDim salt(0 To 15)  ' 16バイトのソルト
+    Dim derivedKey() As Byte
+    derivedKey = mKeyDerivation.DeriveKey(key, salt, 10000)
+    
+    ' 導出されたキーからAESキーを生成
+    If Not mCryptography.CryptDeriveKey(CALG_AES_256, CRYPT_EXPORTABLE) Then
         GoTo Cleanup
     End If
-    
-    ' キー文字列をハッシュ化
-    If CryptHashData(hHash, ByVal key, Len(key), 0) = 0 Then
-        CryptDestroyHash hHash
-        GoTo Cleanup
-    End If
-    
-    ' ハッシュからAESキーを生成
-    If CryptDeriveKey(mCryptoProvider, CALG_AES_256, hHash, CRYPT_EXPORTABLE, mAesKey) = 0 Then
-        CryptDestroyHash hHash
-        GoTo Cleanup
-    End If
-    
-    ' ハッシュオブジェクトの破棄
-    CryptDestroyHash hHash
-    
-    ' CBCモードを設定
-    Dim mode As Long
-    mode = CRYPT_MODE_CBC
-    If CryptSetKeyParam(mAesKey, KP_MODE, mode, 0) = 0 Then
-        GoTo Cleanup
-    End If
-    
     DeriveAESKey = True
     
 Cleanup:

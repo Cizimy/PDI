@@ -20,6 +20,7 @@ Private Const HP_HASHSIZE As Long = 4
 ' メンバ変数
 Private mCryptoProvider As LongPtr
 Private mInitialized As Boolean
+Private mAesKey As LongPtr
 Private mPerformanceMonitor As clsPerformanceMonitor
 
 ' ======================
@@ -32,6 +33,9 @@ End Sub
 
 Private Sub Class_Terminate()
     If mInitialized Then
+        If mAesKey <> 0 Then
+            CryptDestroyKey mAesKey
+        End If
         CryptReleaseContext mCryptoProvider, 0
     End If
     Set mPerformanceMonitor = Nothing
@@ -56,6 +60,59 @@ Private Sub InitializeCrypto()
     End If
 End Sub
 
+Private Function DeriveAESKey(ByVal key As String) As Boolean
+    On Error GoTo ErrorHandler
+    
+    ' 既存のキーを破棄
+    If mAesKey <> 0 Then
+        CryptDestroyKey mAesKey
+        mAesKey = 0
+    End If
+    
+    ' キーのハッシュを作成
+    Dim hHash As LongPtr
+    If CryptCreateHash(mCryptoProvider, CALG_SHA_256, 0, 0, hHash) = 0 Then
+        GoTo ErrorHandler
+    End If
+    
+    ' キー文字列をハッシュ化
+    If CryptHashData(hHash, ByVal key, Len(key), 0) = 0 Then
+        CryptDestroyHash hHash
+        GoTo ErrorHandler
+    End If
+    
+    ' ハッシュからAESキーを生成
+    If CryptDeriveKey(mCryptoProvider, CALG_AES_256, hHash, CRYPT_EXPORTABLE, mAesKey) = 0 Then
+        CryptDestroyHash hHash
+        GoTo ErrorHandler
+    End If
+    
+    ' ハッシュオブジェクトの破棄
+    CryptDestroyHash hHash
+    
+    ' CBCモードを設定
+    Dim mode As Long
+    mode = CRYPT_MODE_CBC
+    If CryptSetKeyParam(mAesKey, KP_MODE, mode, 0) = 0 Then
+        GoTo ErrorHandler
+    End If
+    
+    DeriveAESKey = True
+    Exit Function
+    
+ErrorHandler:
+    Dim errInfo As ErrorInfo
+    With errInfo
+        .Code = ErrCryptoKeyDerivationFailed
+        .Description = "AESキーの生成に失敗しました。"
+        .Category = ECSecurity
+        .Source = "clsCrypto"
+        .ProcedureName = "DeriveAESKey"
+    End With
+    modError.HandleError errInfo
+    DeriveAESKey = False
+End Function
+
 ' ======================
 ' パブリックメソッド
 ' ======================
@@ -76,14 +133,8 @@ Public Function EncryptString(ByVal plainText As String, ByVal key As String) As
         Exit Function
     End If
     
-    ' 単純なXOR暗号化（実際のプロダクションでは、より強力な暗号化アルゴリズムを使用すべき）
-    Dim result As String
-    Dim i As Long, j As Long
-    Dim keyLen As Long
-    
-    keyLen = Len(key)
-    ' 空のキーチェック
-    If keyLen = 0 Then
+    ' キーの検証
+    If Len(key) = 0 Then
         Dim errInfo As ErrorInfo
         With errInfo
             .Code = ErrCryptoKeyNotSpecified
@@ -97,15 +148,45 @@ Public Function EncryptString(ByVal plainText As String, ByVal key As String) As
         Exit Function
     End If
     
-    result = String$(Len(plainText), 0)
-    For i = 1 To Len(plainText)
-        j = ((i - 1) Mod keyLen) + 1
-        Mid$(result, i, 1) = Chr$(Asc(Mid$(plainText, i, 1)) Xor Asc(Mid$(key, j, 1)))
-    Next i
+    ' AESキーの生成
+    If Not DeriveAESKey(key) Then
+        mPerformanceMonitor.EndMeasurement "String Encryption"
+        Exit Function
+    End If
     
-    ' Base64エンコード
+    ' データの準備
+    Dim dataLen As Long
+    Dim blockSize As Long
+    blockSize = 16 ' AESブロックサイズ
+    
+    ' パディングを含むデータ長を計算
+    dataLen = Len(plainText)
+    If (dataLen Mod blockSize) <> 0 Then
+        dataLen = dataLen + (blockSize - (dataLen Mod blockSize))
+    End If
+    
+    ' バッファの準備
+    Dim buffer() As Byte
+    ReDim buffer(0 To dataLen - 1)
+    CopyMemory buffer(0), ByVal StrPtr(plainText), Len(plainText) * 2
+    
+    ' 暗号化
+    If CryptEncrypt(mAesKey, 0, True, 0, buffer(0), dataLen, dataLen) = 0 Then
+        Dim errInfo As ErrorInfo
+        With errInfo
+            .Code = ErrCryptoEncryptionFailed
+            .Description = "データの暗号化に失敗しました。"
+            .Category = ECSecurity
+            .Source = "clsCrypto"
+            .ProcedureName = "EncryptString"
+        End With
+        modError.HandleError errInfo
+        mPerformanceMonitor.EndMeasurement "String Encryption"
+        Exit Function
+    End If
+    
     mPerformanceMonitor.EndMeasurement "String Encryption"
-    EncryptString = Base64Encode(result)
+    EncryptString = Base64Encode(buffer)
 End Function
 
 Public Function DecryptString(ByVal cipherText As String, ByVal key As String) As String
@@ -125,17 +206,8 @@ Public Function DecryptString(ByVal cipherText As String, ByVal key As String) A
         Exit Function
     End If
     
-    ' Base64デコード
-    Dim decoded As String
-    decoded = Base64Decode(cipherText)
-    
-    ' XOR復号化
-    Dim result As String
-    Dim i As Long, j As Long
-    Dim keyLen As Long
-    
-    keyLen = Len(key)
-    If keyLen = 0 Then
+    ' キーの検証
+    If Len(key) = 0 Then
         Dim errInfo As ErrorInfo
         With errInfo
             .Code = ErrCryptoKeyNotSpecified
@@ -149,14 +221,37 @@ Public Function DecryptString(ByVal cipherText As String, ByVal key As String) A
         Exit Function
     End If
     
-    result = String$(Len(decoded), 0)
-    For i = 1 To Len(decoded)
-        j = ((i - 1) Mod keyLen) + 1
-        Mid$(result, i, 1) = Chr$(Asc(Mid$(decoded, i, 1)) Xor Asc(Mid$(key, j, 1)))
-    Next i
+    ' AESキーの生成
+    If Not DeriveAESKey(key) Then
+        mPerformanceMonitor.EndMeasurement "String Decryption"
+        Exit Function
+    End If
+    
+    ' Base64デコード
+    Dim buffer() As Byte
+    buffer = Base64Decode(cipherText)
+   
+     ' データ長の取得
+    Dim dataLen As Long
+    dataLen = UBound(buffer) - LBound(buffer) + 1
+    ' 復号化
+    If CryptDecrypt(mAesKey, 0, True, 0, buffer(0), dataLen) = 0 Then
+        Dim errInfo As ErrorInfo
+        With errInfo
+            .Code = ErrCryptoDecryptionFailed
+            .Description = "データの復号化に失敗しました。"
+            .Category = ECSecurity
+            .Source = "clsCrypto"
+            .ProcedureName = "DecryptString"
+        End With
+        modError.HandleError errInfo
+        mPerformanceMonitor.EndMeasurement "String Decryption"
+        Exit Function
+    End If
+    
     
     mPerformanceMonitor.EndMeasurement "String Decryption"
-    DecryptString = result
+    DecryptString = Left$(StrConv(buffer, vbUnicode), dataLen)
 End Function
 
 Public Function GenerateHash(ByVal inputString As String) As String

@@ -49,6 +49,10 @@ Public Enum ErrorCode
     ErrCryptoKeyNotSpecified = vbObjectError + 7002     ' 暗号化キー未指定
     ErrCryptoHashCreateFailed = vbObjectError + 7003    ' ハッシュオブジェクト作成失敗
     ErrCryptoHashDataFailed = vbObjectError + 7004      ' データハッシュ化失敗
+    ErrCryptoKeyDerivationFailed = vbObjectError + 7005 ' キー生成失敗
+    ErrCryptoEncryptionFailed = vbObjectError + 7006    ' 暗号化失敗
+    ErrCryptoDecryptionFailed = vbObjectError + 7007    ' 復号化失敗
+    ErrCryptoInvalidKeyLength = vbObjectError + 7008    ' 無効なキー長
     
     ' ロック関連エラー (7100-7199)
     ErrLockMutexCreateFailed = vbObjectError + 7100     ' Mutexの作成失敗

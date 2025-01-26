@@ -74,6 +74,46 @@ Public Declare PtrSafe Function CryptDestroyHash Lib "advapi32.dll" ( _
 Public Declare PtrSafe Function CryptReleaseContext Lib "advapi32.dll" ( _
     ByVal hProv As LongPtr, ByVal dwFlags As Long) As Long
 
+' --- AES暗号化関連 ---
+Public Declare PtrSafe Function CryptGenKey Lib "advapi32.dll" ( _
+    ByVal hProv As LongPtr, ByVal Algid As Long, _
+    ByVal dwFlags As Long, ByRef phKey As LongPtr) As Long
+
+Public Declare PtrSafe Function CryptImportKey Lib "advapi32.dll" ( _
+    ByVal hProv As LongPtr, ByRef pbData As Any, _
+    ByVal dwDataLen As Long, ByVal hPubKey As LongPtr, _
+    ByVal dwFlags As Long, ByRef phKey As LongPtr) As Long
+
+Public Declare PtrSafe Function CryptDestroyKey Lib "advapi32.dll" ( _
+    ByVal hKey As LongPtr) As Long
+
+Public Declare PtrSafe Function CryptEncrypt Lib "advapi32.dll" ( _
+    ByVal hKey As LongPtr, ByVal hHash As LongPtr, _
+    ByVal Final As Long, ByVal dwFlags As Long, _
+    ByRef pbData As Any, ByRef pdwDataLen As Long, _
+    ByVal dwBufLen As Long) As Long
+
+Public Declare PtrSafe Function CryptDecrypt Lib "advapi32.dll" ( _
+    ByVal hKey As LongPtr, ByVal hHash As LongPtr, _
+    ByVal Final As Long, ByVal dwFlags As Long, _
+    ByRef pbData As Any, ByRef pdwDataLen As Long) As Long
+
+Public Declare PtrSafe Function CryptDeriveKey Lib "advapi32.dll" ( _
+    ByVal hProv As LongPtr, ByVal Algid As Long, _
+    ByVal hBaseData As LongPtr, ByVal dwFlags As Long, _
+    ByRef phKey As LongPtr) As Long
+
+
+Public Declare PtrSafe Function CryptSetKeyParam Lib "advapi32.dll" ( _
+    ByVal hKey As LongPtr, ByVal dwParam As Long, _
+    ByRef pbData As Any, ByVal dwFlags As Long) As Long
+
+' --- メモリ操作 ---
+Public Declare PtrSafe Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" ( _
+    ByRef Destination As Any, _
+    ByRef Source As Any, _
+    ByVal Length As LongPtr)
+
 ' --- パフォーマンスカウンター ---
 Public Declare PtrSafe Function QueryPerformanceCounter Lib "kernel32" ( _
     lpPerformanceCount As Currency) As Long
@@ -111,6 +151,13 @@ Public Const CRYPT_VERIFYCONTEXT As Long = &HF0000000
 Public Const CALG_SHA_256 As Long = &H800C
 Public Const HP_HASHVAL As Long = 2
 Public Const HP_HASHSIZE As Long = 4
+
+' --- AES暗号化関連の定数 ---
+Public Const CALG_AES_256 As Long = &H6610
+Public Const CRYPT_EXPORTABLE As Long = &H1
+Public Const KP_MODE As Long = 4
+Public Const CRYPT_MODE_CBC As Long = 1
+Public Const CRYPT_PADDING As Long = &H10
 
 ' ======================
 ' 型定義

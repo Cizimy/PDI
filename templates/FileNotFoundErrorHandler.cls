@@ -14,12 +14,24 @@ Option Explicit
 ' ======================
 Private Const MODULE_NAME As String = "FileNotFoundErrorHandler"
 
+' ======================
+' プライベート変数
+' ======================
+Private mLock As clsLock
+
 Implements IErrorHandler
 
 ' ======================
 ' シングルトンインスタンス
 ' ======================
 Private Shared instance As FileNotFoundErrorHandler
+
+' ======================
+' 初期化処理
+' ======================
+Private Sub Class_Initialize()
+    Set mLock = New clsLock
+End Sub
 
 ' ======================
 ' ファクトリメソッド
@@ -55,8 +67,11 @@ Private Function IErrorHandler_HandleError(ByRef errorDetail As typErrorDetail) 
     Dim proceed As Boolean
     proceed = False  ' デフォルトでは処理を中断
     
+    mLock.AcquireLock
+    
     ' エラー情報をログに記録
     LogError errorDetail
+    mLock.ReleaseLock
     
     ' ユーザーに通知
     NotifyUser errorDetail, vbExclamation
@@ -73,14 +88,18 @@ End Function
 Private Sub LogError(ByRef errorDetail As typErrorDetail)
     On Error GoTo ErrorHandler
     
+    mLock.AcquireLock
+    
     ' エラーログの出力
     With New clsLogger
         .Configure New DefaultLoggerSettings
     
-   r.Log MODULE_NAME, _
+        .Log MODULE_NAME, _
              "ファイルが見つかりません: " & errorDetail.Description, _
              errorDetail.ErrorCode
     End With
+    
+    mLock.ReleaseLock
     Exit Sub
 
 ErrorHandler:

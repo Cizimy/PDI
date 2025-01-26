@@ -25,6 +25,7 @@ Private Const MAX_RETRY_COUNT As Long = 3
 ' ======================
 Private mConnectionString As String
 Private mConfig As IDatabaseConfig
+Private mLock As clsLock
 
 Implements IErrorHandler
 
@@ -39,6 +40,7 @@ Private Shared instance As DatabaseConnectionErrorHandler
 Public Sub Initialize(ByVal config As IDatabaseConfig)
     If config Is Nothing Then Exit Sub
     Set mConfig = config
+    Set mLock = New clsLock
     mConnectionString = mConfig.GetConnectionString
 End Sub
 
@@ -78,8 +80,11 @@ Private Function IErrorHandler_HandleError(ByRef errorDetail As ErrorInfo) As Bo
     Dim proceed As Boolean
     proceed = False  ' デフォルトでは処理を中断
     
+    mLock.AcquireLock
+    
     ' エラー情報をログに記録
     LogError errorDetail
+    mLock.ReleaseLock
     
     ' リトライ処理の実行
     If AttemptRetry(errorDetail) Then
@@ -110,6 +115,8 @@ Private Function AttemptRetry(ByRef errorDetail As ErrorInfo) As Boolean
             Exit For
         End If
         
+        mLock.AcquireLock
+        
         ' リトライ試行をログに記録
         Dim loggerSettings As DefaultLoggerSettings
         Set loggerSettings = New DefaultLoggerSettings
@@ -120,6 +127,8 @@ Private Function AttemptRetry(ByRef errorDetail As ErrorInfo) As Boolean
                  "データベース接続リトライ " & retryCount & "/" & MAX_RETRY_COUNT, _
                  errorDetail.Code
         End With
+        
+        mLock.ReleaseLock
     Next retryCount
     
     AttemptRetry = success
@@ -161,6 +170,8 @@ End Function
 Private Sub LogError(ByRef errorDetail As ErrorInfo)
     On Error GoTo ErrorHandler
     
+    mLock.AcquireLock
+    
     ' エラーログの出力
     Dim loggerSettings As DefaultLoggerSettings
     Set loggerSettings = New DefaultLoggerSettings
@@ -168,10 +179,12 @@ Private Sub LogError(ByRef errorDetail As ErrorInfo)
     With New clsLogger
         .Configure loggerSettings
     
-   r.Log MODULE_NAME, _
+    .Log MODULE_NAME, _
              "データベース接続エラー: " & errorDetail.Description, _
              errorDetail.Code
     End With
+    
+    mLock.ReleaseLock
     Exit Sub
 
 ErrorHandler:

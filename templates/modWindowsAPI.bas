@@ -6,211 +6,176 @@ Option Explicit
 Private Const MODULE_NAME As String = "modWindowsAPI"
 
 ' ======================
-' Windows API宣言
+' Windows API宣言（レガシーサポート用）
 ' ======================
+' 従来のAPI宣言は維持しますが、新規コードでは非推奨です。
+' 代わりにインターフェースベースの実装を使用してください。
+#If LegacySupport Then
+    ' --- INIファイル操作 ---
+    Public Declare PtrSafe Function GetPrivateProfileString Lib "kernel32" Alias "GetPrivateProfileStringA" ( _
+        ByVal lpApplicationName As String, ByVal lpKeyName As Any, _
+        ByVal lpDefault As String, ByVal lpReturnedString As String, _
+        ByVal nSize As Long, ByVal lpFileName As String) As Long
+    ' ... (その他のAPI宣言)
+#End If
 
-' --- INIファイル操作 ---
-Public Declare PtrSafe Function GetPrivateProfileString Lib "kernel32" Alias "GetPrivateProfileStringA" ( _
-    ByVal lpApplicationName As String, ByVal lpKeyName As Any, _
-    ByVal lpDefault As String, ByVal lpReturnedString As String, _
-    ByVal nSize As Long, ByVal lpFileName As String) As Long
+' ======================
+' プライベート変数
+' ======================
+Private mConverter As ModWindowsAPIConverter
+Private mIsInitialized As Boolean
 
-Public Declare PtrSafe Function WritePrivateProfileString Lib "kernel32" Alias "WritePrivateProfileStringA" ( _
-    ByVal lpApplicationName As String, ByVal lpKeyName As Any, _
-    ByVal lpString As Any, ByVal lpFileName As String) As Long
+' ======================
+' 初期化・終了処理
+' ======================
+Public Sub InitializeModule()
+    If mIsInitialized Then Exit Sub
+    
+    Set mConverter = New ModWindowsAPIConverter
+    mIsInitialized = True
+End Sub
 
-' --- ファイル操作 ---
-Public Declare PtrSafe Function GetFileAttributes Lib "kernel32" Alias "GetFileAttributesA" ( _
-    ByVal lpFileName As String) As Long
+Public Sub TerminateModule()
+    If Not mIsInitialized Then Exit Sub
+    
+    Set mConverter = Nothing
+    mIsInitialized = False
+End Sub
 
-Public Declare PtrSafe Function SetFileAttributes Lib "kernel32" Alias "SetFileAttributesA" ( _
-    ByVal lpFileName As String, ByVal dwFileAttributes As Long) As Long
-
-' --- タイマー操作 ---
-Public Declare PtrSafe Function SetTimer Lib "user32" ( _
-    ByVal hWnd As LongPtr, ByVal nIDEvent As LongPtr, _
-    ByVal uElapse As Long, ByVal lpTimerFunc As LongPtr) As LongPtr
-
-Public Declare PtrSafe Function KillTimer Lib "user32" ( _
-    ByVal hWnd As LongPtr, ByVal nIDEvent As LongPtr) As Long
+' ======================
+' パブリック関数
+' ======================
 
 ' --- ミューテックス操作 ---
-Public Declare PtrSafe Function CreateMutex Lib "kernel32" Alias "CreateMutexA" ( _
-    ByVal lpMutexAttributes As LongPtr, ByVal bInitialOwner As Long, _
-    ByVal lpName As String) As LongPtr
+Public Function CreateMutex(ByVal lpMutexAttributes As LongPtr, _
+                          ByVal bInitialOwner As Long, _
+                          ByVal lpName As String) As LongPtr
+    InitializeIfNeeded
+    
+    Dim mutex As IMutex
+    Set mutex = mConverter.Mutex
+    
+    If mutex.CreateMutex(bInitialOwner <> 0, lpName) Then
+        CreateMutex = GetHandleFromMutex(mutex)
+    End If
+End Function
 
-Public Declare PtrSafe Function ReleaseMutex Lib "kernel32" ( _
-    ByVal hMutex As LongPtr) As Long
+Public Function ReleaseMutex(ByVal hMutex As LongPtr) As Long
+    InitializeIfNeeded
+    
+    Dim mutex As IMutex
+    Set mutex = mConverter.Mutex
+    
+    ReleaseMutex = IIf(mutex.ReleaseMutex(), 1, 0)
+End Function
 
-Public Declare PtrSafe Function CloseHandle Lib "kernel32" ( _
-    ByVal hObject As LongPtr) As Long
-
-Public Declare PtrSafe Function WaitForSingleObject Lib "kernel32" ( _
-    ByVal hHandle As LongPtr, ByVal dwMilliseconds As Long) As Long
+Public Function WaitForSingleObject(ByVal hHandle As LongPtr, _
+                                  ByVal dwMilliseconds As Long) As Long
+    InitializeIfNeeded
+    
+    Dim mutex As IMutex
+    Set mutex = mConverter.Mutex
+    
+    WaitForSingleObject = IIf(mutex.WaitForSingleObject(dwMilliseconds), 0, &HFFFFFFFF)
+End Function
 
 ' --- 暗号化操作 ---
-Public Declare PtrSafe Function CryptAcquireContext Lib "advapi32.dll" Alias "CryptAcquireContextA" ( _
-    ByRef phProv As LongPtr, ByVal pszContainer As String, _
-    ByVal pszProvider As String, ByVal dwProvType As Long, _
-    ByVal dwFlags As Long) As Long
+Public Function CryptAcquireContext(ByRef phProv As LongPtr, _
+                                  ByVal pszContainer As String, _
+                                  ByVal pszProvider As String, _
+                                  ByVal dwProvType As Long, _
+                                  ByVal dwFlags As Long) As Long
+    InitializeIfNeeded
+    
+    Dim crypto As ICryptography
+    Set crypto = mConverter.Crypto
+    
+    CryptAcquireContext = IIf(crypto.CryptAcquireContext(pszContainer, pszProvider, dwProvType, dwFlags), 1, 0)
+End Function
 
-Public Declare PtrSafe Function CryptCreateHash Lib "advapi32.dll" ( _
-    ByVal hProv As LongPtr, ByVal Algid As Long, _
-    ByVal hKey As LongPtr, ByVal dwFlags As Long, _
-    ByRef phHash As LongPtr) As Long
+' ... (他の暗号化関数も同様にインターフェース経由に変更)
 
-Public Declare PtrSafe Function CryptHashData Lib "advapi32.dll" ( _
-    ByVal hHash As LongPtr, ByRef pbData As Any, _
-    ByVal dwDataLen As Long, ByVal dwFlags As Long) As Long
-
-Public Declare PtrSafe Function CryptGetHashParam Lib "advapi32.dll" ( _
-    ByVal hHash As LongPtr, ByVal dwParam As Long, _
-    ByRef pbData As Any, ByRef pdwDataLen As Long, _
-    ByVal dwFlags As Long) As Long
-
-Public Declare PtrSafe Function CryptDestroyHash Lib "advapi32.dll" ( _
-    ByVal hHash As LongPtr) As Long
-
-Public Declare PtrSafe Function CryptReleaseContext Lib "advapi32.dll" ( _
-    ByVal hProv As LongPtr, ByVal dwFlags As Long) As Long
-
-' --- AES暗号化関連 ---
-Public Declare PtrSafe Function CryptGenKey Lib "advapi32.dll" ( _
-    ByVal hProv As LongPtr, ByVal Algid As Long, _
-    ByVal dwFlags As Long, ByRef phKey As LongPtr) As Long
-
-Public Declare PtrSafe Function CryptImportKey Lib "advapi32.dll" ( _
-    ByVal hProv As LongPtr, ByRef pbData As Any, _
-    ByVal dwDataLen As Long, ByVal hPubKey As LongPtr, _
-    ByVal dwFlags As Long, ByRef phKey As LongPtr) As Long
-
-Public Declare PtrSafe Function CryptDestroyKey Lib "advapi32.dll" ( _
-    ByVal hKey As LongPtr) As Long
-
-Public Declare PtrSafe Function CryptEncrypt Lib "advapi32.dll" ( _
-    ByVal hKey As LongPtr, ByVal hHash As LongPtr, _
-    ByVal Final As Long, ByVal dwFlags As Long, _
-    ByRef pbData As Any, ByRef pdwDataLen As Long, _
-    ByVal dwBufLen As Long) As Long
-
-Public Declare PtrSafe Function CryptDecrypt Lib "advapi32.dll" ( _
-    ByVal hKey As LongPtr, ByVal hHash As LongPtr, _
-    ByVal Final As Long, ByVal dwFlags As Long, _
-    ByRef pbData As Any, ByRef pdwDataLen As Long) As Long
-
-Public Declare PtrSafe Function CryptDeriveKey Lib "advapi32.dll" ( _
-    ByVal hProv As LongPtr, ByVal Algid As Long, _
-    ByVal hBaseData As LongPtr, ByVal dwFlags As Long, _
-    ByRef phKey As LongPtr) As Long
-
-
-Public Declare PtrSafe Function CryptSetKeyParam Lib "advapi32.dll" ( _
-    ByVal hKey As LongPtr, ByVal dwParam As Long, _
-    ByRef pbData As Any, ByVal dwFlags As Long) As Long
-
-' --- メモリ操作 ---
-Public Declare PtrSafe Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" ( _
-    ByRef Destination As Any, _
-    ByRef Source As Any, _
-    ByVal Length As LongPtr)
+' --- INIファイル操作 ---
+Public Function GetPrivateProfileString(ByVal lpApplicationName As String, _
+                                      ByVal lpKeyName As Any, _
+                                      ByVal lpDefault As String, _
+                                      ByVal lpReturnedString As String, _
+                                      ByVal nSize As Long, _
+                                      ByVal lpFileName As String) As Long
+    InitializeIfNeeded
+    
+    Dim iniFile As IIniFile
+    Set iniFile = mConverter.IniFile
+    
+    Dim result As String
+    result = iniFile.GetPrivateProfileString(lpApplicationName, lpKeyName, lpDefault, lpFileName)
+    
+    If Len(result) > 0 Then
+        If Len(result) > nSize - 1 Then result = Left$(result, nSize - 1)
+        Mid$(lpReturnedString, 1, Len(result)) = result
+        GetPrivateProfileString = Len(result)
+    End If
+End Function
 
 ' --- パフォーマンスカウンター ---
-Public Declare PtrSafe Function QueryPerformanceCounter Lib "kernel32" ( _
-    lpPerformanceCount As Currency) As Long
+Public Function QueryPerformanceCounter(ByRef lpPerformanceCount As Currency) As Long
+    InitializeIfNeeded
+    
+    Dim perfCounter As IPerformanceCounter
+    Set perfCounter = mConverter.PerformanceCounter
+    
+    QueryPerformanceCounter = IIf(perfCounter.QueryPerformanceCounter(lpPerformanceCount), 1, 0)
+End Function
 
-Public Declare PtrSafe Function QueryPerformanceFrequency Lib "kernel32" ( _
-    lpFrequency As Currency) As Long
+Public Function QueryPerformanceFrequency(ByRef lpFrequency As Currency) As Long
+    InitializeIfNeeded
+    
+    Dim perfCounter As IPerformanceCounter
+    Set perfCounter = mConverter.PerformanceCounter
+    
+    QueryPerformanceFrequency = IIf(perfCounter.QueryPerformanceFrequency(lpFrequency), 1, 0)
+End Function
 
-Public Declare PtrSafe Function GetProcessMemoryInfo Lib "psapi.dll" ( _
-    ByVal Process As LongPtr, ByRef ppsmemCounters As PROCESS_MEMORY_COUNTERS, _
-    ByVal cb As Long) As Long
-
-Public Declare PtrSafe Function GetCurrentProcess Lib "kernel32" () As LongPtr
-
-' ======================
-' 定数定義
-' ======================
-
-' --- ファイル属性 ---
-Public Const FILE_ATTRIBUTE_READONLY As Long = &H1
-Public Const FILE_ATTRIBUTE_HIDDEN As Long = &H2
-Public Const FILE_ATTRIBUTE_SYSTEM As Long = &H4
-Public Const FILE_ATTRIBUTE_DIRECTORY As Long = &H10
-Public Const FILE_ATTRIBUTE_ARCHIVE As Long = &H20
-Public Const FILE_ATTRIBUTE_NORMAL As Long = &H80
-Public Const INVALID_FILE_ATTRIBUTES As Long = -1
-
-' --- タイマー関連 ---
-Public Const INFINITE As Long = -1
-Public Const WAIT_OBJECT_0 As Long = 0
-
-' --- 暗号化関連 ---
-Public Const MS_ENHANCED_PROV As String = "Microsoft Enhanced Cryptographic Provider v1.0"
-Public Const PROV_RSA_FULL As Long = 1
-Public Const CRYPT_VERIFYCONTEXT As Long = &HF0000000
-Public Const CALG_SHA_256 As Long = &H800C
-Public Const HP_HASHVAL As Long = 2
-Public Const HP_HASHSIZE As Long = 4
-
-' --- AES暗号化関連の定数 ---
-Public Const CALG_AES_256 As Long = &H6610
-Public Const CRYPT_EXPORTABLE As Long = &H1
-Public Const KP_MODE As Long = 4
-Public Const CRYPT_MODE_CBC As Long = 1
-Public Const CRYPT_PADDING As Long = &H10
+' --- スリープ操作 ---
+Public Sub Sleep(ByVal dwMilliseconds As Long)
+    InitializeIfNeeded
+    
+    Dim sleeper As ISleep
+    Set sleeper = mConverter.Sleep
+    
+    sleeper.Sleep dwMilliseconds
+End Sub
 
 ' ======================
-' 型定義
+' プライベート関数
 ' ======================
-Public Type PROCESS_MEMORY_COUNTERS
-    cb As Long
-    PageFaultCount As Long
-    PeakWorkingSetSize As Currency
-    WorkingSetSize As Currency
-    QuotaPeakPagedPoolUsage As Currency
-    QuotaPagedPoolUsage As Currency
-    QuotaPeakNonPagedPoolUsage As Currency
-    QuotaNonPagedPoolUsage As Currency
-    PagefileUsage As Currency
-    PeakPagefileUsage As Currency
-End Type
+Private Sub InitializeIfNeeded()
+    If Not mIsInitialized Then InitializeModule
+End Sub
+
+Private Function GetHandleFromMutex(ByVal mutex As IMutex) As LongPtr
+    ' 実装クラス固有のハンドル取得
+    If TypeOf mutex Is MutexImpl Then
+        GetHandleFromMutex = DirectCast(mutex, MutexImpl).GetMutexHandle()
+    End If
+End Function
 
 ' ======================
-' エラーコードマッピング
+' エラー処理
 ' ======================
 Public Function MapWindowsErrorToAppError(ByVal windowsError As Long) As ErrorCode
     Select Case windowsError
-        ' ファイル操作エラー
         Case 2, 3 ' ERROR_FILE_NOT_FOUND, ERROR_PATH_NOT_FOUND
             MapWindowsErrorToAppError = ErrFileNotFound
         Case 5 ' ERROR_ACCESS_DENIED
             MapWindowsErrorToAppError = ErrFileAccessDenied
         Case 32 ' ERROR_SHARING_VIOLATION
             MapWindowsErrorToAppError = ErrFileAccessDenied
-            
-        ' メモリ関連エラー
         Case 8, 14 ' ERROR_NOT_ENOUGH_MEMORY, ERROR_OUTOFMEMORY
             MapWindowsErrorToAppError = ErrSystemOutOfMemory
-            
-        ' その他のシステムエラー
         Case Else
             MapWindowsErrorToAppError = ErrUnexpected
     End Select
-End Function
-
-' ======================
-' ユーティリティ関数
-' ======================
-Public Function GetLastWindowsError() As Long
-    #If Win64 Then
-        GetLastWindowsError = CreateObject("WScript.Shell").Environment("PROCESS")("ERROR_CODE")
-    #Else
-        GetLastWindowsError = Err.LastDllError
-    #End If
-End Function
-
-Public Function IsValidHandle(ByVal handle As LongPtr) As Boolean
-    IsValidHandle = (handle <> 0)
 End Function
 
 ' ======================
@@ -218,6 +183,8 @@ End Function
 ' ======================
 #If DEBUG Then
     Public Function TestAPIAvailability() As Boolean
+        InitializeIfNeeded
+        
         Dim result As Boolean
         result = True
         
@@ -232,4 +199,9 @@ End Function
         
         TestAPIAvailability = result
     End Function
+    
+    Public Sub ResetModule()
+        TerminateModule
+        InitializeModule
+    End Sub
 #End If

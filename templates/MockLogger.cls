@@ -31,6 +31,13 @@ Private Type LogEntry
     Timestamp As Date
 End Type
 
+' エラー情報を格納する型
+Private Type LogOperationResult
+    Success As Boolean
+    Value As Variant
+    ErrorDetail As typErrorDetail
+End Type
+
 Private mLogEntries As Collection
 Private mLogLevel As LogLevelEnum
 Private mLogDestination As LogDestination
@@ -111,26 +118,40 @@ End Property
 ''' </summary>
 ''' <param name="index">取得するログエントリのインデックス</param>
 ''' <returns>フォーマット済みのログエントリ文字列、無効なインデックスの場合は空文字列</returns>
-Private Function GetLogEntry(ByVal index As Long) As String
+Private Function GetLogEntry(ByVal index As Long) As LogOperationResult
     On Error GoTo ErrorHandler
     
+    Dim result As LogOperationResult
+    result.Success = True
+    
     If index < 1 Or index > mLogEntries.Count Then
-        GetLogEntry = ""
+        result.Success = False
+        With result.ErrorDetail
+            .ErrorCode = ERR_INVALID_PARAMETER
+            .Description = "無効なインデックスが指定されました: " & index
+            .Category = ECValidation
+            .Source = MODULE_NAME
+            .ProcedureName = "GetLogEntry"
+            .StackTrace = modStackTrace.GetStackTrace()
+            .OccurredAt = Now
+        End With
+        GetLogEntry = result
         Exit Function
     End If
     
     Dim entry As LogEntry
     entry = mLogEntries(index)
     
-    GetLogEntry = Format$(entry.Timestamp, "yyyy/mm/dd hh:nn:ss") & " " & _
-                 "[" & entry.ModuleName & "] " & _
-                 IIf(entry.ErrorCode <> 0, "(Code: " & entry.ErrorCode & ") ", "") & _
-                 entry.Message
+    result.Value = Format$(entry.Timestamp, "yyyy/mm/dd hh:nn:ss") & " " & _
+                  "[" & entry.ModuleName & "] " & _
+                  IIf(entry.ErrorCode <> 0, "(Code: " & entry.ErrorCode & ") ", "") & _
+                  entry.Message
+    GetLogEntry = result
     Exit Function
 
 ErrorHandler:
-    Dim errDetail As typErrorDetail
-    With errDetail
+    result.Success = False
+    With result.ErrorDetail
         .ErrorCode = ERR_UNEXPECTED
         .Description = "ログエントリの取得中にエラーが発生しました: " & Err.Description
         .Category = ECGeneral
@@ -139,8 +160,7 @@ ErrorHandler:
         .StackTrace = modStackTrace.GetStackTrace()
         .OccurredAt = Now
     End With
-    modError.HandleError errDetail
-    GetLogEntry = ""
+    GetLogEntry = result
 End Function
 
 ''' <summary>
@@ -155,8 +175,11 @@ End Sub
 ''' </summary>
 ''' <param name="moduleName">対象のモジュール名</param>
 ''' <returns>指定されたモジュールのログエントリ数</returns>
-Private Function GetLogCountForModule(ByVal moduleName As String) As Long
+Private Function GetLogCountForModule(ByVal moduleName As String) As LogOperationResult
     On Error GoTo ErrorHandler
+    
+    Dim result As LogOperationResult
+    result.Success = True
     
     Dim count As Long
     Dim i As Long
@@ -169,12 +192,13 @@ Private Function GetLogCountForModule(ByVal moduleName As String) As Long
         End If
     Next i
     
-    GetLogCountForModule = count
+    result.Value = count
+    GetLogCountForModule = result
     Exit Function
 
 ErrorHandler:
-    Dim errDetail As typErrorDetail
-    With errDetail
+    result.Success = False
+    With result.ErrorDetail
         .ErrorCode = ERR_UNEXPECTED
         .Description = "モジュール別ログ数の取得中にエラーが発生しました: " & Err.Description
         .Category = ECGeneral
@@ -183,8 +207,7 @@ ErrorHandler:
         .StackTrace = modStackTrace.GetStackTrace()
         .OccurredAt = Now
     End With
-    modError.HandleError errDetail
-    GetLogCountForModule = 0
+    GetLogCountForModule = result
 End Function
 
 ''' <summary>
@@ -192,8 +215,11 @@ End Function
 ''' </summary>
 ''' <param name="errorCode">対象のエラーコード</param>
 ''' <returns>指定されたエラーコードのログエントリ数</returns>
-Private Function GetLogCountForErrorCode(ByVal errorCode As ErrorCode) As Long
+Private Function GetLogCountForErrorCode(ByVal errorCode As ErrorCode) As LogOperationResult
     On Error GoTo ErrorHandler
+    
+    Dim result As LogOperationResult
+    result.Success = True
     
     Dim count As Long
     Dim i As Long
@@ -206,12 +232,13 @@ Private Function GetLogCountForErrorCode(ByVal errorCode As ErrorCode) As Long
         End If
     Next i
     
-    GetLogCountForErrorCode = count
+    result.Value = count
+    GetLogCountForErrorCode = result
     Exit Function
 
 ErrorHandler:
-    Dim errDetail As typErrorDetail
-    With errDetail
+    result.Success = False
+    With result.ErrorDetail
         .ErrorCode = ERR_UNEXPECTED
         .Description = "エラーコード別ログ数の取得中にエラーが発生しました: " & Err.Description
         .Category = ECGeneral
@@ -220,18 +247,47 @@ ErrorHandler:
         .StackTrace = modStackTrace.GetStackTrace()
         .OccurredAt = Now
     End With
-    modError.HandleError errDetail
-    GetLogCountForErrorCode = 0
+    GetLogCountForErrorCode = result
 End Function
 
 ''' <summary>
 ''' 最後のログエントリを取得（テスト用）
 ''' </summary>
 ''' <returns>最後のログエントリ、ログが空の場合は空文字列</returns>
-Private Function GetLastLogEntry() As String
-    If mLogEntries.Count > 0 Then
-        GetLastLogEntry = GetLogEntry(mLogEntries.Count)
-    Else
-        GetLastLogEntry = ""
+Private Function GetLastLogEntry() As LogOperationResult
+    On Error GoTo ErrorHandler
+    
+    Dim result As LogOperationResult
+    result.Success = True
+    
+    If mLogEntries.Count = 0 Then
+        result.Success = False
+        With result.ErrorDetail
+            .ErrorCode = ERR_NO_DATA
+            .Description = "ログエントリが存在しません"
+            .Category = ECValidation
+            .Source = MODULE_NAME
+            .ProcedureName = "GetLastLogEntry"
+            .StackTrace = modStackTrace.GetStackTrace()
+            .OccurredAt = Now
+        End With
+        GetLastLogEntry = result
+        Exit Function
     End If
+    
+    GetLastLogEntry = GetLogEntry(mLogEntries.Count)
+    Exit Function
+
+ErrorHandler:
+    result.Success = False
+    With result.ErrorDetail
+        .ErrorCode = ERR_UNEXPECTED
+        .Description = "最後のログエントリの取得中にエラーが発生しました: " & Err.Description
+        .Category = ECGeneral
+        .Source = MODULE_NAME
+        .ProcedureName = "GetLastLogEntry"
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
+    End With
+    GetLastLogEntry = result
 End Function

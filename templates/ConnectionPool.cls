@@ -177,19 +177,26 @@ Private Function CreateNewConnection() As Object
     On Error GoTo ErrorHandler
     mPerformanceMonitor.StartMeasurement "Create Database Connection"
     
+    mLock.AcquireLock
+    
     Dim conn As Object
     Set conn = CreateObject("ADODB.Connection")
     conn.ConnectionString = mConnectionString
     conn.ConnectionTimeout = CONNECTION_TIMEOUT
+    
     ' データベース接続の作成
     conn.Open
     
     Set CreateNewConnection = conn
+    
+Cleanup:
+    mLock.ReleaseLock
+    mPerformanceMonitor.EndMeasurement "Create Database Connection"
     Exit Function
     
 ErrorHandler:
     Set CreateNewConnection = Nothing
-    mPerformanceMonitor.EndMeasurement "Create Database Connection"
+    Resume Cleanup
 End Function
 
 ''' <summary>

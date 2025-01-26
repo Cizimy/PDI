@@ -24,13 +24,19 @@ Implements IUserNotifier
 ' ======================
 Private mNotificationStyle As VbMsgBoxStyle
 Private mDefaultTitle As String
+Private mLock As clsLock
 
 ' ======================
 ' 初期化
 ' ======================
 Private Sub Class_Initialize()
     mNotificationStyle = vbOKOnly Or vbInformation
+    Set mLock = New clsLock
     mDefaultTitle = "エラー"
+End Sub
+
+Private Sub Class_Terminate()
+    Set mLock = Nothing
 End Sub
 
 ' ======================
@@ -40,6 +46,8 @@ Private Function IUserNotifier_Notify(ByRef errorDetail As typErrorDetail, _
                                     Optional ByVal buttons As VbMsgBoxStyle = vbOKOnly, _
                                     Optional ByVal title As String = "エラー") As VbMsgBoxResult
     On Error GoTo ErrorHandler
+    
+    mLock.AcquireLock
     
     ' エラーの重大度に応じてアイコンを設定
     Dim icon As VbMsgBoxStyle
@@ -51,8 +59,12 @@ Private Function IUserNotifier_Notify(ByRef errorDetail As typErrorDetail, _
     
     ' メッセージボックスの表示（NotificationStyleを適用）
     IUserNotifier_Notify = MsgBox(msg, mNotificationStyle Or buttons Or icon, title)
+    
+Cleanup:
+    mLock.ReleaseLock
     Exit Function
 
+    
 ErrorHandler:
     Dim errDetail As typErrorDetail
     With errDetail
@@ -66,6 +78,7 @@ ErrorHandler:
     End With
     modError.HandleError errDetail
     IUserNotifier_Notify = vbOK ' エラー時はOKを返す
+    Resume Cleanup
 End Function
 
 Private Property Let IUserNotifier_NotificationStyle(ByVal style As VbMsgBoxStyle)

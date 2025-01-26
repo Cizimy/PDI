@@ -66,6 +66,8 @@ End Sub
 Private Function DeriveAESKey(ByVal key As String) As Boolean
     On Error GoTo ErrorHandler
     
+    mLock.AcquireLock
+    
     ' 既存のキーを破棄
     If mAesKey <> 0 Then
         CryptDestroyKey mAesKey
@@ -75,19 +77,19 @@ Private Function DeriveAESKey(ByVal key As String) As Boolean
     ' キーのハッシュを作成
     Dim hHash As LongPtr
     If CryptCreateHash(mCryptoProvider, CALG_SHA_256, 0, 0, hHash) = 0 Then
-        GoTo ErrorHandler
+        GoTo Cleanup
     End If
     
     ' キー文字列をハッシュ化
     If CryptHashData(hHash, ByVal key, Len(key), 0) = 0 Then
         CryptDestroyHash hHash
-        GoTo ErrorHandler
+        GoTo Cleanup
     End If
     
     ' ハッシュからAESキーを生成
     If CryptDeriveKey(mCryptoProvider, CALG_AES_256, hHash, CRYPT_EXPORTABLE, mAesKey) = 0 Then
         CryptDestroyHash hHash
-        GoTo ErrorHandler
+        GoTo Cleanup
     End If
     
     ' ハッシュオブジェクトの破棄
@@ -97,12 +99,14 @@ Private Function DeriveAESKey(ByVal key As String) As Boolean
     Dim mode As Long
     mode = CRYPT_MODE_CBC
     If CryptSetKeyParam(mAesKey, KP_MODE, mode, 0) = 0 Then
-        GoTo ErrorHandler
+        GoTo Cleanup
     End If
     
     DeriveAESKey = True
-    Exit Function
     
+Cleanup:
+    mLock.ReleaseLock
+    Exit Function
 ErrorHandler:
     Dim errInfo As ErrorInfo
     With errInfo
@@ -114,6 +118,7 @@ ErrorHandler:
     End With
     modError.HandleError errInfo
     DeriveAESKey = False
+    Resume Cleanup
 End Function
 
 ' ======================

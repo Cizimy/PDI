@@ -9,34 +9,33 @@ Attribute VB_PredefinedId = False
 Attribute VB_Exposed = False
 Option Explicit
 
-' ======================
+'==========================
 ' モジュール情報
-' ======================
+'==========================
 Private Const MODULE_NAME As String = "clsCallStack"
 
-' ======================
+'==========================
 ' メンバ変数
-' ======================
-Private mIsInitialized As Boolean
+'==========================
+Private mStackTrace As IStackTrace
 Private mLock As clsLock
 
-' ======================
+'==========================
 ' 初期化・終了処理
-' ======================
+'==========================
 Private Sub Class_Initialize()
-    modStackTrace.InitializeModule
+    Set mStackTrace = New StackTraceImpl
     Set mLock = New clsLock
-    mIsInitialized = True
 End Sub
 
 Private Sub Class_Terminate()
+    Set mStackTrace = Nothing
     Set mLock = Nothing
-    mIsInitialized = False
 End Sub
 
-' ======================
+'==========================
 ' パブリックメソッド
-' ======================
+'==========================
 
 ''' <summary>
 ''' 呼び出し履歴にエントリを追加
@@ -47,12 +46,10 @@ End Sub
 ''' スタックトレースの最大深さを超えた場合、エラーを発生させずに無視します
 ''' </remarks>
 Public Sub Push(ByVal ModuleName As String, ByVal ProcedureName As String)
-    If Not mIsInitialized Then Exit Sub
-    
     mLock.AcquireLock
     On Error GoTo ErrorHandler
     
-    modStackTrace.PushStackEntry ModuleName, ProcedureName
+    mStackTrace.PushStackEntry ModuleName, ProcedureName
     
     mLock.ReleaseLock
     Exit Sub
@@ -65,7 +62,7 @@ ErrorHandler:
         .Category = ECGeneral
         .Source = MODULE_NAME
         .ProcedureName = "Push"
-        .StackTrace = modStackTrace.GetStackTrace()
+        .StackTrace = mStackTrace.GetStackTrace()
         .OccurredAt = Now
     End With
     modError.HandleError errDetail
@@ -78,12 +75,10 @@ End Sub
 ''' </summary>
 ''' <returns>最後に追加されたプロシージャの完全修飾名、またはスタックが空の場合は空文字列</returns>
 Public Function Pop() As String
-    If Not mIsInitialized Then Exit Function
-    
     mLock.AcquireLock
     On Error GoTo ErrorHandler
     
-    Pop = modStackTrace.PopStackEntry()
+    Pop = mStackTrace.PopStackEntry()
     
     mLock.ReleaseLock
     Exit Function
@@ -96,7 +91,7 @@ ErrorHandler:
         .Category = ECGeneral
         .Source = MODULE_NAME
         .ProcedureName = "Pop"
-        .StackTrace = modStackTrace.GetStackTrace()
+        .StackTrace = mStackTrace.GetStackTrace()
         .OccurredAt = Now
     End With
     modError.HandleError errDetail
@@ -109,12 +104,10 @@ End Function
 ''' </summary>
 ''' <returns>スタックトレースの文字列表現</returns>
 Public Property Get StackTrace() As String
-    If Not mIsInitialized Then Exit Property
-    
     mLock.AcquireLock
     On Error GoTo ErrorHandler
     
-    StackTrace = modStackTrace.GetStackTrace()
+    StackTrace = mStackTrace.GetStackTrace()
     
     mLock.ReleaseLock
     Exit Property
@@ -127,7 +120,7 @@ ErrorHandler:
         .Category = ECGeneral
         .Source = MODULE_NAME
         .ProcedureName = "StackTrace"
-        .StackTrace = modStackTrace.GetStackTrace()
+        .StackTrace = mStackTrace.GetStackTrace()
         .OccurredAt = Now
     End With
     modError.HandleError errDetail
@@ -140,36 +133,18 @@ End Property
 ''' </summary>
 ''' <returns>現在のスタックの深さ</returns>
 Public Property Get Count() As Long
-    Count = modStackTrace.StackDepth
+    Count = mStackTrace.StackDepth
 End Property
 
-' ======================
-' テストサポート機能（開発環境専用）
-' 警告: これらのメソッドは開発時のテスト目的でのみ使用し、
-' 本番環境では使用しないでください。
-' ======================
+'==========================
+' テストサポート（開発環境用）
+'==========================
 #If DEBUG Then
-    ''' <summary>
-    ''' スタックの状態を検証（テスト用）
-    ''' </summary>
-    ''' <returns>スタックが有効な状態の場合True</returns>
-    Private Function ValidateStackState() As Boolean
-        ValidateStackState = modStackTrace.ValidateStackState()
+    Public Sub SetStackTrace(ByVal stackTrace As IStackTrace)
+        Set mStackTrace = stackTrace
+    End Sub
+    
+    Public Function GetStackTrace() As IStackTrace
+        Set GetStackTrace = mStackTrace
     End Function
-    
-    ''' <summary>
-    ''' スタックをクリア（テスト用）
-    ''' </summary>
-    Private Sub ClearStack()
-        modStackTrace.ClearStack
-    End Sub
-    
-    ''' <summary>
-    ''' モジュールをリセット（テスト用）
-    ''' </summary>
-    Private Sub ResetModule()
-        mIsInitialized = False
-        modStackTrace.ResetModule
-        mIsInitialized = True
-    End Sub
 #End If

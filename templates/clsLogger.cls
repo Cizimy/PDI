@@ -21,6 +21,7 @@ Private Const MODULE_NAME As String = "clsLogger"
 ' ======================
 Private mSettings As ILoggerSettings
 Private mLogQueue As Queue
+Private mDatabaseConfig As IDatabaseConfig
 Private mConnectionPool As ConnectionPool
 Private mLock As clsLock
 Private mTimerID As LongPtr
@@ -52,6 +53,7 @@ Private Sub Class_Terminate()
     Set mConnectionPool = Nothing
     Set mLock = Nothing
     Set mPerformanceMonitor = Nothing
+    Set mDatabaseConfig = Nothing
     Set mSettings = Nothing
     
     mIsInitialized = False
@@ -60,12 +62,13 @@ End Sub
 ' ======================
 ' 公開メソッド
 ' ======================
-Public Sub Configure(ByVal settings As ILoggerSettings)
+Public Sub Configure(ByVal settings As ILoggerSettings, ByVal dbConfig As IDatabaseConfig)
     Set mSettings = settings
+    Set mDatabaseConfig = dbConfig
     
     ' コネクションプールの初期化
-    If Not mSettings Is Nothing Then
-        mConnectionPool.Initialize modDatabaseUtils.GetConnectionString()
+    If Not mSettings Is Nothing And Not mDatabaseConfig Is Nothing Then
+        mConnectionPool.Initialize mDatabaseConfig.GetConnectionString()
     End If
     
     ' タイマーの設定

@@ -76,7 +76,7 @@ Private Sub InitializeLogging()
     
     ' デフォルトロガーの設定
     With New clsLogger
-        .Configure loggerSettings
+        .Configure loggerSettings, modConfig
         .Log MODULE_NAME, "ロギングシステムが初期化されました", 0
     End With
     
@@ -129,8 +129,7 @@ Private Sub InitializeErrorHandlers()
     
     ' エラーハンドラーの初期化
     ' この時点で設定とロギングは初期化済みであることが保証される
-    With DatabaseConnectionErrorHandler.Create
-(modConfig)
+    With DatabaseConnectionErrorHandler.Create(modConfig)
         ' 必要な初期化処理があれば実行
     End With
     

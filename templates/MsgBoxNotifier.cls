@@ -24,8 +24,10 @@ Implements IUserNotifier
 ' ======================
 Private mNotificationStyle As VbMsgBoxStyle
 Private mDefaultTitle As String
-Private mLock As clsLock
-Private mPerformanceMonitor As clsPerformanceMonitor
+Private mLock As ILock
+Private mPerformanceMonitor As IPerformanceMonitor
+Private mAppConfig As IAppConfig
+Private mMessageFormatter As IMessageFormatter
 
 ' ======================
 ' 型定義
@@ -44,11 +46,28 @@ End Type
 ' ======================
 ' 初期化・終了処理
 ' ======================
-Private Sub Class_Initialize()
+''' <summary>
+''' クラスの初期化を行います。
+''' </summary>
+''' <param name="lock">排他制御を提供するILockインターフェース</param>
+''' <param name="performanceMonitor">パフォーマンス監視を提供するIPerformanceMonitorインターフェース</param>
+''' <param name="appConfig">アプリケーション設定を提供するIAppConfigインターフェース</param>
+''' <param name="messageFormatter">メッセージフォーマットを提供するIMessageFormatterインターフェース</param>
+Public Sub Initialize(ByVal lock As ILock, _
+                     ByVal performanceMonitor As IPerformanceMonitor, _
+                     ByVal appConfig As IAppConfig, _
+                     ByVal messageFormatter As IMessageFormatter)
+    If lock Is Nothing Or performanceMonitor Is Nothing Or _
+       appConfig Is Nothing Or messageFormatter Is Nothing Then
+        Err.Raise 5, MODULE_NAME & ".Initialize", "必要なインターフェースがNothingです。"
+    End If
+    
     mNotificationStyle = vbOKOnly Or vbInformation
     mDefaultTitle = "エラー"
-    Set mLock = New clsLock
-    Set mPerformanceMonitor = New clsPerformanceMonitor
+    Set mLock = lock
+    Set mPerformanceMonitor = performanceMonitor
+    Set mAppConfig = appConfig
+    Set mMessageFormatter = messageFormatter
 End Sub
 
 Private Sub Class_Terminate()
@@ -124,7 +143,7 @@ Private Function TryPrepareNotification(ByRef context As NotificationContext) As
     context.Icon = GetIconForErrorCategory(context.ErrorDetail.Category)
     
     ' メッセージの組み立て
-    context.Message = BuildErrorMessage(context.ErrorDetail)
+    context.Message = mMessageFormatter.FormatMessage("", context.ErrorDetail)
     
     mPerformanceMonitor.EndMeasurement "PrepareNotification"
     TryPrepareNotification = True
@@ -195,22 +214,6 @@ Private Function GetIconForErrorCategory(ByVal category As ErrorCodeCategory) As
     End Select
 End Function
 
-Private Function BuildErrorMessage(ByRef errorDetail As ErrorInfo) As String
-    Dim msg As String
-    
-    msg = "エラーが発生しました。" & vbCrLf & vbCrLf & _
-          "説明: " & errorDetail.Description & vbCrLf & _
-          "発生場所: " & errorDetail.Source & "." & errorDetail.ProcedureName
-    
-    ' スタックトレースが存在する場合は追加
-    If Len(errorDetail.StackTrace) > 0 Then
-        msg = msg & vbCrLf & vbCrLf & _
-              "スタックトレース:" & vbCrLf & _
-              errorDetail.StackTrace
-    End If
-    
-    BuildErrorMessage = msg
-End Function
 
 ' ======================
 ' テストサポート機能
@@ -218,6 +221,15 @@ End Function
 #If DEBUG Then
     ' === 通知テスト ===
     Public Sub TestNotification()
+        ' テスト用の依存性を注入
+        Dim testLock As New MockLock
+        Dim testMonitor As New MockPerformanceMonitor
+        Dim testConfig As New MockAppConfig
+        Dim testFormatter As New DefaultMessageFormatter
+        
+        ' 初期化
+        Initialize testLock, testMonitor, testConfig, testFormatter
+        
         ' テスト用エラー情報の作成
         Dim testError As ErrorInfo
         With testError

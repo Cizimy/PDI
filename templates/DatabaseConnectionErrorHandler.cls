@@ -94,8 +94,11 @@ Private Function AttemptRetry(ByRef errorDetail As ErrorInfo) As Boolean
         End If
         
         ' リトライ試行をログに記録
+        Dim loggerSettings As DefaultLoggerSettings
+        Set loggerSettings = New DefaultLoggerSettings
+        loggerSettings.Initialize modConfig.Settings.DatabaseConnectionString
         With New clsLogger
-            .Configure New DefaultLoggerSettings
+            .Configure loggerSettings
             .Log MODULE_NAME, _
                  "データベース接続リトライ " & retryCount & "/" & MAX_RETRY_COUNT, _
                  errorDetail.Code
@@ -142,8 +145,11 @@ Private Sub LogError(ByRef errorDetail As ErrorInfo)
     On Error GoTo ErrorHandler
     
     ' エラーログの出力
+    Dim loggerSettings As DefaultLoggerSettings
+    Set loggerSettings = New DefaultLoggerSettings
+    loggerSettings.Initialize modConfig.Settings.DatabaseConnectionString
     With New clsLogger
-        .Configure New DefaultLoggerSettings
+        .Configure loggerSettings
     
    r.Log MODULE_NAME, _
              "データベース接続エラー: " & errorDetail.Description, _

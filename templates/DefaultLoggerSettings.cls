@@ -25,7 +25,7 @@ Private mConnectionString As String
 ' ======================
 ' 初期化・終了処理
 ' ======================
-Private Sub Class_Initialize()
+Public Sub Initialize(Optional ByVal connectionString As String = "")
     On Error GoTo ErrorHandler
     
     ' デフォルト値の設定
@@ -35,7 +35,13 @@ Private Sub Class_Initialize()
     mLogTableName = "AppLog"
     mLogEventSource = APPLICATION_NAME
     mTimerInterval = 1000 ' 1秒
-    mConnectionString = modConfig.Settings.DatabaseConnectionString
+    
+    ' 接続文字列の設定
+    If connectionString = "" Then
+        mConnectionString = modConfig.Settings.DatabaseConnectionString
+    Else
+        mConnectionString = connectionString
+    End If
     Exit Sub
 
 ErrorHandler:
@@ -50,6 +56,11 @@ ErrorHandler:
         .OccurredAt = Now
     End With
     modError.HandleError errDetail
+End Sub
+
+Private Sub Class_Initialize()
+    ' デフォルトの初期化は空の接続文字列で実行
+    Initialize ""
 End Sub
 
 Private Sub Class_Terminate()

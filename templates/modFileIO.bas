@@ -14,37 +14,37 @@ Private Const DEFAULT_ENCODING As String = "UTF-8"
 ' ======================
 ' プライベート変数
 ' ======================
-Private mLock As clsLock
-Private mPerformanceMonitor As clsPerformanceMonitor
-Private mIsInitialized As Boolean
+Private lock As clsLock
+Private performanceMonitor As clsPerformanceMonitor
+Private isInitialized As Boolean
 
 ' ======================
 ' 初期化・終了処理
 ' ======================
 Public Property Get IsInitialized() As Boolean
-    IsInitialized = mIsInitialized
+    IsInitialized = isInitialized
 End Property
 
 Private Sub InitializeIfNeeded()
-    If Not mIsInitialized Then InitializeModule
+    If Not isInitialized Then InitializeModule
 End Sub
 
 Public Sub InitializeModule()
-    If mIsInitialized Then Exit Sub
+    If isInitialized Then Exit Sub
     
-    Set mLock = New clsLock
-    Set mPerformanceMonitor = New clsPerformanceMonitor
+    Set lock = New clsLock
+    Set performanceMonitor = New clsPerformanceMonitor
     
-    mIsInitialized = True
+    isInitialized = True
 End Sub
 
 Public Sub TerminateModule()
-    If Not mIsInitialized Then Exit Sub
+    If Not isInitialized Then Exit Sub
     
-    Set mLock = Nothing
-    Set mPerformanceMonitor = Nothing
+    Set lock = Nothing
+    Set performanceMonitor = Nothing
     
-    mIsInitialized = False
+    isInitialized = False
 End Sub
 
 ' ======================
@@ -68,8 +68,8 @@ Public Function ReadTextFile(ByVal filePath As String, _
                            Optional ByVal encoding As String = DEFAULT_ENCODING) As String
     InitializeIfNeeded
     
-    mLock.AcquireLock
-    mPerformanceMonitor.StartMeasurement "Read Text File"
+    lock.AcquireLock
+    performanceMonitor.StartMeasurement "Read Text File"
     On Error GoTo ErrorHandler
     
     If Not FileExists(filePath) Then
@@ -84,8 +84,8 @@ Public Function ReadTextFile(ByVal filePath As String, _
     Close #fileNum
     
 CleanUp:
-    mLock.ReleaseLock
-    mPerformanceMonitor.EndMeasurement "Read Text File"
+    lock.ReleaseLock
+    performanceMonitor.EndMeasurement "Read Text File"
     Exit Function
     
 ErrorHandler:
@@ -126,8 +126,8 @@ Public Function WriteTextFile(ByVal filePath As String, _
                             Optional ByVal encoding As String = DEFAULT_ENCODING) As Boolean
     InitializeIfNeeded
     
-    mLock.AcquireLock
-    mPerformanceMonitor.StartMeasurement "Write Text File"
+    lock.AcquireLock
+    performanceMonitor.StartMeasurement "Write Text File"
     On Error GoTo ErrorHandler
     
     Dim fileNum As Integer
@@ -145,8 +145,8 @@ Public Function WriteTextFile(ByVal filePath As String, _
     WriteTextFile = True
     
 CleanUp:
-    mLock.ReleaseLock
-    mPerformanceMonitor.EndMeasurement "Write Text File"
+    lock.ReleaseLock
+    performanceMonitor.EndMeasurement "Write Text File"
     Exit Function
     
 ErrorHandler:
@@ -181,8 +181,8 @@ End Function
 Public Function ReadBinaryFile(ByVal filePath As String) As Byte()
     InitializeIfNeeded
     
-    mLock.AcquireLock
-    mPerformanceMonitor.StartMeasurement "Read Binary File"
+    lock.AcquireLock
+    performanceMonitor.StartMeasurement "Read Binary File"
     On Error GoTo ErrorHandler
     
     If Not FileExists(filePath) Then
@@ -201,8 +201,8 @@ Public Function ReadBinaryFile(ByVal filePath As String) As Byte()
     ReadBinaryFile = fileData
     
 CleanUp:
-    mLock.ReleaseLock
-    mPerformanceMonitor.EndMeasurement "Read Binary File"
+    lock.ReleaseLock
+    performanceMonitor.EndMeasurement "Read Binary File"
     Exit Function
     
 ErrorHandler:
@@ -239,8 +239,8 @@ Public Function WriteBinaryFile(ByVal filePath As String, _
                               ByRef data() As Byte) As Boolean
     InitializeIfNeeded
     
-    mLock.AcquireLock
-    mPerformanceMonitor.StartMeasurement "Write Binary File"
+    lock.AcquireLock
+    performanceMonitor.StartMeasurement "Write Binary File"
     On Error GoTo ErrorHandler
     
     Dim fileNum As Integer
@@ -253,8 +253,8 @@ Public Function WriteBinaryFile(ByVal filePath As String, _
     WriteBinaryFile = True
     
 CleanUp:
-    mLock.ReleaseLock
-    mPerformanceMonitor.EndMeasurement "Write Binary File"
+    lock.ReleaseLock
+    performanceMonitor.EndMeasurement "Write Binary File"
     Exit Function
     
 ErrorHandler:
@@ -277,15 +277,15 @@ End Function
 Public Function FileExists(ByVal filePath As String) As Boolean
     InitializeIfNeeded
     
-    mLock.AcquireLock
-    mPerformanceMonitor.StartMeasurement "FileExists"
+    lock.AcquireLock
+    performanceMonitor.StartMeasurement "FileExists"
     On Error GoTo ErrorHandler
     
     FileExists = (Dir(filePath) <> "")
     
 CleanUp:
-    mLock.ReleaseLock
-    mPerformanceMonitor.EndMeasurement "FileExists"
+    lock.ReleaseLock
+    performanceMonitor.EndMeasurement "FileExists"
     Exit Function
     
 ErrorHandler:
@@ -308,15 +308,15 @@ End Function
 Public Function FolderExists(ByVal folderPath As String) As Boolean
     InitializeIfNeeded
     
-    mLock.AcquireLock
-    mPerformanceMonitor.StartMeasurement "FolderExists"
+    lock.AcquireLock
+    performanceMonitor.StartMeasurement "FolderExists"
     On Error GoTo ErrorHandler
     
     FolderExists = (Dir(folderPath, vbDirectory) <> "")
     
 CleanUp:
-    mLock.ReleaseLock
-    mPerformanceMonitor.EndMeasurement "FolderExists"
+    lock.ReleaseLock
+    performanceMonitor.EndMeasurement "FolderExists"
     Exit Function
     
 ErrorHandler:
@@ -339,16 +339,16 @@ End Function
 Public Function CreateFolder(ByVal folderPath As String) As Boolean
     InitializeIfNeeded
     
-    mLock.AcquireLock
-    mPerformanceMonitor.StartMeasurement "Create Folder"
+    lock.AcquireLock
+    performanceMonitor.StartMeasurement "Create Folder"
     On Error GoTo ErrorHandler
     
     MkDir folderPath
     CreateFolder = True
     
 CleanUp:
-    mLock.ReleaseLock
-    mPerformanceMonitor.EndMeasurement "Create Folder"
+    lock.ReleaseLock
+    performanceMonitor.EndMeasurement "Create Folder"
     Exit Function
     
 ErrorHandler:
@@ -371,16 +371,16 @@ End Function
 Public Function DeleteFile(ByVal filePath As String) As Boolean
     InitializeIfNeeded
     
-    mLock.AcquireLock
-    mPerformanceMonitor.StartMeasurement "Delete File"
+    lock.AcquireLock
+    performanceMonitor.StartMeasurement "Delete File"
     On Error GoTo ErrorHandler
     
     Kill filePath
     DeleteFile = True
     
 CleanUp:
-    mLock.ReleaseLock
-    mPerformanceMonitor.EndMeasurement "Delete File"
+    lock.ReleaseLock
+    performanceMonitor.EndMeasurement "Delete File"
     Exit Function
     
 ErrorHandler:
@@ -403,16 +403,16 @@ End Function
 Public Function DeleteFolder(ByVal folderPath As String) As Boolean
     InitializeIfNeeded
     
-    mLock.AcquireLock
-    mPerformanceMonitor.StartMeasurement "Delete Folder"
+    lock.AcquireLock
+    performanceMonitor.StartMeasurement "Delete Folder"
     On Error GoTo ErrorHandler
     
     RmDir folderPath
     DeleteFolder = True
     
 CleanUp:
-    mLock.ReleaseLock
-    mPerformanceMonitor.EndMeasurement "Delete Folder"
+    lock.ReleaseLock
+    performanceMonitor.EndMeasurement "Delete Folder"
     Exit Function
     
 ErrorHandler:
@@ -436,16 +436,16 @@ Public Function GetAbsolutePath(ByVal relativePath As String, _
                               Optional ByVal basePath As String) As String
     InitializeIfNeeded
     
-    mLock.AcquireLock
+    lock.AcquireLock
     On Error GoTo ErrorHandler
-    mPerformanceMonitor.StartMeasurement "GetAbsolutePath"
+    performanceMonitor.StartMeasurement "GetAbsolutePath"
     
     If Len(basePath) = 0 Then basePath = CurDir
     GetAbsolutePath = CreateObject("Scripting.FileSystemObject").GetAbsolutePathName(basePath & "\" & relativePath)
     
 CleanUp:
-    mLock.ReleaseLock
-    mPerformanceMonitor.EndMeasurement "GetAbsolutePath"
+    lock.ReleaseLock
+    performanceMonitor.EndMeasurement "GetAbsolutePath"
     Exit Function
     
 ErrorHandler:

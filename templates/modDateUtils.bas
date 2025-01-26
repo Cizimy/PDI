@@ -15,24 +15,24 @@ Private Const DEFAULT_DATETIME_FORMAT As String = "yyyy/mm/dd hh:nn:ss"
 ' ======================
 ' プライベート変数
 ' ======================
-Private mPerformanceMonitor As clsPerformanceMonitor
-Private mIsInitialized As Boolean
+Private performanceMonitor As clsPerformanceMonitor
+Private isInitialized As Boolean
 
 ' ======================
 ' 初期化・終了処理
 ' ======================
 Public Sub InitializeModule()
-    If mIsInitialized Then Exit Sub
+    If isInitialized Then Exit Sub
     
-    Set mPerformanceMonitor = New clsPerformanceMonitor
-    mIsInitialized = True
+    Set performanceMonitor = New clsPerformanceMonitor
+    isInitialized = True
 End Sub
 
 Public Sub TerminateModule()
-    If Not mIsInitialized Then Exit Sub
+    If Not isInitialized Then Exit Sub
     
-    Set mPerformanceMonitor = Nothing
-    mIsInitialized = False
+    Set performanceMonitor = Nothing
+    isInitialized = False
 End Sub
 
 ' ======================
@@ -45,18 +45,18 @@ End Sub
 ''' <param name="testDate">確認する日付</param>
 ''' <returns>有効な日付の場合True</returns>
 Public Function IsValidDate(ByVal testDate As Variant) As Boolean
-    If Not mIsInitialized Then InitializeModule
+    If Not isInitialized Then InitializeModule
     
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.StartMeasurement "IsValidDate"
+    If Not performanceMonitor Is Nothing Then
+        performanceMonitor.StartMeasurement "IsValidDate"
     End If
     
     On Error Resume Next
     IsValidDate = IsDate(testDate)
     On Error GoTo 0
     
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.EndMeasurement "IsValidDate"
+    If Not performanceMonitor Is Nothing Then
+        performanceMonitor.EndMeasurement "IsValidDate"
     End If
 End Function
 
@@ -69,18 +69,18 @@ End Function
 ''' <returns>加算後の日付</returns>
 Public Function DateAdd(ByVal interval As String, ByVal number As Double, _
                       ByVal dateValue As Date) As Date
-    If Not mIsInitialized Then InitializeModule
+    If Not isInitialized Then InitializeModule
     
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.StartMeasurement "DateAdd"
+    If Not performanceMonitor Is Nothing Then
+        performanceMonitor.StartMeasurement "DateAdd"
     End If
     
     On Error GoTo ErrorHandler
     
     DateAdd = VBA.DateAdd(interval, number, dateValue)
     
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.EndMeasurement "DateAdd"
+    If Not performanceMonitor Is Nothing Then
+        performanceMonitor.EndMeasurement "DateAdd"
     End If
     Exit Function
 
@@ -96,8 +96,8 @@ ErrorHandler:
         .OccurredAt = Now
     End With
     modError.HandleError errDetail
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.EndMeasurement "DateAdd"
+    If Not performanceMonitor Is Nothing Then
+        performanceMonitor.EndMeasurement "DateAdd"
     End If
     DateAdd = dateValue
 End Function
@@ -111,18 +111,18 @@ End Function
 ''' <returns>日付の差分</returns>
 Public Function DateDiff(ByVal interval As String, ByVal date1 As Date, _
                        ByVal date2 As Date) As Long
-    If Not mIsInitialized Then InitializeModule
+    If Not isInitialized Then InitializeModule
     
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.StartMeasurement "DateDiff"
+    If Not performanceMonitor Is Nothing Then
+        performanceMonitor.StartMeasurement "DateDiff"
     End If
     
     On Error GoTo ErrorHandler
     
     DateDiff = VBA.DateDiff(interval, date1, date2)
     
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.EndMeasurement "DateDiff"
+    If Not performanceMonitor Is Nothing Then
+        performanceMonitor.EndMeasurement "DateDiff"
     End If
     Exit Function
 
@@ -138,8 +138,8 @@ ErrorHandler:
         .OccurredAt = Now
     End With
     modError.HandleError errDetail
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.EndMeasurement "DateDiff"
+    If Not performanceMonitor Is Nothing Then
+        performanceMonitor.EndMeasurement "DateDiff"
     End If
     DateDiff = 0
 End Function
@@ -152,18 +152,18 @@ End Function
 ''' <returns>フォーマットされた日付文字列</returns>
 Public Function FormatDate(ByVal dateValue As Date, _
                          Optional ByVal format As String = DEFAULT_DATE_FORMAT) As String
-    If Not mIsInitialized Then InitializeModule
+    If Not isInitialized Then InitializeModule
     
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.StartMeasurement "FormatDate"
+    If Not performanceMonitor Is Nothing Then
+        performanceMonitor.StartMeasurement "FormatDate"
     End If
     
     On Error GoTo ErrorHandler
     
     FormatDate = Format$(dateValue, format)
     
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.EndMeasurement "FormatDate"
+    If Not performanceMonitor Is Nothing Then
+        performanceMonitor.EndMeasurement "FormatDate"
     End If
     Exit Function
 
@@ -179,8 +179,8 @@ ErrorHandler:
         .OccurredAt = Now
     End With
     modError.HandleError errDetail
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.EndMeasurement "FormatDate"
+    If Not performanceMonitor Is Nothing Then
+        performanceMonitor.EndMeasurement "FormatDate"
     End If
     FormatDate = Format$(dateValue, DEFAULT_DATE_FORMAT)
 End Function
@@ -190,7 +190,7 @@ End Function
 ''' </summary>
 ''' <returns>現在の日時</returns>
 Public Function GetCurrentDateTime() As Date
-    If Not mIsInitialized Then InitializeModule
+    If Not isInitialized Then InitializeModule
     GetCurrentDateTime = Now
 End Function
 
@@ -200,7 +200,7 @@ End Function
 ''' <param name="dateValue">確認する日付</param>
 ''' <returns>営業日の場合True</returns>
 Public Function IsBusinessDay(ByVal dateValue As Date) As Boolean
-    If Not mIsInitialized Then InitializeModule
+    If Not isInitialized Then InitializeModule
     
     ' 土曜日(7)または日曜日(1)の場合はFalse
     IsBusinessDay = Not (Weekday(dateValue, vbSunday) = 1 Or _
@@ -225,6 +225,6 @@ End Function
     ''' パフォーマンスモニターの参照を取得（テスト用）
     ''' </summary>
     Private Function GetPerformanceMonitor() As clsPerformanceMonitor
-        Set GetPerformanceMonitor = mPerformanceMonitor
+        Set GetPerformanceMonitor = performanceMonitor
     End Function
 #End If

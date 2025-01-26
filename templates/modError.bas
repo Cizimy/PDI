@@ -8,37 +8,37 @@ Private Const MODULE_NAME As String = "modError"
 ' ======================
 ' プライベート変数
 ' ======================
-Private mErrorHandlers As Collection
-Private mIsInitialized As Boolean
+Private errorHandlers As Collection
+Private isInitialized As Boolean
 
 ' ======================
 ' 初期化・終了処理
 ' ======================
 Public Property Get IsInitialized() As Boolean
-    IsInitialized = mIsInitialized
+    IsInitialized = isInitialized
 End Property
 
 Public Sub InitializeModule()
-    If mIsInitialized Then Exit Sub
+    If isInitialized Then Exit Sub
     
-    Set mErrorHandlers = New Collection
+    Set errorHandlers = New Collection
     RegisterDefaultHandlers
     
-    mIsInitialized = True
+    isInitialized = True
 End Sub
 
 Public Sub TerminateModule()
-    If Not mIsInitialized Then Exit Sub
+    If Not isInitialized Then Exit Sub
     
-    Set mErrorHandlers = Nothing
-    mIsInitialized = False
+    Set errorHandlers = Nothing
+    isInitialized = False
 End Sub
 
 ' ======================
 ' エラーハンドリング
 ' ======================
 Public Sub HandleError(ByRef errInfo As ErrorInfo)
-    If Not mIsInitialized Then InitializeModule
+    If Not isInitialized Then InitializeModule
     
     ' エラー情報の補完
     With errInfo
@@ -77,7 +77,7 @@ End Sub
 
 Private Function GetErrorHandler(ByVal errorCode As ErrorCode) As IErrorHandler
     On Error Resume Next
-    Set GetErrorHandler = mErrorHandlers(CStr(errorCode))
+    Set GetErrorHandler = errorHandlers(CStr(errorCode))
     If Err.Number <> 0 Then
         ' 該当するハンドラが見つからない場合は、エラーカテゴリに基づいてデフォルトハンドラを返す
         Set GetErrorHandler = GetDefaultHandlerForCategory(modErrorCodes.GetErrorCategory(errorCode))
@@ -100,20 +100,20 @@ End Function
 ' パブリックメソッド
 ' ======================
 Public Sub RegisterErrorHandler(ByVal errorCode As ErrorCode, ByVal handler As IErrorHandler)
-    If Not mIsInitialized Then InitializeModule
+    If Not isInitialized Then InitializeModule
     
     On Error Resume Next
-    mErrorHandlers.Remove CStr(errorCode)
+    errorHandlers.Remove CStr(errorCode)
     On Error GoTo 0
     
-    mErrorHandlers.Add handler, CStr(errorCode)
+    errorHandlers.Add handler, CStr(errorCode)
 End Sub
 
 Public Sub UnregisterErrorHandler(ByVal errorCode As ErrorCode)
-    If Not mIsInitialized Then Exit Sub
+    If Not isInitialized Then Exit Sub
     
     On Error Resume Next
-    mErrorHandlers.Remove CStr(errorCode)
+    errorHandlers.Remove CStr(errorCode)
     On Error GoTo 0
 End Sub
 
@@ -124,11 +124,11 @@ End Sub
 ' ======================
 #If DEBUG Then
     Private Function GetRegisteredHandlerCount() As Long
-        GetRegisteredHandlerCount = mErrorHandlers.Count
+        GetRegisteredHandlerCount = errorHandlers.Count
     End Function
     
     Private Sub ClearHandlers()
-        Set mErrorHandlers = New Collection
+        Set errorHandlers = New Collection
     End Sub
     
     Private Sub ResetModule()

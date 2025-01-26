@@ -8,24 +8,24 @@ Private Const MODULE_NAME As String = "modStringUtils"
 ' ======================
 ' プライベート変数
 ' ======================
-Private mPerformanceMonitor As clsPerformanceMonitor
-Private mIsInitialized As Boolean
+Private performanceMonitor As clsPerformanceMonitor
+Private isInitialized As Boolean
 
 ' ======================
 ' 初期化・終了処理
 ' ======================
 Public Sub InitializeModule()
-    If mIsInitialized Then Exit Sub
+    If isInitialized Then Exit Sub
     
-    Set mPerformanceMonitor = New clsPerformanceMonitor
-    mIsInitialized = True
+    Set performanceMonitor = New clsPerformanceMonitor
+    isInitialized = True
 End Sub
 
 Public Sub TerminateModule()
-    If Not mIsInitialized Then Exit Sub
+    If Not isInitialized Then Exit Sub
     
-    Set mPerformanceMonitor = Nothing
-    mIsInitialized = False
+    Set performanceMonitor = Nothing
+    isInitialized = False
 End Sub
 
 ' ======================
@@ -41,10 +41,10 @@ End Sub
 ''' <returns>パディングされた文字列</returns>
 Public Function PadLeft(ByVal baseStr As String, ByVal totalWidth As Long, _
                       Optional ByVal padChar As String = " ") As String
-    If Not mIsInitialized Then InitializeModule
+    If Not isInitialized Then InitializeModule
     
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.StartMeasurement "PadLeft"
+    If Not performanceMonitor Is Nothing Then
+        performanceMonitor.StartMeasurement "PadLeft"
     End If
     
     On Error GoTo ErrorHandler
@@ -55,8 +55,8 @@ Public Function PadLeft(ByVal baseStr As String, ByVal totalWidth As Long, _
         PadLeft = String(totalWidth - Len(baseStr), Left$(padChar, 1)) & baseStr
     End If
     
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.EndMeasurement "PadLeft"
+    If Not performanceMonitor Is Nothing Then
+        performanceMonitor.EndMeasurement "PadLeft"
     End If
     Exit Function
 
@@ -72,8 +72,8 @@ ErrorHandler:
         .OccurredAt = Now
     End With
     modError.HandleError errDetail
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.EndMeasurement "PadLeft"
+    If Not performanceMonitor Is Nothing Then
+        performanceMonitor.EndMeasurement "PadLeft"
     End If
     PadLeft = baseStr
 End Function
@@ -87,10 +87,10 @@ End Function
 ''' <returns>パディングされた文字列</returns>
 Public Function PadRight(ByVal baseStr As String, ByVal totalWidth As Long, _
                        Optional ByVal padChar As String = " ") As String
-    If Not mIsInitialized Then InitializeModule
+    If Not isInitialized Then InitializeModule
     
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.StartMeasurement "PadRight"
+    If Not performanceMonitor Is Nothing Then
+        performanceMonitor.StartMeasurement "PadRight"
     End If
     
     On Error GoTo ErrorHandler
@@ -101,8 +101,8 @@ Public Function PadRight(ByVal baseStr As String, ByVal totalWidth As Long, _
         PadRight = baseStr & String(totalWidth - Len(baseStr), Left$(padChar, 1))
     End If
     
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.EndMeasurement "PadRight"
+    If Not performanceMonitor Is Nothing Then
+        performanceMonitor.EndMeasurement "PadRight"
     End If
     Exit Function
 
@@ -118,8 +118,8 @@ ErrorHandler:
         .OccurredAt = Now
     End With
     modError.HandleError errDetail
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.EndMeasurement "PadRight"
+    If Not performanceMonitor Is Nothing Then
+        performanceMonitor.EndMeasurement "PadRight"
     End If
     PadRight = baseStr
 End Function
@@ -130,7 +130,7 @@ End Function
 ''' <param name="str">対象の文字列</param>
 ''' <returns>トリムされた文字列</returns>
 Public Function TrimString(ByVal str As String) As String
-    If Not mIsInitialized Then InitializeModule
+    If Not isInitialized Then InitializeModule
     
     TrimString = Trim$(str)
 End Function
@@ -142,18 +142,18 @@ End Function
 ''' <param name="delimiter">区切り文字</param>
 ''' <returns>分割された文字列の配列</returns>
 Public Function SplitString(ByVal str As String, ByVal delimiter As String) As Variant
-    If Not mIsInitialized Then InitializeModule
+    If Not isInitialized Then InitializeModule
     
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.StartMeasurement "SplitString"
+    If Not performanceMonitor Is Nothing Then
+        performanceMonitor.StartMeasurement "SplitString"
     End If
     
     On Error GoTo ErrorHandler
     
     SplitString = Split(str, delimiter)
     
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.EndMeasurement "SplitString"
+    If Not performanceMonitor Is Nothing Then
+        performanceMonitor.EndMeasurement "SplitString"
     End If
     Exit Function
 
@@ -169,8 +169,8 @@ ErrorHandler:
         .OccurredAt = Now
     End With
     modError.HandleError errDetail
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.EndMeasurement "SplitString"
+    If Not performanceMonitor Is Nothing Then
+        performanceMonitor.EndMeasurement "SplitString"
     End If
     SplitString = Array()
 End Function
@@ -182,18 +182,18 @@ End Function
 ''' <param name="delimiter">区切り文字</param>
 ''' <returns>結合された文字列</returns>
 Public Function JoinStrings(ByRef arr As Variant, Optional ByVal delimiter As String = "") As String
-    If Not mIsInitialized Then InitializeModule
+    If Not isInitialized Then InitializeModule
     
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.StartMeasurement "JoinStrings"
+    If Not performanceMonitor Is Nothing Then
+        performanceMonitor.StartMeasurement "JoinStrings"
     End If
     
     On Error GoTo ErrorHandler
     
     JoinStrings = Join(arr, delimiter)
     
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.EndMeasurement "JoinStrings"
+    If Not performanceMonitor Is Nothing Then
+        performanceMonitor.EndMeasurement "JoinStrings"
     End If
     Exit Function
 
@@ -209,8 +209,8 @@ ErrorHandler:
         .OccurredAt = Now
     End With
     modError.HandleError errDetail
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.EndMeasurement "JoinStrings"
+    If Not performanceMonitor Is Nothing Then
+        performanceMonitor.EndMeasurement "JoinStrings"
     End If
     JoinStrings = ""
 End Function
@@ -233,6 +233,6 @@ End Function
     ''' パフォーマンスモニターの参照を取得（テスト用）
     ''' </summary>
     Private Function GetPerformanceMonitor() As clsPerformanceMonitor
-        Set GetPerformanceMonitor = mPerformanceMonitor
+        Set GetPerformanceMonitor = performanceMonitor
     End Function
 #End If

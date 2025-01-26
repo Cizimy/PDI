@@ -13,24 +13,24 @@ Private Const EPSILON As Double = 0.0000000001 ' 浮動小数点比較用の許�
 ' ======================
 ' プライベート変数
 ' ======================
-Private mPerformanceMonitor As clsPerformanceMonitor
-Private mIsInitialized As Boolean
+Private performanceMonitor As clsPerformanceMonitor
+Private isInitialized As Boolean
 
 ' ======================
 ' 初期化・終了処理
 ' ======================
 Public Sub InitializeModule()
-    If mIsInitialized Then Exit Sub
+    If isInitialized Then Exit Sub
     
-    Set mPerformanceMonitor = New clsPerformanceMonitor
-    mIsInitialized = True
+    Set performanceMonitor = New clsPerformanceMonitor
+    isInitialized = True
 End Sub
 
 Public Sub TerminateModule()
-    If Not mIsInitialized Then Exit Sub
+    If Not isInitialized Then Exit Sub
     
-    Set mPerformanceMonitor = Nothing
-    mIsInitialized = False
+    Set performanceMonitor = Nothing
+    isInitialized = False
 End Sub
 
 ' ======================
@@ -46,10 +46,10 @@ End Sub
 ''' <returns>除算結果、またはデフォルト値</returns>
 Public Function SafeDivide(ByVal numerator As Double, ByVal denominator As Double, _
                          Optional ByVal defaultValue As Variant = 0) As Variant
-    If Not mIsInitialized Then InitializeModule
+    If Not isInitialized Then InitializeModule
     
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.StartMeasurement "SafeDivide"
+    If Not performanceMonitor Is Nothing Then
+        performanceMonitor.StartMeasurement "SafeDivide"
     End If
     
     On Error GoTo ErrorHandler
@@ -73,8 +73,8 @@ Public Function SafeDivide(ByVal numerator As Double, ByVal denominator As Doubl
         SafeDivide = numerator / denominator
     End If
     
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.EndMeasurement "SafeDivide"
+    If Not performanceMonitor Is Nothing Then
+        performanceMonitor.EndMeasurement "SafeDivide"
     End If
     Exit Function
 
@@ -90,8 +90,8 @@ ErrorHandler:
         .OccurredAt = Now
     End With
     modError.HandleError errDetail
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.EndMeasurement "SafeDivide"
+    If Not performanceMonitor Is Nothing Then
+        performanceMonitor.EndMeasurement "SafeDivide"
     End If
     SafeDivide = defaultValue
 End Function
@@ -105,7 +105,7 @@ End Function
 ''' <returns>範囲内の場合True</returns>
 Public Function IsInRange(ByVal value As Double, ByVal minValue As Double, _
                         ByVal maxValue As Double) As Boolean
-    If Not mIsInitialized Then InitializeModule
+    If Not isInitialized Then InitializeModule
     
     IsInRange = (value >= minValue And value <= maxValue)
 End Function
@@ -119,7 +119,7 @@ End Function
 ''' <returns>範囲内に収められた値</returns>
 Public Function Clamp(ByVal value As Double, ByVal minValue As Double, _
                      ByVal maxValue As Double) As Double
-    If Not mIsInitialized Then InitializeModule
+    If Not isInitialized Then InitializeModule
     
     If value < minValue Then
         Clamp = minValue
@@ -137,7 +137,7 @@ End Function
 ''' <param name="decimals">小数点以下の桁数</param>
 ''' <returns>四捨五入された値</returns>
 Public Function Round(ByVal value As Double, Optional ByVal decimals As Long = 0) As Double
-    If Not mIsInitialized Then InitializeModule
+    If Not isInitialized Then InitializeModule
     
     Dim factor As Double
     factor = 10 ^ decimals
@@ -162,6 +162,6 @@ End Function
     ''' パフォーマンスモニターの参照を取得（テスト用）
     ''' </summary>
     Private Function GetPerformanceMonitor() As clsPerformanceMonitor
-        Set GetPerformanceMonitor = mPerformanceMonitor
+        Set GetPerformanceMonitor = performanceMonitor
     End Function
 #End If

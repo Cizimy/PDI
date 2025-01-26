@@ -14,29 +14,29 @@ Private Const RETRY_INTERVAL_MS As Long = 1000
 ' ======================
 ' プライベート変数
 ' ======================
-Private mPerformanceMonitor As clsPerformanceMonitor
-Private mIsInitialized As Boolean
-Private mLock As clsLock
-Private mDefaultConnection As Object ' ADODB.Connection
+Private performanceMonitor As clsPerformanceMonitor
+Private isInitialized As Boolean
+Private lock As clsLock
+Private defaultConnection As Object ' ADODB.Connection
 
 ' ======================
 ' 初期化・終了処理
 ' ======================
 Public Sub InitializeModule()
-    If mIsInitialized Then Exit Sub
+    If isInitialized Then Exit Sub
     
-    Set mPerformanceMonitor = New clsPerformanceMonitor
-    Set mLock = New clsLock
-    mIsInitialized = True
+    Set performanceMonitor = New clsPerformanceMonitor
+    Set lock = New clsLock
+    isInitialized = True
 End Sub
 
 Public Sub TerminateModule()
-    If Not mIsInitialized Then Exit Sub
+    If Not isInitialized Then Exit Sub
     
     CloseConnection
-    Set mPerformanceMonitor = Nothing
-    Set mLock = Nothing
-    mIsInitialized = False
+    Set performanceMonitor = Nothing
+    Set lock = Nothing
+    isInitialized = False
 End Sub
 
 ' ======================
@@ -48,20 +48,20 @@ End Sub
 ''' </summary>
 ''' <returns>接続文字列</returns>
 Public Function GetConnectionString() As String
-    If Not mIsInitialized Then InitializeModule
+    If Not isInitialized Then InitializeModule
     
     On Error GoTo ErrorHandler
 
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.StartMeasurement "GetConnectionString"
+    If Not performanceMonitor Is Nothing Then
+        performanceMonitor.StartMeasurement "GetConnectionString"
     End If
     
-    mLock.AcquireLock
+    lock.AcquireLock
     
     ' 設定から接続文字列を取得
     GetConnectionString = modConfig.Settings.DatabaseConnectionString
 
-    mLock.ReleaseLock
+    lock.ReleaseLock
     
     If GetConnectionString = "" Then
         Dim errDetail As typErrorDetail
@@ -75,13 +75,13 @@ Public Function GetConnectionString() As String
             .OccurredAt = Now
         End With
         modError.HandleError errDetail
-        If Not mPerformanceMonitor Is Nothing Then
-            mPerformanceMonitor.EndMeasurement "GetConnectionString"
+        If Not performanceMonitor Is Nothing Then
+            performanceMonitor.EndMeasurement "GetConnectionString"
         End If
     End If
     
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.EndMeasurement "GetConnectionString"
+    If Not performanceMonitor Is Nothing Then
+        performanceMonitor.EndMeasurement "GetConnectionString"
     End If
     Exit Function
 
@@ -97,8 +97,8 @@ ErrorHandler:
             .OccurredAt = Now
     End With
     modError.HandleError errDetail2
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.EndMeasurement "GetConnectionString"
+    If Not performanceMonitor Is Nothing Then
+        performanceMonitor.EndMeasurement "GetConnectionString"
     End If
     GetConnectionString = ""
 End Function
@@ -108,20 +108,20 @@ End Function
 ''' </summary>
 ''' <returns>データベース接続オブジェクト</returns>
 Public Function GetConnection() As Object ' ADODB.Connection
-    If Not mIsInitialized Then InitializeModule
+    If Not isInitialized Then InitializeModule
     
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.StartMeasurement "GetConnection"
+    If Not performanceMonitor Is Nothing Then
+        performanceMonitor.StartMeasurement "GetConnection"
     End If
     
     On Error GoTo ErrorHandler
     
-    mLock.AcquireLock
+    lock.AcquireLock
     
     ' 既存の接続を確認
-    If Not mDefaultConnection Is Nothing Then
-        If mDefaultConnection.State = 1 Then ' adStateOpen
-            Set GetConnection = mDefaultConnection
+    If Not defaultConnection Is Nothing Then
+        If defaultConnection.State = 1 Then ' adStateOpen
+            Set GetConnection = defaultConnection
             GoTo CleanupAndExit
         End If
     End If
@@ -131,11 +131,11 @@ Public Function GetConnection() As Object ' ADODB.Connection
     connStr = GetConnectionString()
     If connStr = "" Then Exit Function
     
-    Set mDefaultConnection = CreateObject("ADODB.Connection")
-    mDefaultConnection.ConnectionString = connStr
-    mDefaultConnection.Open
+    Set defaultConnection = CreateObject("ADODB.Connection")
+    defaultConnection.ConnectionString = connStr
+    defaultConnection.Open
     
-    Set GetConnection = mDefaultConnection
+    Set GetConnection = defaultConnection
 
     GoTo CleanupAndExit
 
@@ -154,9 +154,9 @@ ErrorHandler:
     Set GetConnection = Nothing
 
 CleanupAndExit:
-    mLock.ReleaseLock
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.EndMeasurement "GetConnection"
+    lock.ReleaseLock
+    If Not performanceMonitor Is Nothing Then
+        performanceMonitor.EndMeasurement "GetConnection"
     End If
     Exit Function
 
@@ -166,16 +166,16 @@ End Function
 ''' データベース接続を閉じます
 ''' </summary>
 Public Sub CloseConnection()
-    If Not mDefaultConnection Is Nothing Then
-        mLock.AcquireLock
+    If Not defaultConnection Is Nothing Then
+        lock.AcquireLock
         
         On Error Resume Next
-        If mDefaultConnection.State = 1 Then ' adStateOpen
-            mDefaultConnection.Close
+        If defaultConnection.State = 1 Then ' adStateOpen
+            defaultConnection.Close
         End If
-        Set mDefaultConnection = Nothing
+        Set defaultConnection = Nothing
         
-        mLock.ReleaseLock
+        lock.ReleaseLock
         On Error GoTo 0
     End If
 End Sub
@@ -185,7 +185,7 @@ End Sub
 ''' </summary>
 ''' <returns>接続成功の場合True</returns>
 Public Function TestConnection() As Boolean
-    If Not mIsInitialized Then InitializeModule
+    If Not isInitialized Then InitializeModule
     
     Dim conn As Object
     Set conn = GetConnection()
@@ -207,10 +207,10 @@ End Function
 ''' <returns>レコードセット</returns>
 Public Function ExecuteQuery(ByVal sql As String, _
                            Optional ByRef params As Variant) As Object ' ADODB.Recordset
-    If Not mIsInitialized Then InitializeModule
+    If Not isInitialized Then InitializeModule
     
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.StartMeasurement "ExecuteQuery"
+    If Not performanceMonitor Is Nothing Then
+        performanceMonitor.StartMeasurement "ExecuteQuery"
     End If
     
     On Error GoTo ErrorHandler
@@ -239,8 +239,8 @@ Public Function ExecuteQuery(ByVal sql As String, _
         Set ExecuteQuery = .Execute
     End With
     
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.EndMeasurement "ExecuteQuery"
+    If Not performanceMonitor Is Nothing Then
+        performanceMonitor.EndMeasurement "ExecuteQuery"
     End If
     Exit Function
 
@@ -256,8 +256,8 @@ ErrorHandler:
             .OccurredAt = Now
     End With
     modError.HandleError errDetail
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.EndMeasurement "ExecuteQuery"
+    If Not performanceMonitor Is Nothing Then
+        performanceMonitor.EndMeasurement "ExecuteQuery"
     End If
     Set ExecuteQuery = Nothing
 End Function
@@ -300,6 +300,6 @@ End Function
     ''' パフォーマンスモニターの参照を取得（テスト用）
     ''' </summary>
     Private Function GetPerformanceMonitor() As clsPerformanceMonitor
-        Set GetPerformanceMonitor = mPerformanceMonitor
+        Set GetPerformanceMonitor = performanceMonitor
     End Function
 #End If

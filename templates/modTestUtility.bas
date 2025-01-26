@@ -28,22 +28,22 @@ End Type
 ' ======================
 ' プライベート変数
 ' ======================
-Private mTestCases As Collection
-Private mPerformanceMonitor As clsPerformanceMonitor
-Private mCurrentTestCase As TestCase
-Private mIsInitialized As Boolean
+Private testCases As Collection
+Private performanceMonitor As clsPerformanceMonitor
+Private currentTestCase As TestCase
+Private isInitialized As Boolean
 
 ' ======================
 ' 初期化処理
 ' ======================
 Public Sub InitializeTestModule()
-    If mIsInitialized Then Exit Sub
+    If isInitialized Then Exit Sub
     
     On Error GoTo ErrorHandler
     
-    Set mTestCases = New Collection
-    Set mPerformanceMonitor = New clsPerformanceMonitor
-    mIsInitialized = True
+    Set testCases = New Collection
+    Set performanceMonitor = New clsPerformanceMonitor
+    isInitialized = True
     Exit Sub
 
 ErrorHandler:
@@ -70,11 +70,11 @@ Public Sub StartTest(ByVal testName As String, ByVal description As String, _
                     Optional ByVal category As String = "General", _
                     Optional ByVal priority As Integer = 1)
                     
-    If Not mIsInitialized Then InitializeTestModule
+    If Not isInitialized Then InitializeTestModule
     On Error GoTo ErrorHandler
     
     ' 新しいテストケースを初期化
-    With mCurrentTestCase
+    With currentTestCase
         .Name = testName
         .Description = description
         .Category = category
@@ -84,7 +84,7 @@ Public Sub StartTest(ByVal testName As String, ByVal description As String, _
     End With
     
     ' パフォーマンス計測開始
-    mPerformanceMonitor.StartMeasurement testName
+    performanceMonitor.StartMeasurement testName
     
     ' ログにテスト開始を記録
     LogTestEvent "テスト開始: " & testName & " (" & description & ")"
@@ -104,35 +104,35 @@ ErrorHandler:
     modError.HandleError errDetail
     
     ' エラー発生時は現在のテストのパフォーマンス計測を終了
-    If Not mPerformanceMonitor Is Nothing Then
-        mPerformanceMonitor.EndMeasurement testName
+    If Not performanceMonitor Is Nothing Then
+        performanceMonitor.EndMeasurement testName
     End If
     ' エラー発生時はテストをエラー状態で終了
     EndTest ResultError, "テスト開始処理中にエラーが発生: " & Err.Description
 End Sub
 
 Public Sub EndTest(ByVal result As TestResult, Optional ByVal errorMessage As String = "")
-    If Not mIsInitialized Then Exit Sub
+    If Not isInitialized Then Exit Sub
     On Error GoTo ErrorHandler
     
     Dim originalResult As TestResult
     originalResult = result
     
     ' パフォーマンス計測終了
-    mPerformanceMonitor.EndMeasurement mCurrentTestCase.Name
+    performanceMonitor.EndMeasurement currentTestCase.Name
     
     ' テスト結果を設定
-    With mCurrentTestCase
+    With currentTestCase
         .Result = result
         .ErrorMessage = errorMessage
         .ExecutionTime = GetTestExecutionTime(.Name)
     End With
     
     ' テストケースをコレクションに追加
-    mTestCases.Add mCurrentTestCase, mCurrentTestCase.Name
+    testCases.Add currentTestCase, currentTestCase.Name
     
     ' ログにテスト終了を記録
-    LogTestEvent "テスト終了: " & mCurrentTestCase.Name & " - " & GetResultText(result)
+    LogTestEvent "テスト終了: " & currentTestCase.Name & " - " & GetResultText(result)
     If errorMessage <> "" Then
         LogTestEvent "エラー詳細: " & errorMessage
     End If
@@ -152,7 +152,7 @@ ErrorHandler:
     modError.HandleError errDetail
     
     ' エラー発生時は元のテスト結果を保持しつつ、エラーメッセージを追加
-    With mCurrentTestCase
+    With currentTestCase
         .Result = originalResult
         .ErrorMessage = .ErrorMessage & vbCrLf & "テスト終了処理中にエラーが発生: " & Err.Description
     End With
@@ -163,7 +163,7 @@ End Sub
 ' ======================
 Public Sub AssertEqual(ByVal expected As Variant, ByVal actual As Variant, _
                       Optional ByVal message As String = "")
-    If Not mIsInitialized Then InitializeTestModule
+    If Not isInitialized Then InitializeTestModule
     On Error GoTo ErrorHandler
     
     If expected <> actual Then
@@ -198,7 +198,7 @@ ErrorHandler:
 End Sub
 
 Public Sub AssertTrue(ByVal condition As Boolean, Optional ByVal message As String = "")
-    If Not mIsInitialized Then InitializeTestModule
+    If Not isInitialized Then InitializeTestModule
     On Error GoTo ErrorHandler
     
     If Not condition Then
@@ -231,7 +231,7 @@ ErrorHandler:
 End Sub
 
 Public Sub AssertFalse(ByVal condition As Boolean, Optional ByVal message As String = "")
-    If Not mIsInitialized Then InitializeTestModule
+    If Not isInitialized Then InitializeTestModule
     On Error GoTo ErrorHandler
     
     If condition Then
@@ -267,7 +267,7 @@ End Sub
 ' テスト結果レポート
 ' ======================
 Public Function GenerateTestReport() As String
-    If Not mIsInitialized Then InitializeTestModule
+    If Not isInitialized Then InitializeTestModule
     On Error GoTo ErrorHandler
     
     Dim report As String
@@ -287,8 +287,8 @@ Public Function GenerateTestReport() As String
     Dim categories As Collection
     Set categories = New Collection
     
-    For i = 1 To mTestCases.Count
-        testCase = mTestCases(i)
+    For i = 1 To testCases.Count
+        testCase = testCases(i)
         
         ' カテゴリの追加
         On Error Resume Next
@@ -321,8 +321,8 @@ Public Function GenerateTestReport() As String
     For Each category In categories
         report = report & vbCrLf & "カテゴリ: " & category & vbCrLf
         
-        For i = 1 To mTestCases.Count
-            testCase = mTestCases(i)
+        For i = 1 To testCases.Count
+            testCase = testCases(i)
             If testCase.Category = category Then
                 report = report & _
                         "  - " & testCase.Name & vbCrLf & _
@@ -374,7 +374,7 @@ Private Function GetTestExecutionTime(ByVal testName As String) As Double
     On Error GoTo ErrorHandler
     
     Dim perfData As String
-    perfData = mPerformanceMonitor.GetMeasurement(testName)
+    perfData = performanceMonitor.GetMeasurement(testName)
     
     ' 実行時間を抽出（パフォーマンスモニターの出力形式に依存）
     Dim pos As Long
@@ -429,12 +429,12 @@ End Sub
 ' クリーンアップ
 ' ======================
 Public Sub CleanupTestModule()
-    If Not mIsInitialized Then Exit Sub
+    If Not isInitialized Then Exit Sub
     
     On Error Resume Next
-    Set mTestCases = Nothing
-    Set mPerformanceMonitor = Nothing
-    mIsInitialized = False
+    Set testCases = Nothing
+    Set performanceMonitor = Nothing
+    isInitialized = False
     
     If Err.Number <> 0 Then
         Debug.Print "クリーンアップ中にエラーが発生: " & Err.Description

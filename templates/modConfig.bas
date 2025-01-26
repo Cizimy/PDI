@@ -29,61 +29,61 @@ End Type
 ' ======================
 ' プライベート変数
 ' ======================
-Private mSettings As ConfigurationSettings
-Private mSettingsLock As clsLock
-Private mPerformanceMonitor As clsPerformanceMonitor
-Private mIsInitialized As Boolean
+Private settings As ConfigurationSettings
+Private settingsLock As clsLock
+Private performanceMonitor As clsPerformanceMonitor
+Private isInitialized As Boolean
 
 ' ======================
 ' 初期化・終了処理
 ' ======================
 Public Sub InitializeModule()
-    If mIsInitialized Then Exit Sub
+    If isInitialized Then Exit Sub
     
-    Set mSettingsLock = New clsLock
-    Set mPerformanceMonitor = New clsPerformanceMonitor
+    Set settingsLock = New clsLock
+    Set performanceMonitor = New clsPerformanceMonitor
     
     LoadDefaultSettings
     LoadConfigurationFromFile
     
-    mIsInitialized = True
+    isInitialized = True
     
     ' パフォーマンスモニタリング開始
-    If mSettings.PerformanceMonitoringEnabled Then
-        mPerformanceMonitor.StartMeasurement "ConfigInitialization"
+    If settings.PerformanceMonitoringEnabled Then
+        performanceMonitor.StartMeasurement "ConfigInitialization"
     End If
 End Sub
 
 Public Sub TerminateModule()
-    If Not mIsInitialized Then Exit Sub
+    If Not isInitialized Then Exit Sub
     
     ' パフォーマンスモニタリング終了
-    If mSettings.PerformanceMonitoringEnabled Then
-        mPerformanceMonitor.EndMeasurement "ConfigInitialization"
+    If settings.PerformanceMonitoringEnabled Then
+        performanceMonitor.EndMeasurement "ConfigInitialization"
     End If
     
-    Set mSettingsLock = Nothing
-    Set mPerformanceMonitor = Nothing
-    mIsInitialized = False
+    Set settingsLock = Nothing
+    Set performanceMonitor = Nothing
+    isInitialized = False
 End Sub
 
 ' ======================
 ' 公開プロパティ
 ' ======================
 Public Property Get Settings() As ConfigurationSettings
-    If Not mIsInitialized Then InitializeModule
+    If Not isInitialized Then InitializeModule
     
-    mSettingsLock.AcquireLock
-    Settings = mSettings
-    mSettingsLock.ReleaseLock
+    settingsLock.AcquireLock
+    Settings = settings
+    settingsLock.ReleaseLock
 End Property
 
 Public Property Let Settings(ByVal Value As ConfigurationSettings)
-    If Not mIsInitialized Then InitializeModule
+    If Not isInitialized Then InitializeModule
     
-    mSettingsLock.AcquireLock
-    mSettings = Value
-    mSettingsLock.ReleaseLock
+    settingsLock.AcquireLock
+    settings = Value
+    settingsLock.ReleaseLock
     
     ' 設定の永続化
     SaveConfigurationToFile
@@ -94,7 +94,7 @@ End Property
 ' ======================
 Public Function GetConfigValue(ByVal section As String, ByVal key As String, _
                              Optional ByVal defaultValue As String = "") As String
-    If Not mIsInitialized Then InitializeModule
+    If Not isInitialized Then InitializeModule
     
     Dim buffer As String
     Dim result As Long
@@ -111,7 +111,7 @@ End Function
 
 Public Function SetConfigValue(ByVal section As String, ByVal key As String, _
                              ByVal Value As String) As Boolean
-    If Not mIsInitialized Then InitializeModule
+    If Not isInitialized Then InitializeModule
     
     SetConfigValue = (modWindowsAPI.WritePrivateProfileString(section, key, Value, GetConfigFilePath()) <> 0)
 End Function
@@ -120,7 +120,7 @@ End Function
 ' プライベートメソッド
 ' ======================
 Private Sub LoadDefaultSettings()
-    With mSettings
+    With settings
         .LogLevel = LevelInfo
         .LogDestination = DestFile
         .LogFilePath = DEFAULT_LOG_FILE
@@ -133,7 +133,7 @@ End Sub
 Private Sub LoadConfigurationFromFile()
     On Error GoTo ErrorHandler
     
-    With mSettings
+    With settings
         ' ログ設定
         .LogLevel = CInt(GetConfigValue(DEFAULT_SECTION, "LogLevel", CStr(LevelInfo)))
         .LogDestination = CInt(GetConfigValue(DEFAULT_SECTION, "LogDestination", CStr(DestFile)))
@@ -171,7 +171,7 @@ End Sub
 Private Sub SaveConfigurationToFile()
     On Error GoTo ErrorHandler
     
-    With mSettings
+    With settings
         ' ログ設定
         SetConfigValue DEFAULT_SECTION, "LogLevel", CStr(.LogLevel)
         SetConfigValue DEFAULT_SECTION, "LogDestination", CStr(.LogDestination)
@@ -233,7 +233,7 @@ End Function
     End Sub
     
     Public Function ValidateSettings() As Boolean
-        With mSettings
+        With settings
             ValidateSettings = _
                 .LogLevel >= LevelDebug And .LogLevel <= LevelFatal And _
                 .LogDestination >= DestNone And .LogDestination <= DestEmail And _

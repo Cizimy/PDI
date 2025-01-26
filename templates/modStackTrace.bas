@@ -13,40 +13,40 @@ Private Const MAX_STACK_TRACE_DEPTH As Long = 10 ' スタックトレースの�
 ' ======================
 ' プライベート変数
 ' ======================
-Private mStack As Collection
-Private mIsInitialized As Boolean
+Private stack As Collection
+Private isInitialized As Boolean
 
 ' ======================
 ' 初期化・終了処理
 ' ======================
 Public Property Get IsInitialized() As Boolean
-    IsInitialized = mIsInitialized
+    IsInitialized = isInitialized
 End Property
 
 Public Sub InitializeModule()
-    If mIsInitialized Then Exit Sub
+    If isInitialized Then Exit Sub
     
-    Set mStack = New Collection
-    mIsInitialized = True
+    Set stack = New Collection
+    isInitialized = True
 End Sub
 
 Public Sub TerminateModule()
-    If Not mIsInitialized Then Exit Sub
+    If Not isInitialized Then Exit Sub
     
-    Set mStack = Nothing
-    mIsInitialized = False
+    Set stack = Nothing
+    isInitialized = False
 End Sub
 
 ' ======================
 ' パブリックメソッド
 ' ======================
 Public Sub PushStackEntry(ByVal ModuleName As String, ByVal ProcedureName As String)
-    If Not mIsInitialized Then InitializeModule
+    If Not isInitialized Then InitializeModule
     
     On Error GoTo ErrorHandler
     
-    If mStack.Count < MAX_STACK_TRACE_DEPTH Then
-        mStack.Add ModuleName & "." & ProcedureName
+    If stack.Count < MAX_STACK_TRACE_DEPTH Then
+        stack.Add ModuleName & "." & ProcedureName
     End If
     Exit Sub
 
@@ -65,14 +65,14 @@ ErrorHandler:
 End Sub
 
 Public Function PopStackEntry() As String
-    If Not mIsInitialized Then Exit Function
+    If Not isInitialized Then Exit Function
     
     On Error GoTo ErrorHandler
     
     Dim result As String
-    If mStack.Count > 0 Then
-        result = mStack(mStack.Count)
-        mStack.Remove mStack.Count
+    If stack.Count > 0 Then
+        result = stack(stack.Count)
+        stack.Remove stack.Count
         PopStackEntry = result
     End If
     Exit Function
@@ -91,15 +91,15 @@ ErrorHandler:
 End Function
 
 Public Function GetStackTrace() As String
-    If Not mIsInitialized Then Exit Function
+    If Not isInitialized Then Exit Function
     
     On Error GoTo ErrorHandler
     
     Dim i As Long
     Dim trace As String
     
-    For i = mStack.Count To 1 Step -1
-        trace = trace & "  " & mStack(i) & vbCrLf
+    For i = stack.Count To 1 Step -1
+        trace = trace & "  " & stack(i) & vbCrLf
     Next i
     
     GetStackTrace = trace
@@ -120,8 +120,8 @@ ErrorHandler:
 End Function
 
 Public Property Get StackDepth() As Long
-    If Not mIsInitialized Then Exit Property
-    StackDepth = mStack.Count
+    If Not isInitialized Then Exit Property
+    StackDepth = stack.Count
 End Property
 
 ' ======================
@@ -134,8 +134,8 @@ End Property
     ''' スタックの内容をクリア（テスト用）
     ''' </summary>
     Private Sub ClearStack()
-        If Not mIsInitialized Then Exit Sub
-        Set mStack = New Collection
+        If Not isInitialized Then Exit Sub
+        Set stack = New Collection
     End Sub
     
     ''' <summary>
@@ -143,8 +143,8 @@ End Property
     ''' </summary>
     ''' <returns>スタックの深さが最大値以下の場合True</returns>
     Private Function ValidateStackState() As Boolean
-        If Not mIsInitialized Then Exit Function
-        ValidateStackState = (mStack.Count <= MAX_STACK_TRACE_DEPTH)
+        If Not isInitialized Then Exit Function
+        ValidateStackState = (stack.Count <= MAX_STACK_TRACE_DEPTH)
     End Function
     
     ''' <summary>

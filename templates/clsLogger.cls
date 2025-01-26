@@ -27,6 +27,9 @@ Private mLock As clsLock
 Private mTimerID As LongPtr
 Private mPerformanceMonitor As clsPerformanceMonitor
 Private mIsInitialized As Boolean
+Private Const MAX_RETRY_COUNT As Long = 3
+Private Const RETRY_DELAY_MS As Long = 1000
+Private Const EMERGENCY_LOG_PATH As String = "\PDI_emergency.log"
 
 ' ======================
 ' イベント
@@ -201,29 +204,63 @@ End Sub
 Private Sub WriteToFile(ByVal logEntry As Variant)
     On Error GoTo ErrorHandler
     
-    Dim fileNum As Integer
-    fileNum = FreeFile
+    Dim retryCount As Long
+    fDim ileNum As Integer
+    Dim logMessage As String
     
-    Open mSettings.LogFilePath For Append As #fileNum
-    Print #fileNum, Format$(logEntry(3), "yyyy/mm/dd hh:nn:ss") & " " & _
-                   "[" & logEntry(0) & "] " & _
-                   IIf(logEntry(2) <> 0, "(Code: " & logEntry(2) & ") ", "") & _
-                   logEntry(1)
-    Close #fileNum
+    logMessage = Format$(logEntry(3), "yyyy/mm/dd hh:nn:ss") & " " & _
+                 "[" & logEntry(0) & "] " & _
+                 IIf(logEntry(2) <> 0, "(Code: " & logEntry(2) & ") ", "") & _
+                 logEntry(1)
+    
+    Do While retryCount < MAX_RETRY_COUNT
+        On Error Resume Next
+        fileNum = FreeFile
+        Open mSettings.LogFilePath For Append As #fileNum
+        Print #fileNum, logMessage
+        Close #fileNum
+        
+        If Err.Number = 0 Then
+            Exit Sub
+        End If
+        
+        retryCount = retryCount + 1
+        If retryCount < MAX_RETRY_COUNT Then
+            Sleep RETRY_DELAY_MS
+        End If
+    Loop
+    
+    On Error GoTo ErrorHandler
+    ' ファイルへの書き込みが失敗した場合、代替出力先を試行
+    WriteToFallbackDestination logMessage, "ファイルログ出力失敗"
     Exit Sub
     
 ErrorHandler:
-    Dim errDetail As ErrorInfo
-    With errDetail
-        .Code = ErrFileAccessDenied
-        .Description = "ファイルへのログ出力に失敗しました: " & Err.Description
-        .Category = ECFileIO
-        .Source = MODULE_NAME
-        .ProcedureName = "WriteToFile"
-        .StackTrace = modStackTrace.GetStackTrace()
-        .OccurredAt = Now
-    End With
-    modError.HandleError errDetail
+    WriteToFallbackDestination logMessage, "ファイルログ出力で予期せぬエラー: " & Err.Description
+End Sub
+
+Private Sub WriteToFallbackDestination(ByVal message As String, ByVal errorContext As String)
+    On Error Resume Next
+   
+    M' イベントログへの出力を試みる
+    modWindowsAPI.WriteToEventLog "PDI Logger", errorContext & vbCrLf & message, EVENTLOG_WARNING_TYPE
+  
+    oc' 緊急用ファイルへの出力を試みる
+    Dim fso As Object
+    Set fso = CreateObject("Scripting.FileSystemObject")
+  
+    = Dim emergencyPath As String
+    emergencyPath = Environ$("TEMP") & EMERGENCY_LOG_PATH
+    
+    Dim ts As Object
+    Set ts = fso.OpenTextFile(emergencyPath, 8, True)
+    If Not ts Is Nothing Then
+        ts.WriteLine Now & ": " & errorContext
+        ts.WriteLine message
+        ts.WriteLine String(50, "-")
+        ts.Close
+    End If
+    Set fso = Nothing
 End Sub
 
 Private Sub WriteToDatabase(ByVal logEntry As Variant)
@@ -231,47 +268,68 @@ Private Sub WriteToDatabase(ByVal logEntry As Variant)
     
     Dim conn As Object
     Set conn = Nothing
-    mPerformanceMonitor.StartMeasurement "Database Connection"
-    Set conn = mConnectionPool.GetConnection()
+    Dim retryCount As Long
     
-    If Not conn Is Nothing Then
-        mPerformanceMonitor.StartMeasurement "Database Insert"
-        Dim cmd As Object
-        Set cmd = CreateObject("ADODB.Command")
-        With cmd
-            .ActiveConnection = conn
-            .CommandText = "INSERT INTO " & mSettings.LogTableName & " (LogTime, ModuleName, LogLevel, Message) VALUES (?, ?, ?, ?)"
-            .Parameters.Append .CreateParameter("LogTime", 7, 1, , logEntry(3))
-            .Parameters.Append .CreateParameter("ModuleName", 200, 1, 255, logEntry(0))
-            .Parameters.Append .CreateParameter("LogLevel", 3, 1, , logEntry(2))
-            .Parameters.Append .CreateParameter("Message", 200, 1, 4000, logEntry(1))
-            .Execute
-        End With
+    Do While retryCount < MAX_RETRY_COUNT
+        On Error Resume Next
+        mPerformanceMonitor.StartMeasurement "Database Connection"
+        Set conn = mConnectionPool.GetConnection()
+    
+    
+        If Not conn Is Nothing Then
+            mPerformanceMonitor.StartMeasurement "Database Insert"
+            Dim cmd As Object
+            Set cmd = CreateObject("ADODB.Command")
+            With cmd
+                .ActiveConnection = conn
+                .CommandText = "INSERT INTO " & mSettings.LogTableName & " (LogTime, ModuleName, LogLevel, Message) VALUES (?, ?, ?, ?)"
+                .Parameters.Append .CreateParameter("LogTime", 7, 1, , logEntry(3))
+                .Parameters.Append .CreateParameter("ModuleName", 200, 1, 255, logEntry(0))
+                .Parameters.Append .CreateParameter("LogLevel", 3, 1, , logEntry(2))
+                .Parameters.Append .CreateParameter("Message", 200, 1, 4000, logEntry(1))
+                .Execute
+            End With
         
+    
+            If Err.Number = 0 Then
+                mConnectionPool.ReleaseConnection conn
+                mPerformanceMonitor.EndMeasurement "Database Connection"
+                mPerformanceMonitor.EndMeasurement "Database Insert"
+                    End If
+        End If
+        
+        retryCount = retryCount + 1
+        If retryCount < MAX_RETRY_COUNT Then
+            If Not conn Is Nothing Then
+            Exit Sub
+    
         mConnectionPool.ReleaseConnection conn
-        mPerformanceMonitor.EndMeasurement "Database Connection"
-        mPerformanceMonitor.EndMeasurement "Database Insert"
-    End If
+                Set conn = Nothing
+            End If
+    
+        Sleep RETRY_DELAY_MS
+        End If
+    Loop
+    
+    On Error GoTo ErrorHandler
+    ' データベースへの書き込みが失敗した場合、ファイルに出力
+    Dim logMessage As String
+    logMessage = Format$(logEntry(3), "yyyy/mm/dd hh:nn:ss") & " " & _
+                 "[" & logEntry(0) & "] " & _
+                 IIf(logEntry(2) <> 0, "(Code: " & logEntry(2) & ") ", "") & _
+                 logEntry(1)
+    
+    WriteToFallbackDestination logMessage, "データベースログ出力失敗"
     Exit Sub
     
 ErrorHandler:
-    mPerformanceMonitor.EndMeasurement "Database Connection"
     If Not conn Is Nothing Then
+        mPerformanceMonitor.EndMeasurement "Database Connection"
         mPerformanceMonitor.EndMeasurement "Database Insert"
         mConnectionPool.ReleaseConnection conn
     End If
     
-    Dim errDetail As ErrorInfo
-    With errDetail
-        .Code = ErrDbQueryFailed
-        .Description = "データベースへのログ出力に失敗しました: " & Err.Description
-        .Category = ECDatabase
-        .Source = MODULE_NAME
-        .ProcedureName = "WriteToDatabase"
-        .StackTrace = modStackTrace.GetStackTrace()
-        .OccurredAt = Now
-    End With
-    modError.HandleError errDetail
+    WriteToFallbackDestination logMessage, "データベースログ出力で予期せぬエラー: " & Err.Description
 End Sub
 
 Private Sub WriteToEventLog(ByVal logEntry As Variant)

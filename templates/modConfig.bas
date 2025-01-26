@@ -25,6 +25,7 @@ Private Type ConfigurationSettings
     PerformanceMonitoringEnabled As Boolean
     DiagnosticsEnabled As Boolean
     EncryptionKey As String
+    AutoSave As Boolean
 End Type
 
 ' ======================
@@ -34,6 +35,7 @@ Private settings As ConfigurationSettings
 Private settingsLock As clsLock
 Private performanceMonitor As clsPerformanceMonitor
 Private isInitialized As Boolean
+Private isDirty As Boolean
 
 ' ======================
 ' 初期化・終了処理
@@ -63,6 +65,10 @@ Public Sub TerminateModule()
         performanceMonitor.EndMeasurement "ConfigInitialization"
     End If
     
+    ' 変更された設定を保存
+    If isDirty And settings.AutoSave Then
+        SaveConfigurationToFile
+    End If
     Set settingsLock = Nothing
     Set performanceMonitor = Nothing
     isInitialized = False
@@ -86,8 +92,10 @@ Public Property Let Settings(ByVal Value As ConfigurationSettings)
     settings = Value
     settingsLock.ReleaseLock
     
-    ' 設定の永続化
-    SaveConfigurationToFile
+    isDirty = True
+    If settings.AutoSave Then
+        SaveConfigurationToFile
+    End If
 End Property
 
 ' ======================
@@ -114,7 +122,13 @@ Public Function SetConfigValue(ByVal section As String, ByVal key As String, _
                              ByVal Value As String) As Boolean
     If Not isInitialized Then InitializeModule
     
-    SetConfigValue = (modWindowsAPI.WritePrivateProfileString(section, key, Value, GetConfigFilePath()) <> 0)
+    Dim result As Boolean
+    result = (modWindowsAPI.WritePrivateProfileString(section, key, Value, GetConfigFilePath()) <> 0)
+    
+    If result Then
+        isDirty = True
+    End If
+    SetConfigValue = result
 End Function
 
 ' ======================
@@ -128,6 +142,7 @@ Private Sub LoadDefaultSettings()
         .SecurityLevel = LevelMedium
         .PerformanceMonitoringEnabled = True
         .DiagnosticsEnabled = True
+        .AutoSave = True
     End With
 End Sub
 
@@ -150,6 +165,9 @@ Private Sub LoadConfigurationFromFile()
         ' 診断設定
         .PerformanceMonitoringEnabled = CBool(GetConfigValue("Diagnostics", "PerformanceMonitoring", "True"))
         .DiagnosticsEnabled = CBool(GetConfigValue("Diagnostics", "Enabled", "True"))
+        
+        ' 自動保存設定
+        .AutoSave = CBool(GetConfigValue(DEFAULT_SECTION, "AutoSave", "True"))
     End With
     
     Exit Sub
@@ -188,8 +206,12 @@ Private Sub SaveConfigurationToFile()
         ' 診断設定
         SetConfigValue "Diagnostics", "PerformanceMonitoring", CStr(.PerformanceMonitoringEnabled)
         SetConfigValue "Diagnostics", "Enabled", CStr(.DiagnosticsEnabled)
+        
+        ' 自動保存設定
+        SetConfigValue DEFAULT_SECTION, "AutoSave", CStr(.AutoSave)
     End With
     
+    isDirty = False
     Exit Sub
 
 ErrorHandler:
@@ -210,6 +232,25 @@ End Sub
 Private Function GetConfigFilePath() As String
     GetConfigFilePath = App.Path & "\" & CONFIG_FILE_PATH
 End Function
+
+' ======================
+' 設定管理
+' ======================
+Public Sub SaveChanges()
+    If Not isInitialized Then InitializeModule
+    
+    If isDirty Then
+        SaveConfigurationToFile
+    End If
+End Sub
+
+Public Property Get HasUnsavedChanges() As Boolean
+    HasUnsavedChanges = isDirty
+End Property
+
+Public Property Let AutoSave(ByVal Value As Boolean)
+    settings.AutoSave = Value
+End Property
 
 ' ======================
 ' ヘルパー関数

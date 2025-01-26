@@ -11,6 +11,8 @@ Private Const MODULE_NAME As String = "modError"
 Private errorHandlers As Collection
 Private isInitialized As Boolean
 Private mLock As clsLock
+Private Const MAX_ERROR_RECURSION As Long = 3
+Private errorRecursionCount As Long
 
 ' ======================
 ' 初期化・終了処理
@@ -24,6 +26,7 @@ Public Sub InitializeModule()
     
     Set errorHandlers = New Collection
     Set mLock = New clsLock
+    errorRecursionCount = 0
     RegisterDefaultHandlers
     
     isInitialized = True
@@ -34,6 +37,7 @@ Public Sub TerminateModule()
     
     Set errorHandlers = Nothing
     Set mLock = Nothing
+    errorRecursionCount = 0
     isInitialized = False
 End Sub
 
@@ -43,6 +47,12 @@ End Sub
 Public Sub HandleError(ByRef errInfo As ErrorInfo)
     If Not isInitialized Then InitializeModule
     
+    ' エラーの再帰を防ぐ
+    errorRecursionCount = errorRecursionCount + 1
+    If errorRecursionCount > MAX_ERROR_RECURSION Then
+        EmergencyErrorLog "エラー処理の再帰回数が上限を超えました。処理を中断します。"
+        Exit Sub
+    End If
     mLock.AcquireLock
     On Error GoTo ErrorHandler
     
@@ -67,11 +77,13 @@ Public Sub HandleError(ByRef errInfo As ErrorInfo)
     If Not proceed Then
         Err.Raise errInfo.Code, errInfo.Source, errInfo.Description
     End If
+    errorRecursionCount = errorRecursionCount - 1
     Exit Sub
 
 ErrorHandler:
     If Not mLock Is Nothing Then mLock.ReleaseLock
-    Err.Raise Err.Number, Err.Source, "HandleError中にエラーが発生しました: " & Err.Description
+    EmergencyErrorLog "HandleError中にエラーが発生しました: " & Err.Description
+    Exit Sub
 End Sub
 
 ' ======================
@@ -161,3 +173,27 @@ End Sub
         InitializeModule
     End Sub
 #End If
+
+' ======================
+' エラーログ出力
+' ======================
+Private Sub EmergencyErrorLog(ByVal message As String)
+    On Error Resume Next
+    
+    ' イベントログへの出力を試みる
+    WriteToEventLog message
+    
+    ' ファイルへの出力を試みる
+    WriteToEmergencyFile message
+End Sub
+
+Private Sub WriteToEventLog(ByVal message As String)
+    ' Windowsイベントログへの出力
+    modWindowsAPI.WriteToEventLog "PDI Error", message, EVENTLOG_ERROR_TYPE
+End Sub
+
+Private Sub WriteToEmergencyFile(ByVal message As String)
+    Dim fso As Object
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    fso.OpenTextFile(Environ$("TEMP") & "\PDI_emergency.log", 8, True).WriteLine Now & ": " & message
+End Sub

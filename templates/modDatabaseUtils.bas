@@ -11,6 +11,7 @@ Private Const MODULE_NAME As String = "modDatabaseUtils"
 Private Const MAX_RETRY_COUNT As Long = 3
 Private Const ERR_MODULE_NOT_INITIALIZED As String = "モジュールが初期化されていません。"
 Private Const RETRY_INTERVAL_MS As Long = 1000
+Private Const DEFAULT_CONNECTION_STRING As String = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=default.accdb;"
 
 ' ======================
 ' プライベート変数
@@ -73,21 +74,13 @@ Public Function GetConnectionString() As String
 
     lock.ReleaseLock
     
+    ' 接続文字列が空の場合、デフォルト値を使用
     If GetConnectionString = "" Then
-        Dim errDetail As typErrorDetail
-        With errDetail
-            .ErrorCode = ERR_DATABASE_CONNECTION_FAILED
-            .Description = "データベース接続文字列が設定されていません。"
-            .Category = ECDatabase
-            .Source = MODULE_NAME
-            .ProcedureName = "GetConnectionString"
-            .StackTrace = modStackTrace.GetStackTrace()
-            .OccurredAt = Now
-        End With
-        modError.HandleError errDetail
-        If Not performanceMonitor Is Nothing Then
-            performanceMonitor.EndMeasurement "GetConnectionString"
-        End If
+        ' デフォルト接続文字列を使用する前に警告をログ
+        LogWarning "接続文字列が設定されていません。デフォルト値を使用します。", _
+                  "GetConnectionString"
+        
+        GetConnectionString = DEFAULT_CONNECTION_STRING
     End If
     
     If Not performanceMonitor Is Nothing Then
@@ -100,17 +93,17 @@ ErrorHandler:
     With errDetail2
         .ErrorCode = ERR_DATABASE_CONNECTION_FAILED
         .Description = "接続文字列の取得中にエラーが発生しました: " & Err.Description
-            .Category = ECDatabase
+        .Category = ECDatabase
         .Source = MODULE_NAME
         .ProcedureName = "GetConnectionString"
-            .StackTrace = modStackTrace.GetStackTrace()
-            .OccurredAt = Now
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
     End With
     modError.HandleError errDetail2
     If Not performanceMonitor Is Nothing Then
         performanceMonitor.EndMeasurement "GetConnectionString"
     End If
-    GetConnectionString = ""
+    GetConnectionString = DEFAULT_CONNECTION_STRING
 End Function
 
 ''' <summary>
@@ -139,7 +132,6 @@ Public Function GetConnection() As Object ' ADODB.Connection
     ' 新しい接続を作成
     Dim connStr As String
     connStr = GetConnectionString()
-    If connStr = "" Then Exit Function
     
     Set defaultConnection = CreateObject("ADODB.Connection")
     defaultConnection.ConnectionString = connStr
@@ -154,11 +146,11 @@ ErrorHandler:
     With errDetail
         .ErrorCode = ERR_DATABASE_CONNECTION_FAILED
         .Description = "データベース接続の取得中にエラーが発生しました: " & Err.Description
-            .Category = ECDatabase
+        .Category = ECDatabase
         .Source = MODULE_NAME
         .ProcedureName = "GetConnection"
-            .StackTrace = modStackTrace.GetStackTrace()
-            .OccurredAt = Now
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
     End With
     modError.HandleError errDetail
     Set GetConnection = Nothing
@@ -238,12 +230,27 @@ Public Function ExecuteQuery(ByVal sql As String, _
         
         ' パラメータの設定
         If Not IsMissing(params) Then
+            ' 単一値のパラメータを配列に変換
+            Dim paramArray As Variant
             If IsArray(params) Then
-                Dim i As Long
-                For i = LBound(params) To UBound(params)
-                    .Parameters.Append .CreateParameter("p" & i, GetParameterType(params(i)), 1, , params(i))
-                Next i
+                paramArray = params
+            Else
+                ReDim paramArray(0)
+                paramArray(0) = params
             End If
+            
+            ' パラメータのバリデーション
+            ValidateParameters paramArray
+            
+            ' パラメータの追加
+            Dim i As Long
+            For i = LBound(paramArray) To UBound(paramArray)
+                Dim paramValue As Variant
+                paramValue = paramArray(i)
+                If Not IsNull(paramValue) Then
+                    .Parameters.Append .CreateParameter("p" & i, GetParameterType(paramValue), 1, , paramValue)
+                End If
+            Next i
         End If
         
         Set ExecuteQuery = .Execute
@@ -259,11 +266,11 @@ ErrorHandler:
     With errDetail
         .ErrorCode = ERR_DATABASE_QUERY_FAILED
         .Description = "クエリの実行中にエラーが発生しました: " & Err.Description
-            .Category = ECDatabase
+        .Category = ECDatabase
         .Source = MODULE_NAME
         .ProcedureName = "ExecuteQuery"
-            .StackTrace = modStackTrace.GetStackTrace()
-            .OccurredAt = Now
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
     End With
     modError.HandleError errDetail
     If Not performanceMonitor Is Nothing Then
@@ -275,8 +282,8 @@ End Function
 ' ======================
 ' プライベート関数
 ' ======================
-Private Function GetParameterType(ByVal value As Variant) As Integer
-    Select Case VarType(value)
+Private Function GetParameterType(ByVal Value As Variant) As Integer
+    Select Case VarType(Value)
         Case vbInteger, vbLong
             GetParameterType = 3 ' adInteger
         Case vbSingle, vbDouble
@@ -290,6 +297,49 @@ Private Function GetParameterType(ByVal value As Variant) As Integer
         Case Else
             GetParameterType = 12 ' adVariant
     End Select
+End Function
+
+Private Sub ValidateParameters(ByRef params As Variant)
+    If Not IsArray(params) Then Exit Sub
+    
+    Dim i As Long
+    For i = LBound(params) To UBound(params)
+        If Not IsNull(params(i)) Then
+            Select Case VarType(params(i))
+                Case vbInteger, vbLong, vbSingle, vbDouble, vbString, vbDate, vbBoolean
+                    ' サポートされている型
+                Case Else
+                    Err.Raise vbObjectError + 1003, MODULE_NAME, _
+                        "サポートされていないパラメータ型です: " & TypeName(params(i))
+            End Select
+        End If
+    Next i
+End Sub
+
+Private Sub LogWarning(ByVal message As String, ByVal procedureName As String)
+    Dim errDetail As typErrorDetail
+    With errDetail
+        .ErrorCode = ERR_DATABASE_WARNING
+        .Description = message
+        .Category = ECDatabase
+        .Source = MODULE_NAME
+        .ProcedureName = procedureName
+        .StackTrace = modStackTrace.GetStackTrace()
+        .OccurredAt = Now
+    End With
+    modError.HandleError errDetail
+End Sub
+
+Public Function GetDefaultConnectionString() As String
+    GetDefaultConnectionString = DEFAULT_CONNECTION_STRING
+End Function
+
+Public Function IsValidConnectionString(ByVal connStr As String) As Boolean
+    On Error Resume Next
+    Dim conn As Object
+    Set conn = CreateObject("ADODB.Connection")
+    conn.ConnectionString = connStr
+    IsValidConnectionString = (Err.Number = 0)
 End Function
 
 ' ======================

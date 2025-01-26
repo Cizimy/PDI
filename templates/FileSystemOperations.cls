@@ -30,14 +30,13 @@ Private mPerformanceMonitor As clsPerformanceMonitor
 ' 初期化・終了処理
 ' ======================
 Private Sub Class_Initialize()
+    ' 必要なオブジェクトの初期化
+    Set mLock = New clsLock
+    Set mPerformanceMonitor = New clsPerformanceMonitor
     ' 必要なモジュールの初期化を確認
     If Not modFileIO.IsInitialized Then
         modFileIO.InitializeModule
     End If
-    modFileIO.SetFileSystemLock mLock
-    
-    Set mLock = New clsLock
-    Set mPerformanceMonitor = New clsPerformanceMonitor
     mIsInitialized = True
 End Sub
 

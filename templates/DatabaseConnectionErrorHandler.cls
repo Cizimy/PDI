@@ -80,11 +80,8 @@ Private Function IErrorHandler_HandleError(ByRef errorDetail As ErrorInfo) As Bo
     Dim proceed As Boolean
     proceed = False  ' デフォルトでは処理を中断
     
-    mLock.AcquireLock
-    
     ' エラー情報をログに記録
     LogError errorDetail
-    mLock.ReleaseLock
     
     ' リトライ処理の実行
     If AttemptRetry(errorDetail) Then
@@ -103,7 +100,6 @@ End Function
 Private Function AttemptRetry(ByRef errorDetail As ErrorInfo) As Boolean
     On Error GoTo ErrorHandler
     
-    Dim isLocked As Boolean
     Dim retryCount As Long
     Dim success As Boolean
     
@@ -116,9 +112,6 @@ Private Function AttemptRetry(ByRef errorDetail As ErrorInfo) As Boolean
             Exit For
         End If
         
-        mLock.AcquireLock
-        isLocked = True
-        
         ' リトライ試行をログに記録
         Dim loggerSettings As DefaultLoggerSettings
         Set loggerSettings = New DefaultLoggerSettings
@@ -129,9 +122,6 @@ Private Function AttemptRetry(ByRef errorDetail As ErrorInfo) As Boolean
                  "データベース接続リトライ " & retryCount & "/" & MAX_RETRY_COUNT, _
                  errorDetail.Code
         End With
-        
-        mLock.ReleaseLock
-        isLocked = False
     Next retryCount
     
     AttemptRetry = success
@@ -149,13 +139,8 @@ ErrorHandler:
         .OccurredAt = Now
     End With
     modError.HandleError errDetail
-    GoTo Cleanup
-
-Cleanup:
-    If isLocked Then
-        mLock.ReleaseLock
-    End If
     AttemptRetry = False
+ ' エラー発生時は失敗として扱う
     Exit Function
 End Function
 

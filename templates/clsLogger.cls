@@ -201,8 +201,6 @@ End Sub
 Private Sub WriteToFile(ByVal logEntry As Variant)
     On Error GoTo ErrorHandler
     
-    mLock.AcquireLock
-    
     Dim fileNum As Integer
     fileNum = FreeFile
     
@@ -212,7 +210,6 @@ Private Sub WriteToFile(ByVal logEntry As Variant)
                    IIf(logEntry(2) <> 0, "(Code: " & logEntry(2) & ") ", "") & _
                    logEntry(1)
     Close #fileNum
-    mLock.ReleaseLock
     Exit Sub
     
 ErrorHandler:
@@ -227,7 +224,6 @@ ErrorHandler:
         .OccurredAt = Now
     End With
     modError.HandleError errDetail
-    mLock.ReleaseLock
 End Sub
 
 Private Sub WriteToDatabase(ByVal logEntry As Variant)
@@ -235,11 +231,8 @@ Private Sub WriteToDatabase(ByVal logEntry As Variant)
     
     Dim conn As Object
     Set conn = Nothing
-    mLock.AcquireLock
-    
     mPerformanceMonitor.StartMeasurement "Database Connection"
     Set conn = mConnectionPool.GetConnection()
-    mLock.ReleaseLock
     
     If Not conn Is Nothing Then
         mPerformanceMonitor.StartMeasurement "Database Insert"
@@ -255,9 +248,7 @@ Private Sub WriteToDatabase(ByVal logEntry As Variant)
             .Execute
         End With
         
-        mLock.AcquireLock
         mConnectionPool.ReleaseConnection conn
-        mLock.ReleaseLock
         mPerformanceMonitor.EndMeasurement "Database Connection"
         mPerformanceMonitor.EndMeasurement "Database Insert"
     End If
@@ -266,10 +257,8 @@ Private Sub WriteToDatabase(ByVal logEntry As Variant)
 ErrorHandler:
     mPerformanceMonitor.EndMeasurement "Database Connection"
     If Not conn Is Nothing Then
-        mLock.AcquireLock
         mPerformanceMonitor.EndMeasurement "Database Insert"
         mConnectionPool.ReleaseConnection conn
-        mLock.ReleaseLock
     End If
     
     Dim errDetail As ErrorInfo
@@ -287,8 +276,6 @@ End Sub
 
 Private Sub WriteToEventLog(ByVal logEntry As Variant)
     On Error GoTo ErrorHandler
-    
-    mLock.AcquireLock
     
     Dim objShell As Object
     Set objShell = Nothing
@@ -321,7 +308,6 @@ Private Sub WriteToEventLog(ByVal logEntry As Variant)
     
     Cleanup:
         If Not objShell Is Nothing Then Set objShell = Nothing
-        mLock.ReleaseLock
         Exit Sub
     
     ErrorHandler:
@@ -340,13 +326,10 @@ Private Sub WriteToEventLog(ByVal logEntry As Variant)
 End Sub
 
 Private Sub WriteToConsole(ByVal logEntry As Variant)
-    mLock.AcquireLock
-    
     Debug.Print Format$(logEntry(3), "yyyy/mm/dd hh:nn:ss") & " " & _
                 "[" & logEntry(0) & "] " & _
                 IIf(logEntry(2) <> 0, "(Code: " & logEntry(2) & ") ", "") & _
                 logEntry(1)
-    mLock.ReleaseLock
 End Sub
 
 ' ======================

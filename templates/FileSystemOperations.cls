@@ -59,13 +59,22 @@ Private Function IFileOperations_ReadTextFile(ByVal filePath As String, _
                                             Optional ByVal encoding As String) As String
     InitializeIfNeeded
     mPerformanceMonitor.StartMeasurement "Read Text File"
+    Dim content As String
     On Error GoTo ErrorHandler
-    IFileOperations_ReadTextFile = modFileIO.ReadTextFile(filePath, encoding)
+    content = modFileIO.ReadTextFile(filePath, encoding)
+    IFileOperations_ReadTextFile = content
     mPerformanceMonitor.EndMeasurement "Read Text File"
     Exit Function
 ErrorHandler:
+    Dim errInfo As ErrorInfo
+    With errInfo
+        .Code = ErrFileNotFound
+        .Description = "ファイルの読み込みに失敗しました: " & filePath
+        .Source = MODULE_NAME & ".IFileOperations_ReadTextFile"
+    End With
+    Call modError.HandleError(errInfo)
     mPerformanceMonitor.EndMeasurement "Read Text File"
-    Err.Raise Err.Number, Err.Source, Err.Description
+    IFileOperations_ReadTextFile = vbNullString
 End Function
 
 Private Function IFileOperations_WriteTextFile(ByVal filePath As String, _
@@ -74,13 +83,22 @@ Private Function IFileOperations_WriteTextFile(ByVal filePath As String, _
                                              Optional ByVal encoding As String) As Boolean
     InitializeIfNeeded
     mPerformanceMonitor.StartMeasurement "Write Text File"
+    Dim result As Boolean
     On Error GoTo ErrorHandler
-    IFileOperations_WriteTextFile = modFileIO.WriteTextFile(filePath, content, append, encoding)
+    result = modFileIO.WriteTextFile(filePath, content, append, encoding)
+    IFileOperations_WriteTextFile = result
     mPerformanceMonitor.EndMeasurement "Write Text File"
     Exit Function
 ErrorHandler:
+    Dim errInfo As ErrorInfo
+    With errInfo
+        .Code = ErrFileAccessDenied
+        .Description = "ファイルの書き込みに失敗しました: " & filePath
+        .Source = MODULE_NAME & ".IFileOperations_WriteTextFile"
+    End With
+    Call modError.HandleError(errInfo)
     mPerformanceMonitor.EndMeasurement "Write Text File"
-    Err.Raise Err.Number, Err.Source, Err.Description
+    IFileOperations_WriteTextFile = False
 End Function
 
 Private Function IFileOperations_ReadBinaryFile(ByVal filePath As String) As Byte()
@@ -92,7 +110,14 @@ Private Function IFileOperations_ReadBinaryFile(ByVal filePath As String) As Byt
     Exit Function
 ErrorHandler:
     mPerformanceMonitor.EndMeasurement "Read Binary File"
-    Err.Raise Err.Number, Err.Source, Err.Description
+    Dim errInfo As ErrorInfo
+    With errInfo
+        .Code = ErrFileNotFound
+        .Description = "バイナリファイルの読み込みに失敗しました: " & filePath
+        .Source = MODULE_NAME & ".IFileOperations_ReadBinaryFile"
+    End With
+    Call modError.HandleError(errInfo)
+    IFileOperations_ReadBinaryFile = Array()
 End Function
 
 Private Function IFileOperations_WriteBinaryFile(ByVal filePath As String, _
@@ -104,8 +129,15 @@ Private Function IFileOperations_WriteBinaryFile(ByVal filePath As String, _
     mPerformanceMonitor.EndMeasurement "Write Binary File"
     Exit Function
 ErrorHandler:
+    Dim errInfo As ErrorInfo
+    With errInfo
+        .Code = ErrFileAccessDenied
+        .Description = "バイナリファイルの書き込みに失敗しました: " & filePath
+        .Source = MODULE_NAME & ".IFileOperations_WriteBinaryFile"
+    End With
+    Call modError.HandleError(errInfo)
     mPerformanceMonitor.EndMeasurement "Write Binary File"
-    Err.Raise Err.Number, Err.Source, Err.Description
+    IFileOperations_WriteBinaryFile = False
 End Function
 
 Private Function IFileOperations_FileExists(ByVal filePath As String) As Boolean
@@ -126,8 +158,15 @@ Private Function IFileOperations_CreateFolder(ByVal folderPath As String) As Boo
     mPerformanceMonitor.EndMeasurement "Create Folder"
     Exit Function
 ErrorHandler:
+    Dim errInfo As ErrorInfo
+    With errInfo
+        .Code = ErrFileAccessDenied
+        .Description = "フォルダの作成に失敗しました: " & folderPath
+        .Source = MODULE_NAME & ".IFileOperations_CreateFolder"
+    End With
+    Call modError.HandleError(errInfo)
     mPerformanceMonitor.EndMeasurement "Create Folder"
-    Err.Raise Err.Number, Err.Source, Err.Description
+    IFileOperations_CreateFolder = False
 End Function
 
 Private Function IFileOperations_DeleteFile(ByVal filePath As String) As Boolean
@@ -138,8 +177,15 @@ Private Function IFileOperations_DeleteFile(ByVal filePath As String) As Boolean
     mPerformanceMonitor.EndMeasurement "Delete File"
     Exit Function
 ErrorHandler:
+    Dim errInfo As ErrorInfo
+    With errInfo
+        .Code = ErrFileAccessDenied
+        .Description = "ファイルの削除に失敗しました: " & filePath
+        .Source = MODULE_NAME & ".IFileOperations_DeleteFile"
+    End With
+    Call modError.HandleError(errInfo)
     mPerformanceMonitor.EndMeasurement "Delete File"
-    Err.Raise Err.Number, Err.Source, Err.Description
+    IFileOperations_DeleteFile = False
 End Function
 
 Private Function IFileOperations_DeleteFolder(ByVal folderPath As String) As Boolean
@@ -150,8 +196,15 @@ Private Function IFileOperations_DeleteFolder(ByVal folderPath As String) As Boo
     mPerformanceMonitor.EndMeasurement "Delete Folder"
     Exit Function
 ErrorHandler:
+    Dim errInfo As ErrorInfo
+    With errInfo
+        .Code = ErrFileAccessDenied
+        .Description = "フォルダの削除に失敗しました: " & folderPath
+        .Source = MODULE_NAME & ".IFileOperations_DeleteFolder"
+    End With
+    Call modError.HandleError(errInfo)
     mPerformanceMonitor.EndMeasurement "Delete Folder"
-    Err.Raise Err.Number, Err.Source, Err.Description
+    IFileOperations_DeleteFolder = False
 End Function
 
 Private Function IFileOperations_GetAbsolutePath(ByVal relativePath As String, _

@@ -84,6 +84,7 @@ End Type
 ' ======================
 Private mPerformanceMonitor As clsPerformanceMonitor
 Private mIsInitialized As Boolean
+Private mLock As clsLock
 
 ' ======================
 ' 初期化・終了処理
@@ -100,6 +101,7 @@ Public Sub InitializeModule()
     
     ' パフォーマンスモニターの初期化
     Set mPerformanceMonitor = New clsPerformanceMonitor
+    Set mLock = New clsLock
     
     ' 設定の初期化
     modConfig.InitializeModule
@@ -115,6 +117,7 @@ Public Sub TerminateModule()
     
     ' パフォーマンスモニターの解放
     Set mPerformanceMonitor = Nothing
+    Set mLock = Nothing
     
     mIsInitialized = False
 End Sub
@@ -124,6 +127,9 @@ End Sub
 ' ======================
 Public Sub HandleError(ByRef errInfo As ErrorInfo)
     If Not mIsInitialized Then InitializeModule
+    
+    mLock.AcquireLock
+    On Error GoTo ErrorHandler
     
     ' パフォーマンスモニタリング開始
     If Not mPerformanceMonitor Is Nothing Then
@@ -144,7 +150,15 @@ Public Sub HandleError(ByRef errInfo As ErrorInfo)
     If Not mPerformanceMonitor Is Nothing Then
         mPerformanceMonitor.EndMeasurement "ErrorHandling_" & errInfo.Code
     End If
+    
+    mLock.ReleaseLock
+    Exit Sub
+
+ErrorHandler:
+    If Not mLock Is Nothing Then mLock.ReleaseLock
+    Err.Raise Err.Number, Err.Source, "HandleError中にエラーが発生しました: " & Err.Description
 End Sub
+
 ' ======================
 ' テストサポート機能（開発環境専用）
 ' 警告: これらのメソッドは開発時のテスト目的でのみ使用し、

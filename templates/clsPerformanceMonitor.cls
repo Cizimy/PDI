@@ -38,6 +38,7 @@ Private mFrequency As Currency
 Private mMeasurements As Collection
 Private mIsEnabled As Boolean
 Private mCurrentOperation As String
+Private mLock As clsLock
 
 ' ======================
 ' 初期化・終了処理
@@ -45,11 +46,13 @@ Private mCurrentOperation As String
 Private Sub Class_Initialize()
     modWindowsAPI.QueryPerformanceFrequency mFrequency
     Set mMeasurements = New Collection
+    Set mLock = New clsLock
     mIsEnabled = True
 End Sub
 
 Private Sub Class_Terminate()
     Set mMeasurements = Nothing
+    Set mLock = Nothing
 End Sub
 
 ' ======================
@@ -58,6 +61,7 @@ End Sub
 Public Sub StartMeasurement(ByVal description As String)
     If Not mIsEnabled Then Exit Sub
     
+    mLock.AcquireLock
     On Error GoTo ErrorHandler
     
     Dim perfData As PerformanceData
@@ -76,6 +80,8 @@ Public Sub StartMeasurement(ByVal description As String)
     
     ' コレクションに追加
     mMeasurements.Add perfData, description
+    
+    mLock.ReleaseLock
     Exit Sub
 
 ErrorHandler:
@@ -90,11 +96,13 @@ ErrorHandler:
         .OccurredAt = Now
     End With
     modError.HandleError errDetail
+    mLock.ReleaseLock
 End Sub
 
 Public Sub EndMeasurement(ByVal description As String)
     If Not mIsEnabled Then Exit Sub
     
+    mLock.AcquireLock
     On Error GoTo ErrorHandler
     
     Dim perfData As PerformanceData
@@ -124,6 +132,8 @@ Public Sub EndMeasurement(ByVal description As String)
             End If
         End If
     Next i
+    
+    mLock.ReleaseLock
     Exit Sub
 
 ErrorHandler:
@@ -138,10 +148,13 @@ ErrorHandler:
         .OccurredAt = Now
     End With
     modError.HandleError errDetail
+    mLock.ReleaseLock
 End Sub
 
 Public Function GetMeasurement(ByVal description As String) As String
     If Not mIsEnabled Then Exit Function
+    
+    mLock.AcquireLock
     
     Dim perfData As PerformanceData
     Dim result As String
@@ -156,12 +169,14 @@ Public Function GetMeasurement(ByVal description As String) As String
     End If
     On Error GoTo 0
     
+    mLock.ReleaseLock
     GetMeasurement = result
 End Function
 
 Public Function GetAllMeasurements() As String
     If Not mIsEnabled Then Exit Function
     
+    mLock.AcquireLock
     On Error GoTo ErrorHandler
     
     Dim result As String
@@ -176,6 +191,7 @@ Public Function GetAllMeasurements() As String
         result = result & vbCrLf & GetMeasurement(perfData.Description)
     Next i
     
+    mLock.ReleaseLock
     GetAllMeasurements = result
     Exit Function
 
@@ -191,10 +207,13 @@ ErrorHandler:
         .OccurredAt = Now
     End With
     modError.HandleError errDetail
+    mLock.ReleaseLock
 End Function
 
 Public Sub ClearMeasurements()
+    mLock.AcquireLock
     Set mMeasurements = New Collection
+    mLock.ReleaseLock
 End Sub
 
 ' ======================
@@ -230,18 +249,22 @@ End Property
     ''' 測定データの数を取得（テスト用）
     ''' </summary>
     Private Function GetMeasurementCount() As Long
+        mLock.AcquireLock
         GetMeasurementCount = mMeasurements.Count
+        mLock.ReleaseLock
     End Function
     
     ''' <summary>
     ''' テスト用の測定データを追加（テスト用）
     ''' </summary>
     Private Sub SimulateMeasurement(ByVal description As String, ByVal elapsedTime As Double)
+        mLock.AcquireLock
         Dim perfData As PerformanceData
         perfData.Description = description
         perfData.ElapsedTime = elapsedTime
         perfData.MemoryUsage = 1000000 ' 1MB
         perfData.PeakMemoryUsage = 2000000 ' 2MB
         mMeasurements.Add perfData, description
+        mLock.ReleaseLock
     End Sub
 #End If

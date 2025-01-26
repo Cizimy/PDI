@@ -22,12 +22,14 @@ Private mCryptoProvider As LongPtr
 Private mInitialized As Boolean
 Private mAesKey As LongPtr
 Private mPerformanceMonitor As clsPerformanceMonitor
+Private mLock As clsLock
 
 ' ======================
 ' 初期化・終了処理
 ' ======================
 Private Sub Class_Initialize()
     Set mPerformanceMonitor = New clsPerformanceMonitor
+    Set mLock = New clsLock
     InitializeCrypto
 End Sub
 
@@ -39,6 +41,7 @@ Private Sub Class_Terminate()
         CryptReleaseContext mCryptoProvider, 0
     End If
     Set mPerformanceMonitor = Nothing
+    Set mLock = Nothing
 End Sub
 
 ' ======================
@@ -119,6 +122,8 @@ End Function
 Public Function EncryptString(ByVal plainText As String, ByVal key As String) As String
     mPerformanceMonitor.StartMeasurement "String Encryption"
     
+    mLock.AcquireLock
+    
     If Not mInitialized Then
         Dim errInfo As ErrorInfo
         With errInfo
@@ -130,6 +135,7 @@ Public Function EncryptString(ByVal plainText As String, ByVal key As String) As
         End With
         modError.HandleError errInfo
         mPerformanceMonitor.EndMeasurement "String Encryption"
+        mLock.ReleaseLock
         Exit Function
     End If
     
@@ -145,12 +151,14 @@ Public Function EncryptString(ByVal plainText As String, ByVal key As String) As
         End With
         modError.HandleError errInfo
         mPerformanceMonitor.EndMeasurement "String Encryption"
+        mLock.ReleaseLock
         Exit Function
     End If
     
     ' AESキーの生成
     If Not DeriveAESKey(key) Then
         mPerformanceMonitor.EndMeasurement "String Encryption"
+        mLock.ReleaseLock
         Exit Function
     End If
     
@@ -182,16 +190,22 @@ Public Function EncryptString(ByVal plainText As String, ByVal key As String) As
         End With
         modError.HandleError errInfo
         mPerformanceMonitor.EndMeasurement "String Encryption"
+        mLock.ReleaseLock
         Exit Function
     End If
     
+    Dim result As String
+    result = Base64Encode(buffer)
+    
     mPerformanceMonitor.EndMeasurement "String Encryption"
-    EncryptString = Base64Encode(buffer)
+    mLock.ReleaseLock
+    EncryptString = result
 End Function
 
 Public Function DecryptString(ByVal cipherText As String, ByVal key As String) As String
     mPerformanceMonitor.StartMeasurement "String Decryption"
     
+mLock.AcquireLock
     If Not mInitialized Then
         Dim errInfo As ErrorInfo
         With errInfo
@@ -203,6 +217,7 @@ Public Function DecryptString(ByVal cipherText As String, ByVal key As String) A
         End With
         modError.HandleError errInfo
         mPerformanceMonitor.EndMeasurement "String Decryption"
+        mLock.ReleaseLock
         Exit Function
     End If
     
@@ -218,12 +233,14 @@ Public Function DecryptString(ByVal cipherText As String, ByVal key As String) A
         End With
         modError.HandleError errInfo
         mPerformanceMonitor.EndMeasurement "String Decryption"
+        mLock.ReleaseLock
         Exit Function
     End If
     
     ' AESキーの生成
     If Not DeriveAESKey(key) Then
         mPerformanceMonitor.EndMeasurement "String Decryption"
+        mLock.ReleaseLock
         Exit Function
     End If
     
@@ -246,16 +263,21 @@ Public Function DecryptString(ByVal cipherText As String, ByVal key As String) A
         End With
         modError.HandleError errInfo
         mPerformanceMonitor.EndMeasurement "String Decryption"
+        mLock.ReleaseLock
         Exit Function
     End If
     
+    Dim result As String
+    result = Left$(StrConv(buffer, vbUnicode), dataLen)
     
     mPerformanceMonitor.EndMeasurement "String Decryption"
-    DecryptString = Left$(StrConv(buffer, vbUnicode), dataLen)
+    mLock.ReleaseLock
+    DecryptString = result
 End Function
 
 Public Function GenerateHash(ByVal inputString As String) As String
     mPerformanceMonitor.StartMeasurement "Hash Generation"
+    mLock.AcquireLock
     
     If Not mInitialized Then
         Dim errInfo As ErrorInfo
@@ -268,6 +290,7 @@ Public Function GenerateHash(ByVal inputString As String) As String
         End With
         modError.HandleError errInfo
         mPerformanceMonitor.EndMeasurement "Hash Generation"
+        mLock.ReleaseLock
         Exit Function
     End If
     
@@ -288,6 +311,7 @@ Public Function GenerateHash(ByVal inputString As String) As String
         End With
         modError.HandleError errInfo
         mPerformanceMonitor.EndMeasurement "Hash Generation"
+        mLock.ReleaseLock
         Exit Function
     End If
     
@@ -304,6 +328,7 @@ Public Function GenerateHash(ByVal inputString As String) As String
         End With
         modError.HandleError errInfo
         mPerformanceMonitor.EndMeasurement "Hash Generation"
+        mLock.ReleaseLock
         Exit Function
     End If
     
@@ -320,6 +345,7 @@ Public Function GenerateHash(ByVal inputString As String) As String
         End With
         modError.HandleError errInfo
         mPerformanceMonitor.EndMeasurement "Hash Generation"
+        mLock.ReleaseLock
         Exit Function
     End If
     
@@ -337,6 +363,7 @@ Public Function GenerateHash(ByVal inputString As String) As String
         End With
         modError.HandleError errInfo
         mPerformanceMonitor.EndMeasurement "Hash Generation"
+        mLock.ReleaseLock
         Exit Function
     End If
     
@@ -351,7 +378,9 @@ Public Function GenerateHash(ByVal inputString As String) As String
     Next i
     
     mPerformanceMonitor.EndMeasurement "Hash Generation"
+    mLock.ReleaseLock
     GenerateHash = result
+    
 End Function
 
 ' ======================

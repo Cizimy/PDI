@@ -15,6 +15,7 @@ Private Const MAX_STACK_TRACE_DEPTH As Long = 10 ' スタックトレースの�
 ' ======================
 Private stack As Collection
 Private isInitialized As Boolean
+Private mLock As clsLock
 
 ' ======================
 ' 初期化・終了処理
@@ -27,6 +28,7 @@ Public Sub InitializeModule()
     If isInitialized Then Exit Sub
     
     Set stack = New Collection
+    Set mLock = New clsLock
     isInitialized = True
 End Sub
 
@@ -34,6 +36,7 @@ Public Sub TerminateModule()
     If Not isInitialized Then Exit Sub
     
     Set stack = Nothing
+    Set mLock = Nothing
     isInitialized = False
 End Sub
 
@@ -43,11 +46,14 @@ End Sub
 Public Sub PushStackEntry(ByVal ModuleName As String, ByVal ProcedureName As String)
     If Not isInitialized Then InitializeModule
     
+    mLock.AcquireLock
     On Error GoTo ErrorHandler
     
     If stack.Count < MAX_STACK_TRACE_DEPTH Then
         stack.Add ModuleName & "." & ProcedureName
     End If
+    
+    mLock.ReleaseLock
     Exit Sub
 
 ErrorHandler:
@@ -61,12 +67,14 @@ ErrorHandler:
         .StackTrace = "モジュール: " & ModuleName & ", プロシージャ: " & ProcedureName
         .OccurredAt = Now
     End With
+    If Not mLock Is Nothing Then mLock.ReleaseLock
     modError.HandleError errInfo
 End Sub
 
 Public Function PopStackEntry() As String
     If Not isInitialized Then Exit Function
     
+    mLock.AcquireLock
     On Error GoTo ErrorHandler
     
     Dim result As String
@@ -75,6 +83,8 @@ Public Function PopStackEntry() As String
         stack.Remove stack.Count
         PopStackEntry = result
     End If
+    
+    mLock.ReleaseLock
     Exit Function
 
 ErrorHandler:
@@ -87,12 +97,14 @@ ErrorHandler:
         .ProcedureName = "PopStackEntry"
         .OccurredAt = Now
     End With
+    If Not mLock Is Nothing Then mLock.ReleaseLock
     modError.HandleError errInfo
 End Function
 
 Public Function GetStackTrace() As String
     If Not isInitialized Then Exit Function
     
+    mLock.AcquireLock
     On Error GoTo ErrorHandler
     
     Dim i As Long
@@ -103,6 +115,7 @@ Public Function GetStackTrace() As String
     Next i
     
     GetStackTrace = trace
+    mLock.ReleaseLock
     Exit Function
 
 ErrorHandler:
@@ -115,13 +128,16 @@ ErrorHandler:
         .ProcedureName = "GetStackTrace"
         .OccurredAt = Now
     End With
+    If Not mLock Is Nothing Then mLock.ReleaseLock
     modError.HandleError errInfo
     GetStackTrace = "スタックトレースの取得に失敗しました。"
 End Function
 
 Public Property Get StackDepth() As Long
     If Not isInitialized Then Exit Property
+    mLock.AcquireLock
     StackDepth = stack.Count
+    mLock.ReleaseLock
 End Property
 
 ' ======================
@@ -135,7 +151,9 @@ End Property
     ''' </summary>
     Private Sub ClearStack()
         If Not isInitialized Then Exit Sub
+        mLock.AcquireLock
         Set stack = New Collection
+        mLock.ReleaseLock
     End Sub
     
     ''' <summary>
@@ -144,7 +162,9 @@ End Property
     ''' <returns>スタックの深さが最大値以下の場合True</returns>
     Private Function ValidateStackState() As Boolean
         If Not isInitialized Then Exit Function
+        mLock.AcquireLock
         ValidateStackState = (stack.Count <= MAX_STACK_TRACE_DEPTH)
+        mLock.ReleaseLock
     End Function
     
     ''' <summary>

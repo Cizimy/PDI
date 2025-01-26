@@ -201,6 +201,8 @@ End Sub
 Private Sub WriteToFile(ByVal logEntry As Variant)
     On Error GoTo ErrorHandler
     
+    mLock.AcquireLock
+    
     Dim fileNum As Integer
     fileNum = FreeFile
     
@@ -210,6 +212,7 @@ Private Sub WriteToFile(ByVal logEntry As Variant)
                    IIf(logEntry(2) <> 0, "(Code: " & logEntry(2) & ") ", "") & _
                    logEntry(1)
     Close #fileNum
+    mLock.ReleaseLock
     Exit Sub
     
 ErrorHandler:
@@ -224,6 +227,7 @@ ErrorHandler:
         .OccurredAt = Now
     End With
     modError.HandleError errDetail
+    mLock.ReleaseLock
 End Sub
 
 Private Sub WriteToDatabase(ByVal logEntry As Variant)
@@ -284,6 +288,8 @@ End Sub
 Private Sub WriteToEventLog(ByVal logEntry As Variant)
     On Error GoTo ErrorHandler
     
+    mLock.AcquireLock
+    
     Dim objShell As Object
     Set objShell = Nothing
     
@@ -315,6 +321,7 @@ Private Sub WriteToEventLog(ByVal logEntry As Variant)
     
     Cleanup:
         If Not objShell Is Nothing Then Set objShell = Nothing
+        mLock.ReleaseLock
         Exit Sub
     
     ErrorHandler:
@@ -329,14 +336,18 @@ Private Sub WriteToEventLog(ByVal logEntry As Variant)
             .OccurredAt = Now
         End With
         modError.HandleError errDetail
+        mLock.ReleaseLock
         Resume Cleanup
 End Sub
 
 Private Sub WriteToConsole(ByVal logEntry As Variant)
+    mLock.AcquireLock
+    
     Debug.Print Format$(logEntry(3), "yyyy/mm/dd hh:nn:ss") & " " & _
                 "[" & logEntry(0) & "] " & _
                 IIf(logEntry(2) <> 0, "(Code: " & logEntry(2) & ") ", "") & _
                 logEntry(1)
+    mLock.ReleaseLock
 End Sub
 
 ' ======================

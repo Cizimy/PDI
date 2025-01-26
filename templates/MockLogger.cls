@@ -41,24 +41,28 @@ End Type
 Private mLogEntries As Collection
 Private mLogLevel As LogLevelEnum
 Private mLogDestination As LogDestination
+Private mLock As clsLock
 
 ' ======================
 ' 初期化・終了処理
 ' ======================
 Private Sub Class_Initialize()
     Set mLogEntries = New Collection
+    Set mLock = New clsLock
     mLogLevel = LOG_LEVEL_INFO
     mLogDestination = DestNone
 End Sub
 
 Private Sub Class_Terminate()
     Set mLogEntries = Nothing
+    Set mLock = Nothing
 End Sub
 
 ' ======================
 ' ILogger実装
 ' ======================
 Private Sub ILogger_Log(ByVal moduleName As String, ByVal message As String, Optional ByVal errorCode As ErrorCode)
+    mLock.AcquireLock
     On Error GoTo ErrorHandler
     
     Dim entry As LogEntry
@@ -70,6 +74,7 @@ Private Sub ILogger_Log(ByVal moduleName As String, ByVal message As String, Opt
     End With
     
     mLogEntries.Add entry
+    mLock.ReleaseLock
     Exit Sub
 
 ErrorHandler:
@@ -84,6 +89,7 @@ ErrorHandler:
         .OccurredAt = Now
     End With
     modError.HandleError errDetail
+    mLock.ReleaseLock
 End Sub
 
 Private Property Let ILogger_LogLevel(ByVal level As LogLevelEnum)
@@ -110,7 +116,9 @@ End Property
 ''' ログエントリの総数を取得（テスト用）
 ''' </summary>
 Private Property Get LogCount() As Long
+    mLock.AcquireLock
     LogCount = mLogEntries.Count
+    mLock.ReleaseLock
 End Property
 
 ''' <summary>
@@ -119,6 +127,7 @@ End Property
 ''' <param name="index">取得するログエントリのインデックス</param>
 ''' <returns>フォーマット済みのログエントリ文字列、無効なインデックスの場合は空文字列</returns>
 Private Function GetLogEntry(ByVal index As Long) As LogOperationResult
+    mLock.AcquireLock
     On Error GoTo ErrorHandler
     
     Dim result As LogOperationResult
@@ -136,6 +145,7 @@ Private Function GetLogEntry(ByVal index As Long) As LogOperationResult
             .OccurredAt = Now
         End With
         GetLogEntry = result
+        mLock.ReleaseLock
         Exit Function
     End If
     
@@ -147,6 +157,7 @@ Private Function GetLogEntry(ByVal index As Long) As LogOperationResult
                   IIf(entry.ErrorCode <> 0, "(Code: " & entry.ErrorCode & ") ", "") & _
                   entry.Message
     GetLogEntry = result
+    mLock.ReleaseLock
     Exit Function
 
 ErrorHandler:
@@ -161,13 +172,16 @@ ErrorHandler:
         .OccurredAt = Now
     End With
     GetLogEntry = result
+    mLock.ReleaseLock
 End Function
 
 ''' <summary>
 ''' すべてのログエントリをクリア（テスト用）
 ''' </summary>
 Private Sub ClearLogs()
+    mLock.AcquireLock
     Set mLogEntries = New Collection
+    mLock.ReleaseLock
 End Sub
 
 ''' <summary>
@@ -176,6 +190,7 @@ End Sub
 ''' <param name="moduleName">対象のモジュール名</param>
 ''' <returns>指定されたモジュールのログエントリ数</returns>
 Private Function GetLogCountForModule(ByVal moduleName As String) As LogOperationResult
+    mLock.AcquireLock
     On Error GoTo ErrorHandler
     
     Dim result As LogOperationResult
@@ -194,6 +209,7 @@ Private Function GetLogCountForModule(ByVal moduleName As String) As LogOperatio
     
     result.Value = count
     GetLogCountForModule = result
+    mLock.ReleaseLock
     Exit Function
 
 ErrorHandler:
@@ -208,6 +224,7 @@ ErrorHandler:
         .OccurredAt = Now
     End With
     GetLogCountForModule = result
+    mLock.ReleaseLock
 End Function
 
 ''' <summary>
@@ -216,6 +233,7 @@ End Function
 ''' <param name="errorCode">対象のエラーコード</param>
 ''' <returns>指定されたエラーコードのログエントリ数</returns>
 Private Function GetLogCountForErrorCode(ByVal errorCode As ErrorCode) As LogOperationResult
+    mLock.AcquireLock
     On Error GoTo ErrorHandler
     
     Dim result As LogOperationResult
@@ -234,6 +252,7 @@ Private Function GetLogCountForErrorCode(ByVal errorCode As ErrorCode) As LogOpe
     
     result.Value = count
     GetLogCountForErrorCode = result
+    mLock.ReleaseLock
     Exit Function
 
 ErrorHandler:
@@ -248,6 +267,7 @@ ErrorHandler:
         .OccurredAt = Now
     End With
     GetLogCountForErrorCode = result
+    mLock.ReleaseLock
 End Function
 
 ''' <summary>
@@ -255,6 +275,7 @@ End Function
 ''' </summary>
 ''' <returns>最後のログエントリ、ログが空の場合は空文字列</returns>
 Private Function GetLastLogEntry() As LogOperationResult
+    mLock.AcquireLock
     On Error GoTo ErrorHandler
     
     Dim result As LogOperationResult
@@ -272,10 +293,12 @@ Private Function GetLastLogEntry() As LogOperationResult
             .OccurredAt = Now
         End With
         GetLastLogEntry = result
+        mLock.ReleaseLock
         Exit Function
     End If
     
     GetLastLogEntry = GetLogEntry(mLogEntries.Count)
+    mLock.ReleaseLock
     Exit Function
 
 ErrorHandler:
@@ -290,4 +313,5 @@ ErrorHandler:
         .OccurredAt = Now
     End With
     GetLastLogEntry = result
+    mLock.ReleaseLock
 End Function

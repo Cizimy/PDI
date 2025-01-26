@@ -18,16 +18,19 @@ Private Const MODULE_NAME As String = "clsCallStack"
 ' メンバ変数
 ' ======================
 Private mIsInitialized As Boolean
+Private mLock As clsLock
 
 ' ======================
 ' 初期化・終了処理
 ' ======================
 Private Sub Class_Initialize()
     modStackTrace.InitializeModule
+    Set mLock = New clsLock
     mIsInitialized = True
 End Sub
 
 Private Sub Class_Terminate()
+    Set mLock = Nothing
     mIsInitialized = False
 End Sub
 
@@ -46,10 +49,12 @@ End Sub
 Public Sub Push(ByVal ModuleName As String, ByVal ProcedureName As String)
     If Not mIsInitialized Then Exit Sub
     
+    mLock.AcquireLock
     On Error GoTo ErrorHandler
     
     modStackTrace.PushStackEntry ModuleName, ProcedureName
     
+    mLock.ReleaseLock
     Exit Sub
 
 ErrorHandler:
@@ -64,6 +69,7 @@ ErrorHandler:
         .OccurredAt = Now
     End With
     modError.HandleError errDetail
+    mLock.ReleaseLock
     Resume Next
 End Sub
 
@@ -74,10 +80,12 @@ End Sub
 Public Function Pop() As String
     If Not mIsInitialized Then Exit Function
     
+    mLock.AcquireLock
     On Error GoTo ErrorHandler
     
     Pop = modStackTrace.PopStackEntry()
     
+    mLock.ReleaseLock
     Exit Function
 
 ErrorHandler:
@@ -92,6 +100,7 @@ ErrorHandler:
         .OccurredAt = Now
     End With
     modError.HandleError errDetail
+    mLock.ReleaseLock
     Resume Next
 End Function
 
@@ -102,10 +111,12 @@ End Function
 Public Property Get StackTrace() As String
     If Not mIsInitialized Then Exit Property
     
+    mLock.AcquireLock
     On Error GoTo ErrorHandler
     
     StackTrace = modStackTrace.GetStackTrace()
     
+    mLock.ReleaseLock
     Exit Property
 
 ErrorHandler:
@@ -120,6 +131,7 @@ ErrorHandler:
         .OccurredAt = Now
     End With
     modError.HandleError errDetail
+    mLock.ReleaseLock
     Resume Next
 End Property
 
@@ -128,7 +140,9 @@ End Property
 ''' </summary>
 ''' <returns>現在のスタックの深さ</returns>
 Public Property Get Count() As Long
+    mLock.AcquireLock
     Count = modStackTrace.StackDepth
+    mLock.ReleaseLock
 End Property
 
 ' ======================

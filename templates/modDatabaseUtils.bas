@@ -9,6 +9,7 @@ Private Const MODULE_NAME As String = "modDatabaseUtils"
 ' 定数定義
 ' ======================
 Private Const MAX_RETRY_COUNT As Long = 3
+Private Const ERR_MODULE_NOT_INITIALIZED As String = "モジュールが初期化されていません。"
 Private Const RETRY_INTERVAL_MS As Long = 1000
 
 ' ======================
@@ -18,15 +19,22 @@ Private performanceMonitor As clsPerformanceMonitor
 Private isInitialized As Boolean
 Private lock As clsLock
 Private defaultConnection As Object ' ADODB.Connection
+Private mConfig As IDatabaseConfig ' データベース設定
 
 ' ======================
 ' 初期化・終了処理
 ' ======================
-''' <param name="config">データベース設定を提供するインターフェース</param>
-Public Sub InitializeModule()
+''' <summary>モジュールを初期化します</summary>
+''' <param name="config">データベース設定を提供するインターフェース（必須）</param>
+Public Sub InitializeModule(ByVal config As IDatabaseConfig)
     If isInitialized Then Exit Sub
     
     Set performanceMonitor = New clsPerformanceMonitor
+    If config Is Nothing Then
+        Err.Raise vbObjectError + 1001, MODULE_NAME, _
+            "データベース設定が指定されていません。"
+    End If
+    Set mConfig = config
     Set lock = New clsLock
     isInitialized = True
 End Sub
@@ -37,6 +45,7 @@ Public Sub TerminateModule()
     CloseConnection
     Set performanceMonitor = Nothing
     Set lock = Nothing
+    Set mConfig = Nothing
     isInitialized = False
 End Sub
 
@@ -48,8 +57,8 @@ End Sub
 ''' データベース接続文字列を取得します
 ''' </summary>
 ''' <returns>接続文字列</returns>
-Public Function GetConnectionString(ByVal config As IDatabaseConfig) As String
-    If Not isInitialized Then InitializeModule
+Public Function GetConnectionString() As String
+    If Not isInitialized Then Err.Raise vbObjectError + 1002, MODULE_NAME, ERR_MODULE_NOT_INITIALIZED
     
     On Error GoTo ErrorHandler
 
@@ -60,7 +69,7 @@ Public Function GetConnectionString(ByVal config As IDatabaseConfig) As String
     lock.AcquireLock
     
     ' IDatabaseConfigから接続文字列を取得
-    GetConnectionString = config.GetConnectionString
+    GetConnectionString = mConfig.GetConnectionString
 
     lock.ReleaseLock
     
@@ -108,8 +117,8 @@ End Function
 ''' データベース接続を取得します
 ''' </summary>
 ''' <returns>データベース接続オブジェクト</returns>
-Public Function GetConnection(ByVal config As IDatabaseConfig) As Object ' ADODB.Connection
-    If Not isInitialized Then InitializeModule
+Public Function GetConnection() As Object ' ADODB.Connection
+    If Not isInitialized Then Err.Raise vbObjectError + 1002, MODULE_NAME, ERR_MODULE_NOT_INITIALIZED
     
     If Not performanceMonitor Is Nothing Then
         performanceMonitor.StartMeasurement "GetConnection"
@@ -129,7 +138,7 @@ Public Function GetConnection(ByVal config As IDatabaseConfig) As Object ' ADODB
     
     ' 新しい接続を作成
     Dim connStr As String
-    connStr = GetConnectionString(config)
+    connStr = GetConnectionString()
     If connStr = "" Then Exit Function
     
     Set defaultConnection = CreateObject("ADODB.Connection")
@@ -185,11 +194,11 @@ End Sub
 ''' データベース接続をテストします
 ''' </summary>
 ''' <returns>接続成功の場合True</returns>
-Public Function TestConnection(ByVal config As IDatabaseConfig) As Boolean
-    If Not isInitialized Then InitializeModule
+Public Function TestConnection() As Boolean
+    If Not isInitialized Then Err.Raise vbObjectError + 1002, MODULE_NAME, ERR_MODULE_NOT_INITIALIZED
     
     Dim conn As Object
-    Set conn = GetConnection(config)
+    Set conn = GetConnection()
     
     TestConnection = Not (conn Is Nothing)
     
@@ -206,9 +215,9 @@ End Function
 ''' <param name="sql">SQLクエリ</param>
 ''' <param name="params">パラメータ配列（オプション）</param>
 ''' <returns>レコードセット</returns>
-Public Function ExecuteQuery(ByVal config As IDatabaseConfig, ByVal sql As String, _
+Public Function ExecuteQuery(ByVal sql As String, _
                            Optional ByRef params As Variant) As Object ' ADODB.Recordset
-    If Not isInitialized Then InitializeModule
+    If Not isInitialized Then Err.Raise vbObjectError + 1002, MODULE_NAME, ERR_MODULE_NOT_INITIALIZED
     
     If Not performanceMonitor Is Nothing Then
         performanceMonitor.StartMeasurement "ExecuteQuery"
@@ -217,7 +226,7 @@ Public Function ExecuteQuery(ByVal config As IDatabaseConfig, ByVal sql As Strin
     On Error GoTo ErrorHandler
     
     Dim conn As Object
-    Set conn = GetConnection(config)
+    Set conn = GetConnection()
     If conn Is Nothing Then Exit Function
     
     Dim cmd As Object

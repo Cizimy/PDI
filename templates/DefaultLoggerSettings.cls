@@ -25,6 +25,16 @@ Private mConnectionString As String
 ' ======================
 ' 初期化・終了処理
 ' ======================
+''' <summary>
+''' ロガー設定を初期化します。
+''' </summary>
+''' <param name="connectionString">データベース接続文字列（オプション）。
+''' 指定しない場合、ファイルログのみが有効になります。</param>
+''' <param name="logLevel">ログレベル（オプション、デフォルト：INFO）</param>
+''' <param name="logFilePath">ログファイルパス（オプション、デフォルト：アプリケーションパス）</param>
+''' <param name="logTableName">ログテーブル名（オプション、デフォルト：AppLog）</param>
+''' <param name="logEventSource">イベントソース名（オプション、デフォルト：アプリケーション名）</param>
+''' <param name="timerInterval">タイマー間隔（オプション、デフォルト：1000ms）</param>
 Public Sub Initialize(ByVal connectionString As String, _
                      Optional ByVal logLevel As LogLevelEnum = LOG_LEVEL_INFO, _
                      Optional ByVal logFilePath As String = "", _
@@ -33,20 +43,14 @@ Public Sub Initialize(ByVal connectionString As String, _
                      Optional ByVal timerInterval As Long = 1000)
     On Error GoTo ErrorHandler
     
-    ' デフォルト値の設定
     mLogLevel = logLevel
     Set mLogDestination = New FileLogDestination
-    mLogFilePath = IIf(logFilePath = "", App.Path & "\" & DEFAULT_LOG_FILE
-, logFilePath)
+    mLogFilePath = IIf(logFilePath = "", App.Path & "\" & DEFAULT_LOG_FILE, logFilePath)
     mLogTableName = logTableName
     mLogEventSource = IIf(logEventSource = "", APPLICATION_NAME, logEventSource)
     mTimerInterval = timerInterval
-    
-    ' 接続文字列の設定
     mConnectionString = connectionString
-    If mConnectionString = "" Then
-        Err.Raise vbObjectError + 1001, "DefaultLoggerSettings", "接続文字列が指定されていません。"
-    End If
+    
     Exit Sub
 
 ErrorHandler:
@@ -64,8 +68,8 @@ ErrorHandler:
 End Sub
 
 Private Sub Class_Initialize()
-    ' デフォルトの初期化は空の接続文字列で実行
-    ' 初期化は Initialize メソッドで行う
+    ' デフォルト設定で初期化
+    Initialize "", LOG_LEVEL_INFO, "", "AppLog", "", 1000
 End Sub
 
 Private Sub Class_Terminate()

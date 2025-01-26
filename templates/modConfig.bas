@@ -1,4 +1,5 @@
 Option Explicit
+Implements IDatabaseConfig
 
 ' ======================
 ' モジュール情報
@@ -221,6 +222,15 @@ Private Function GetCurrentCallStack() As String
     
     ' スタックトレースを取得
     GetCurrentCallStack = callStack.StackTrace
+End Function
+
+' ======================
+' IDatabaseConfig インターフェースの実装
+' ======================
+Private Function IDatabaseConfig_GetConnectionString() As String
+    If Not isInitialized Then InitializeModule
+    
+    IDatabaseConfig_GetConnectionString = Me.Settings.DatabaseConnectionString
 End Function
 
 ' ======================

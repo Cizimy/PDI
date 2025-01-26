@@ -99,9 +99,13 @@ End Sub
 Private Sub InitializeDatabase()
     On Error GoTo ErrorHandler
     
+    ' データベースユーティリティの初期化
+    modDatabaseUtils.InitializeModule modConfig
+    
     ' データベース接続プールの初期化
     With New ConnectionPool
-        .Initialize modConfig.Settings.DatabaseConnectionString
+        ' IDatabaseConfigインターフェースを通じて接続文字列を取得
+        .Initialize modConfig.GetConnectionString
     End With
     
     Exit Sub

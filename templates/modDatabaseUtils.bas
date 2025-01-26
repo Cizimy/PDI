@@ -17,16 +17,19 @@ Private Const RETRY_INTERVAL_MS As Long = 1000
 Private performanceMonitor As clsPerformanceMonitor
 Private isInitialized As Boolean
 Private lock As clsLock
+Private mConfig As IDatabaseConfig
 Private defaultConnection As Object ' ADODB.Connection
 
 ' ======================
 ' 初期化・終了処理
 ' ======================
-Public Sub InitializeModule()
+''' <param name="config">データベース設定を提供するインターフェース</param>
+Public Sub InitializeModule(ByVal config As IDatabaseConfig)
     If isInitialized Then Exit Sub
     
     Set performanceMonitor = New clsPerformanceMonitor
     Set lock = New clsLock
+    Set mConfig = config
     isInitialized = True
 End Sub
 
@@ -36,6 +39,7 @@ Public Sub TerminateModule()
     CloseConnection
     Set performanceMonitor = Nothing
     Set lock = Nothing
+    Set mConfig = Nothing
     isInitialized = False
 End Sub
 
@@ -58,10 +62,8 @@ Public Function GetConnectionString() As String
     
     lock.AcquireLock
     
-    ' 設定から接続文字列を取得
-    Dim settings As ConfigurationSettings
-    settings = modConfig.Settings
-    GetConnectionString = settings.DatabaseConnectionString
+    ' IDatabaseConfigから接続文字列を取得
+    GetConnectionString = mConfig.GetConnectionString
 
     lock.ReleaseLock
     

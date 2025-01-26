@@ -34,6 +34,7 @@ Private mConnectionString As String
 Private mPoolSize As Long
 Private mLock As clsLock
 Private mPerformanceMonitor As clsPerformanceMonitor
+Private mConfig As IDatabaseConfig
 
 ' ======================
 ' 初期化・終了処理
@@ -56,6 +57,7 @@ Private Sub Class_Terminate()
         End If
     Next i
     Set mLock = Nothing
+    Set mConfig = Nothing
     Set mPerformanceMonitor = Nothing
 End Sub
 
@@ -66,9 +68,10 @@ End Sub
 ''' <summary>
 ''' コネクションプールを初期化します
 ''' </summary>
-''' <param name="connectionString">接続文字列</param>
-Public Sub Initialize(ByVal connectionString As String)
-    mConnectionString = connectionString
+''' <param name="config">データベース設定を提供するインターフェース</param>
+Public Sub Initialize(ByVal config As IDatabaseConfig)
+    Set mConfig = config
+    mConnectionString = mConfig.GetConnectionString
 End Sub
 
 ''' <summary>

@@ -24,6 +24,7 @@ Private Const MAX_RETRY_COUNT As Long = 3
 ' プライベート変数
 ' ======================
 Private mConnectionString As String
+Private mConfig As IDatabaseConfig
 
 Implements IErrorHandler
 
@@ -35,9 +36,10 @@ Private Shared instance As DatabaseConnectionErrorHandler
 ' ======================
 ' 初期化処理
 ' ======================
-Public Sub Initialize(ByVal connectionString As String)
-    If connectionString = "" Then Exit Sub
-    mConnectionString = connectionString
+Public Sub Initialize(ByVal config As IDatabaseConfig)
+    If config Is Nothing Then Exit Sub
+    Set mConfig = config
+    mConnectionString = mConfig.GetConnectionString
 End Sub
 
 
@@ -49,7 +51,7 @@ Public Function Create() As DatabaseConnectionErrorHandler
     
     If instance Is Nothing Then
         Set instance = New DatabaseConnectionErrorHandler
-        instance.Initialize modConfig.Settings.DatabaseConnectionString
+        instance.Initialize config
     End If
     Set Create = instance
     Exit Function

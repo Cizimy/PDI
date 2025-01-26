@@ -17,19 +17,17 @@ Private Const RETRY_INTERVAL_MS As Long = 1000
 Private performanceMonitor As clsPerformanceMonitor
 Private isInitialized As Boolean
 Private lock As clsLock
-Private mConfig As IDatabaseConfig
 Private defaultConnection As Object ' ADODB.Connection
 
 ' ======================
 ' 初期化・終了処理
 ' ======================
 ''' <param name="config">データベース設定を提供するインターフェース</param>
-Public Sub InitializeModule(ByVal config As IDatabaseConfig)
+Public Sub InitializeModule()
     If isInitialized Then Exit Sub
     
     Set performanceMonitor = New clsPerformanceMonitor
     Set lock = New clsLock
-    Set mConfig = config
     isInitialized = True
 End Sub
 
@@ -39,7 +37,6 @@ Public Sub TerminateModule()
     CloseConnection
     Set performanceMonitor = Nothing
     Set lock = Nothing
-    Set mConfig = Nothing
     isInitialized = False
 End Sub
 
@@ -51,7 +48,7 @@ End Sub
 ''' データベース接続文字列を取得します
 ''' </summary>
 ''' <returns>接続文字列</returns>
-Public Function GetConnectionString() As String
+Public Function GetConnectionString(ByVal config As IDatabaseConfig) As String
     If Not isInitialized Then InitializeModule
     
     On Error GoTo ErrorHandler
@@ -63,7 +60,7 @@ Public Function GetConnectionString() As String
     lock.AcquireLock
     
     ' IDatabaseConfigから接続文字列を取得
-    GetConnectionString = mConfig.GetConnectionString
+    GetConnectionString = config.GetConnectionString
 
     lock.ReleaseLock
     
@@ -111,7 +108,7 @@ End Function
 ''' データベース接続を取得します
 ''' </summary>
 ''' <returns>データベース接続オブジェクト</returns>
-Public Function GetConnection() As Object ' ADODB.Connection
+Public Function GetConnection(ByVal config As IDatabaseConfig) As Object ' ADODB.Connection
     If Not isInitialized Then InitializeModule
     
     If Not performanceMonitor Is Nothing Then
@@ -132,7 +129,7 @@ Public Function GetConnection() As Object ' ADODB.Connection
     
     ' 新しい接続を作成
     Dim connStr As String
-    connStr = GetConnectionString()
+    connStr = GetConnectionString(config)
     If connStr = "" Then Exit Function
     
     Set defaultConnection = CreateObject("ADODB.Connection")
@@ -188,11 +185,11 @@ End Sub
 ''' データベース接続をテストします
 ''' </summary>
 ''' <returns>接続成功の場合True</returns>
-Public Function TestConnection() As Boolean
+Public Function TestConnection(ByVal config As IDatabaseConfig) As Boolean
     If Not isInitialized Then InitializeModule
     
     Dim conn As Object
-    Set conn = GetConnection()
+    Set conn = GetConnection(config)
     
     TestConnection = Not (conn Is Nothing)
     
@@ -209,7 +206,7 @@ End Function
 ''' <param name="sql">SQLクエリ</param>
 ''' <param name="params">パラメータ配列（オプション）</param>
 ''' <returns>レコードセット</returns>
-Public Function ExecuteQuery(ByVal sql As String, _
+Public Function ExecuteQuery(ByVal config As IDatabaseConfig, ByVal sql As String, _
                            Optional ByRef params As Variant) As Object ' ADODB.Recordset
     If Not isInitialized Then InitializeModule
     
@@ -220,7 +217,7 @@ Public Function ExecuteQuery(ByVal sql As String, _
     On Error GoTo ErrorHandler
     
     Dim conn As Object
-    Set conn = GetConnection()
+    Set conn = GetConnection(config)
     If conn Is Nothing Then Exit Function
     
     Dim cmd As Object

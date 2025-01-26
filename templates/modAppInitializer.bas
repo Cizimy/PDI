@@ -100,12 +100,12 @@ Private Sub InitializeDatabase()
     On Error GoTo ErrorHandler
     
     ' データベースユーティリティの初期化
-    modDatabaseUtils.InitializeModule modConfig
+    modDatabaseUtils.InitializeModule
     
     ' データベース接続プールの初期化
     With New ConnectionPool
         ' IDatabaseConfigインターフェースを通じて接続文字列を取得
-        .Initialize modConfig.GetConnectionString
+        .Initialize modConfig
     End With
     
     Exit Sub
@@ -130,6 +130,7 @@ Private Sub InitializeErrorHandlers()
     ' エラーハンドラーの初期化
     ' この時点で設定とロギングは初期化済みであることが保証される
     With DatabaseConnectionErrorHandler.Create
+(modConfig)
         ' 必要な初期化処理があれば実行
     End With
     

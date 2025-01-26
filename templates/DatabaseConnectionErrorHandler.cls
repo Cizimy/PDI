@@ -94,11 +94,12 @@ Private Function AttemptRetry(ByRef errorDetail As ErrorInfo) As Boolean
         End If
         
         ' リトライ試行をログに記録
-        Dim logger As ILogger
-        Set logger = New FileLogger
-        logger.Log MODULE_NAME, _
-                  "データベース接続リトライ " & retryCount & "/" & MAX_RETRY_COUNT, _
-                  errorDetail.Code
+        With New clsLogger
+            .Configure New DefaultLoggerSettings
+            .Log MODULE_NAME, _
+                 "データベース接続リトライ " & retryCount & "/" & MAX_RETRY_COUNT, _
+                 errorDetail.Code
+        End With
     Next retryCount
     
     AttemptRetry = success
@@ -141,12 +142,13 @@ Private Sub LogError(ByRef errorDetail As ErrorInfo)
     On Error GoTo ErrorHandler
     
     ' エラーログの出力
-    Dim logger As ILogger
-    Set logger = New FileLogger
+    With New clsLogger
+        .Configure New DefaultLoggerSettings
     
-    logger.Log MODULE_NAME, _
-              "データベース接続エラー: " & errorDetail.Description, _
-              errorDetail.Code
+   r.Log MODULE_NAME, _
+             "データベース接続エラー: " & errorDetail.Description, _
+             errorDetail.Code
+    End With
     Exit Sub
 
 ErrorHandler:

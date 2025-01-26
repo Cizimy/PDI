@@ -74,12 +74,13 @@ Private Sub LogError(ByRef errorDetail As typErrorDetail)
     On Error GoTo ErrorHandler
     
     ' エラーログの出力
-    Dim logger As ILogger
-    Set logger = New FileLogger  ' または適切なログ実装を使用
+    With New clsLogger
+        .Configure New DefaultLoggerSettings
     
-    logger.Log MODULE_NAME, _
-              "ファイルが見つかりません: " & errorDetail.Description, _
-              errorDetail.ErrorCode
+   r.Log MODULE_NAME, _
+             "ファイルが見つかりません: " & errorDetail.Description, _
+             errorDetail.ErrorCode
+    End With
     Exit Sub
 
 ErrorHandler:

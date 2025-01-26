@@ -402,27 +402,21 @@ ErrorHandler:
 End Function
 
 Private Sub LogTestEvent(ByVal message As String)
-    Dim fileNum As Integer
-    fileNum = FreeFile
-    
     On Error Resume Next
     
-    ' ファイルが開けない場合は作成を試みる
-    If Dir(TEST_RESULTS_FILE) = "" Then
-        Open TEST_RESULTS_FILE For Output As #fileNum
-        Close #fileNum
-    End If
-    
-    Open TEST_RESULTS_FILE For Append As #fileNum
-    Print #fileNum, Format$(Now, "yyyy/mm/dd hh:nn:ss") & " - " & message
-    Close #fileNum
+    ' clsLoggerを使用してログを出力
+    With New clsLogger
+        Dim settings As New DefaultLoggerSettings
+        settings.LogFilePath = TEST_RESULTS_FILE
+        settings.LogDestination = LOG_DESTINATION_FILE
+        .Configure settings
+        .Log MODULE_NAME, message, 0
+   eEnd With
     
     If Err.Number <> 0 Then
         Debug.Print "ログ出力エラー: " & Err.Description
         Err.Clear
     End If
-    
-    On Error GoTo 0
 End Sub
 
 ' ======================

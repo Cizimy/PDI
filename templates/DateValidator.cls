@@ -22,106 +22,96 @@ Implements IValidator
 ' ======================
 ' プライベート変数
 ' ======================
-Private mErrorMessage As String
-Private mMinDate As Date
-Private mMaxDate As Date
-Private mAllowFutureDate As Boolean
-Private mAllowPastDate As Boolean
+Private mRules As Collection
+Private mError As IError
 
 ' ======================
 ' 初期化・終了処理
 ' ======================
 Private Sub Class_Initialize()
-    mMinDate = DateSerial(1900, 1, 1)
-    mMaxDate = DateSerial(9999, 12, 31)
-    mAllowFutureDate = True
-    mAllowPastDate = True
-    mErrorMessage = ""
+    Set mRules = New Collection
+End Sub
+
+Private Sub Class_Terminate()
+    Set mRules = Nothing
+    Set mError = Nothing
 End Sub
 
 ' ======================
 ' プロパティ
 ' ======================
-Public Property Let MinDate(ByVal value As Date)
-    mMinDate = value
+Public Property Set Error(ByVal value As IError)
+    Set mError = value
 End Property
 
-Public Property Get MinDate() As Date
-    MinDate = mMinDate
-End Property
-
-Public Property Let MaxDate(ByVal value As Date)
-    mMaxDate = value
-End Property
-
-Public Property Get MaxDate() As Date
-    MaxDate = mMaxDate
-End Property
-
-Public Property Let AllowFutureDate(ByVal value As Boolean)
-    mAllowFutureDate = value
-End Property
-
-Public Property Get AllowFutureDate() As Boolean
-    AllowFutureDate = mAllowFutureDate
-End Property
-
-Public Property Let AllowPastDate(ByVal value As Boolean)
-    mAllowPastDate = value
-End Property
-
-Public Property Get AllowPastDate() As Boolean
-    AllowPastDate = mAllowPastDate
+Public Property Get Error() As IError
+    Set Error = mError
 End Property
 
 Private Property Get IValidator_ErrorMessage() As String
-    IValidator_ErrorMessage = mErrorMessage
+    ' エラーメッセージは個別のルールから取得するため、このプロパティは使用しない
+    IValidator_ErrorMessage = ""
 End Property
 
 ' ======================
 ' メソッド
 ' ======================
+Public Sub AddRule(ByVal rule As IValidationRule)
+    If rule Is Nothing Then
+        Err.Raise 5, MODULE_NAME, "ルールがNothingです。"
+    End If
+    mRules.Add rule
+End Sub
+
+Public Sub ClearRules()
+    Set mRules = New Collection
+End Sub
+
 Private Function IValidator_Validate(ByVal value As Variant) As Boolean
     On Error GoTo ErrorHandler
     
+    ' エラーハンドラーが設定されていない場合はエラー
+    If mError Is Nothing Then
+        Err.Raise 5, MODULE_NAME, "エラーハンドラーが設定されていません。"
+    End If
+    
     ' 日付型チェック
     If Not IsDate(value) Then
-        mErrorMessage = "有効な日付形式ではありません。"
+        Dim errInfo As ErrorInfo
+        With errInfo
+            .Code = ErrInvalidInput
+            .Description = "値は日付である必要があります。"
+            .Category = ECValidation
+            .Source = MODULE_NAME
+            .ProcedureName = "IValidator_Validate"
+            .StackTrace = modStackTrace.GetStackTrace()
+            .OccurredAt = Now
+        End With
+        mError.HandleError errInfo
         IValidator_Validate = False
         Exit Function
     End If
     
-    Dim dateValue As Date
-    dateValue = CDate(value)
+    ' 各ルールの検証
+    Dim rule As IValidationRule
+    For Each rule In mRules
+        If Not rule.Validate(value) Then
+            Dim errInfo2 As ErrorInfo
+            With errInfo2
+                .Code = ErrInvalidInput
+                .Description = rule.ErrorMessage
+                .Category = ECValidation
+                .Source = MODULE_NAME
+                .ProcedureName = "IValidator_Validate"
+                .StackTrace = modStackTrace.GetStackTrace()
+                .OccurredAt = Now
+            End With
+            mError.HandleError errInfo2
+            IValidator_Validate = False
+            Exit Function
+        End If
+    Next rule
     
-    ' 範囲チェック
-    If dateValue < mMinDate Then
-        mErrorMessage = "日付が古すぎます。" & Format$(mMinDate, "yyyy/mm/dd") & "以降の日付を指定してください。"
-        IValidator_Validate = False
-        Exit Function
-    End If
-    
-    If dateValue > mMaxDate Then
-        mErrorMessage = "日付が新しすぎます。" & Format$(mMaxDate, "yyyy/mm/dd") & "以前の日付を指定してください。"
-        IValidator_Validate = False
-        Exit Function
-    End If
-    
-    ' 未来日付チェック
-    If Not mAllowFutureDate And dateValue > Date Then
-        mErrorMessage = "未来の日付は指定できません。"
-        IValidator_Validate = False
-        Exit Function
-    End If
-    
-    ' 過去日付チェック
-    If Not mAllowPastDate And dateValue < Date Then
-        mErrorMessage = "過去の日付は指定できません。"
-        IValidator_Validate = False
-        Exit Function
-    End If
-    
-    mErrorMessage = ""
     IValidator_Validate = True
     Exit Function
 
@@ -138,27 +128,52 @@ ErrorHandler:
     End With
     modError.HandleError errDetail
     
-    mErrorMessage = "検証中に予期せぬエラーが発生しました。"
     IValidator_Validate = False
 End Function
 
 ' ======================
 ' ファクトリメソッド
 ' ======================
-Public Function CreateBirthDateValidator() As DateValidator
+Public Function CreateBirthDateValidator(ByVal errorHandler As IError) As DateValidator
     Set CreateBirthDateValidator = New DateValidator
     With CreateBirthDateValidator
-        .MinDate = DateSerial(1900, 1, 1)
-        .MaxDate = Date
-        .AllowFutureDate = False
+        Set .Error = errorHandler
+        
+        Dim minDateRule As MinDateRule
+        Set minDateRule = New MinDateRule
+        minDateRule.MinDate = DateSerial(1900, 1, 1)
+        .AddRule minDateRule
+        
+        Dim maxDateRule As MaxDateRule
+        Set maxDateRule = New MaxDateRule
+        maxDateRule.MaxDate = Date
+        .AddRule maxDateRule
+        
+        Dim futureDateRule As AllowFutureDateRule
+        Set futureDateRule = New AllowFutureDateRule
+        futureDateRule.AllowFutureDate = False
+        .AddRule futureDateRule
     End With
 End Function
 
-Public Function CreateExpiryDateValidator() As DateValidator
+Public Function CreateExpiryDateValidator(ByVal errorHandler As IError) As DateValidator
     Set CreateExpiryDateValidator = New DateValidator
     With CreateExpiryDateValidator
-        .MinDate = Date
-        .MaxDate = DateAdd("yyyy", 100, Date)
-        .AllowPastDate = False
+        Set .Error = errorHandler
+        
+        Dim minDateRule As MinDateRule
+        Set minDateRule = New MinDateRule
+        minDateRule.MinDate = Date
+        .AddRule minDateRule
+        
+        Dim maxDateRule As MaxDateRule
+        Set maxDateRule = New MaxDateRule
+        maxDateRule.MaxDate = DateAdd("yyyy", 100, Date)
+        .AddRule maxDateRule
+        
+        Dim pastDateRule As AllowPastDateRule
+        Set pastDateRule = New AllowPastDateRule
+        pastDateRule.AllowPastDate = False
+        .AddRule pastDateRule
     End With
 End Function

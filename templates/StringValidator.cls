@@ -22,99 +22,96 @@ Implements IValidator
 ' ======================
 ' プライベート変数
 ' ======================
-Private mErrorMessage As String
-Private mMinLength As Long
-Private mMaxLength As Long
-Private mPattern As String
+Private mRules As Collection
+Private mError As IError
 
 ' ======================
 ' 初期化・終了処理
 ' ======================
 Private Sub Class_Initialize()
-    mMinLength = 0
-    mMaxLength = 2147483647 ' Long型の最大値
-    mPattern = ""
-    mErrorMessage = ""
+    Set mRules = New Collection
+End Sub
+
+Private Sub Class_Terminate()
+    Set mRules = Nothing
+    Set mError = Nothing
 End Sub
 
 ' ======================
 ' プロパティ
 ' ======================
-Public Property Let MinLength(ByVal value As Long)
-    mMinLength = value
+Public Property Set Error(ByVal value As IError)
+    Set mError = value
 End Property
 
-Public Property Get MinLength() As Long
-    MinLength = mMinLength
-End Property
-
-Public Property Let MaxLength(ByVal value As Long)
-    mMaxLength = value
-End Property
-
-Public Property Get MaxLength() As Long
-    MaxLength = mMaxLength
-End Property
-
-Public Property Let Pattern(ByVal value As String)
-    mPattern = value
-End Property
-
-Public Property Get Pattern() As String
-    Pattern = mPattern
+Public Property Get Error() As IError
+    Set Error = mError
 End Property
 
 Private Property Get IValidator_ErrorMessage() As String
-    IValidator_ErrorMessage = mErrorMessage
+    ' エラーメッセージは個別のルールから取得するため、このプロパティは使用しない
+    IValidator_ErrorMessage = ""
 End Property
 
 ' ======================
 ' メソッド
 ' ======================
+Public Sub AddRule(ByVal rule As IValidationRule)
+    If rule Is Nothing Then
+        Err.Raise 5, MODULE_NAME, "ルールがNothingです。"
+    End If
+    mRules.Add rule
+End Sub
+
+Public Sub ClearRules()
+    Set mRules = New Collection
+End Sub
+
 Private Function IValidator_Validate(ByVal value As Variant) As Boolean
     On Error GoTo ErrorHandler
     
+    ' エラーハンドラーが設定されていない場合はエラー
+    If mError Is Nothing Then
+        Err.Raise 5, MODULE_NAME, "エラーハンドラーが設定されていません。"
+    End If
+    
     ' 文字列型チェック
     If VarType(value) <> vbString Then
-        mErrorMessage = "値は文字列である必要があります。"
-        IValidator_Validate = False
-        Exit Function
-    End If
-    
-    Dim strValue As String
-    strValue = CStr(value)
-    
-    ' 長さチェック
-    If Len(strValue) < mMinLength Then
-        mErrorMessage = "文字列の長さが短すぎます。最小" & mMinLength & "文字必要です。"
-        IValidator_Validate = False
-        Exit Function
-    End If
-    
-    If Len(strValue) > mMaxLength Then
-        mErrorMessage = "文字列の長さが長すぎます。最大" & mMaxLength & "文字までです。"
-        IValidator_Validate = False
-        Exit Function
-    End If
-    
-    ' パターンチェック
-    If mPattern <> "" Then
-        Dim regex As Object
-        Set regex = CreateObject("VBScript.RegExp")
-        With regex
-            .Pattern = mPattern
-            .Global = True
-            .IgnoreCase = True
-            
-            If Not .Test(strValue) Then
-                mErrorMessage = "文字列が指定されたパターンと一致しません。"
-                IValidator_Validate = False
-                Exit Function
-            End If
+        Dim errInfo As ErrorInfo
+        With errInfo
+            .Code = ErrInvalidInput
+            .Description = "値は文字列である必要があります。"
+            .Category = ECValidation
+            .Source = MODULE_NAME
+            .ProcedureName = "IValidator_Validate"
+            .StackTrace = modStackTrace.GetStackTrace()
+            .OccurredAt = Now
         End With
+        mError.HandleError errInfo
+        IValidator_Validate = False
+        Exit Function
     End If
     
-    mErrorMessage = ""
+    ' 各ルールの検証
+    Dim rule As IValidationRule
+    For Each rule In mRules
+        If Not rule.Validate(value) Then
+            Dim errInfo2 As ErrorInfo
+            With errInfo2
+                .Code = ErrInvalidInput
+                .Description = rule.ErrorMessage
+                .Category = ECValidation
+                .Source = MODULE_NAME
+                .ProcedureName = "IValidator_Validate"
+                .StackTrace = modStackTrace.GetStackTrace()
+                .OccurredAt = Now
+            End With
+            mError.HandleError errInfo2
+            IValidator_Validate = False
+            Exit Function
+        End If
+    Next rule
+    
     IValidator_Validate = True
     Exit Function
 
@@ -131,25 +128,42 @@ ErrorHandler:
     End With
     modError.HandleError errDetail
     
-    mErrorMessage = "検証中に予期せぬエラーが発生しました。"
     IValidator_Validate = False
 End Function
 
 ' ======================
 ' ファクトリメソッド
 ' ======================
-Public Function CreateEmailValidator() As StringValidator
+Public Function CreateEmailValidator(ByVal errorHandler As IError) As StringValidator
     Set CreateEmailValidator = New StringValidator
     With CreateEmailValidator
-        .Pattern = "^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$"
+        Set .Error = errorHandler
+        
+        Dim patternRule As PatternRule
+        Set patternRule = New PatternRule
+        patternRule.Pattern = "^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$"
+        .AddRule patternRule
     End With
 End Function
 
-Public Function CreatePhoneValidator() As StringValidator
+Public Function CreatePhoneValidator(ByVal errorHandler As IError) As StringValidator
     Set CreatePhoneValidator = New StringValidator
     With CreatePhoneValidator
-        .Pattern = "^[0-9\-\(\)]+$"
-        .MinLength = 10
-        .MaxLength = 15
+        Set .Error = errorHandler
+        
+        Dim patternRule As PatternRule
+        Set patternRule = New PatternRule
+        patternRule.Pattern = "^[0-9\-\(\)]+$"
+        .AddRule patternRule
+        
+        Dim minLengthRule As MinLengthRule
+        Set minLengthRule = New MinLengthRule
+        minLengthRule.MinLength = 10
+        .AddRule minLengthRule
+        
+        Dim maxLengthRule As MaxLengthRule
+        Set maxLengthRule = New MaxLengthRule
+        maxLengthRule.MaxLength = 15
+        .AddRule maxLengthRule
     End With
 End Function

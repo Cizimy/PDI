@@ -9,309 +9,150 @@ Attribute VB_PredefinedId = False
 Attribute VB_Exposed = False
 Option Explicit
 
-' ======================
-' 警告: このクラスは開発時のテスト目的でのみ使用し、
-' 本番環境では使用しないでください。
-' ======================
-
 Implements ILogger
 
-' ======================
-' モジュール情報
-' ======================
-Private Const MODULE_NAME As String = "MockLogger"
-
-' ======================
-' メンバ変数
-' ======================
+' ログエントリの構造体
 Private Type LogEntry
-    ModuleName As String
+    Level As String
+    Module As String
+    Procedure As String
     Message As String
-    ErrorCode As ErrorCode
     Timestamp As Date
 End Type
 
-' エラー情報を格納する型
-Private Type LogOperationResult
-    Success As Boolean
-    Value As Variant
-    ErrorDetail As ErrorInfo
-End Type
+' モック用の内部状態
+Private mLogEntries() As LogEntry
+Private mLogCount As Long
+Private mMaxEntries As Long
 
-Private mLogEntries As Collection
-Private mLogLevel As LogLevelEnum
-Private mLogDestination As LogDestination
-Private mLock As clsLock
+' カウンター
+Private mDebugLogCount As Long
+Private mInfoLogCount As Long
+Private mWarnLogCount As Long
+Private mErrorLogCount As Long
 
-' ======================
-' 初期化・終了処理
-' ======================
+'*******************************************************************************
+' 初期化
+'*******************************************************************************
 Private Sub Class_Initialize()
-    Set mLogEntries = New Collection
-    Set mLock = New clsLock
-    mLogLevel = LOG_LEVEL_INFO
-    mLogDestination = DestNone
+    mMaxEntries = 1000
+    ReDim mLogEntries(1 To mMaxEntries)
+    mLogCount = 0
+    ResetCounters
 End Sub
 
-Private Sub Class_Terminate()
-    Set mLogEntries = Nothing
-    Set mLock = Nothing
+'*******************************************************************************
+' ILogger インターフェースの実装
+'*******************************************************************************
+Private Sub ILogger_LogDebug(ByVal Module As String, ByVal Procedure As String, ByVal Message As String)
+    AddLogEntry "DEBUG", Module, Procedure, Message
+    mDebugLogCount = mDebugLogCount + 1
 End Sub
 
-' ======================
-' ILogger実装
-' ======================
-Private Sub ILogger_Log(ByVal moduleName As String, ByVal message As String, Optional ByVal errorCode As ErrorCode)
-    mLock.AcquireLock
-    On Error GoTo ErrorHandler
+Private Sub ILogger_LogInfo(ByVal Module As String, ByVal Procedure As String, ByVal Message As String)
+    AddLogEntry "INFO", Module, Procedure, Message
+    mInfoLogCount = mInfoLogCount + 1
+End Sub
+
+Private Sub ILogger_LogWarning(ByVal Module As String, ByVal Procedure As String, ByVal Message As String)
+    AddLogEntry "WARN", Module, Procedure, Message
+    mWarnLogCount = mWarnLogCount + 1
+End Sub
+
+Private Sub ILogger_LogError(ByVal Module As String, ByVal Procedure As String, ByVal Message As String)
+    AddLogEntry "ERROR", Module, Procedure, Message
+    mErrorLogCount = mErrorLogCount + 1
+End Sub
+
+'*******************************************************************************
+' プライベートメソッド
+'*******************************************************************************
+Private Sub AddLogEntry(ByVal Level As String, ByVal Module As String, ByVal Procedure As String, ByVal Message As String)
+    If mLogCount >= mMaxEntries Then Exit Sub
     
-    Dim entry As LogEntry
-    With entry
-        .ModuleName = moduleName
-        .Message = message
-        .ErrorCode = errorCode
+    mLogCount = mLogCount + 1
+    With mLogEntries(mLogCount)
+        .Level = Level
+        .Module = Module
+        .Procedure = Procedure
+        .Message = Message
         .Timestamp = Now
     End With
-    
-    mLogEntries.Add entry
-    mLock.ReleaseLock
-    Exit Sub
-
-ErrorHandler:
-    Dim errDetail As ErrorInfo
-    With errDetail
-        .Code = ErrUnexpected
-        .Description = "モックロガーへのログ追加中にエラーが発生しました: " & Err.Description
-        .Category = ECGeneral
-        .Source = MODULE_NAME
-        .ProcedureName = "ILogger_Log"
-        .StackTrace = modStackTrace.GetStackTrace()
-        .OccurredAt = Now
-    End With
-    modError.HandleError errDetail
-    mLock.ReleaseLock
 End Sub
 
-Private Property Let ILogger_LogLevel(ByVal level As LogLevelEnum)
-    mLogLevel = level
+'*******************************************************************************
+' モック用のヘルパーメソッド
+'*******************************************************************************
+Public Property Get LogCount() As Long
+    LogCount = mLogCount
 End Property
 
-Private Property Get ILogger_LogLevel() As LogLevelEnum
-    ILogger_LogLevel = mLogLevel
+Public Property Get DebugLogCount() As Long
+    DebugLogCount = mDebugLogCount
 End Property
 
-Private Property Let ILogger_LogDestination(ByVal destination As LogDestination)
-    mLogDestination = destination
+Public Property Get InfoLogCount() As Long
+    InfoLogCount = mInfoLogCount
 End Property
 
-Private Property Get ILogger_LogDestination() As LogDestination
-    ILogger_LogDestination = mLogDestination
+Public Property Get WarnLogCount() As Long
+    WarnLogCount = mWarnLogCount
 End Property
 
-' ======================
-' テストサポートメソッド（開発環境専用）
-' ======================
-
-''' <summary>
-''' ログエントリの総数を取得（テスト用）
-''' </summary>
-Private Property Get LogCount() As Long
-    mLock.AcquireLock
-    LogCount = mLogEntries.Count
-    mLock.ReleaseLock
+Public Property Get ErrorLogCount() As Long
+    ErrorLogCount = mErrorLogCount
 End Property
 
-''' <summary>
-''' 指定されたインデックスのログエントリを取得（テスト用）
-''' </summary>
-''' <param name="index">取得するログエントリのインデックス</param>
-''' <returns>フォーマット済みのログエントリ文字列、無効なインデックスの場合は空文字列</returns>
-Private Function GetLogEntry(ByVal index As Long) As LogOperationResult
-    mLock.AcquireLock
-    On Error GoTo ErrorHandler
-    
-    Dim result As LogOperationResult
-    result.Success = True
-    
-    If index < 1 Or index > mLogEntries.Count Then
-        result.Success = False
-        With result.ErrorDetail
-            .Code = ErrInvalidParameter
-            .Description = "無効なインデックスが指定されました: " & index
-            .Category = ECValidation
-            .Source = MODULE_NAME
-            .ProcedureName = "GetLogEntry"
-            .StackTrace = modStackTrace.GetStackTrace()
-            .OccurredAt = Now
-        End With
-        GetLogEntry = result
-        mLock.ReleaseLock
+Public Function GetLogEntry(ByVal index As Long) As String
+    If index < 1 Or index > mLogCount Then
+        GetLogEntry = ""
         Exit Function
     End If
     
-    Dim entry As LogEntry
-    entry = mLogEntries(index)
-    
-    result.Value = Format$(entry.Timestamp, "yyyy/mm/dd hh:nn:ss") & " " & _
-                  "[" & entry.ModuleName & "] " & _
-                  IIf(entry.ErrorCode <> 0, "(Code: " & entry.ErrorCode & ") ", "") & _
-                  entry.Message
-    GetLogEntry = result
-    mLock.ReleaseLock
-    Exit Function
-
-ErrorHandler:
-    result.Success = False
-    With result.ErrorDetail
-        .Code = ErrUnexpected
-        .Description = "ログエントリの取得中にエラーが発生しました: " & Err.Description
-        .Category = ECGeneral
-        .Source = MODULE_NAME
-        .ProcedureName = "GetLogEntry"
-        .StackTrace = modStackTrace.GetStackTrace()
-        .OccurredAt = Now
+    With mLogEntries(index)
+        GetLogEntry = .Level & "|" & .Module & "|" & .Procedure & "|" & .Message
     End With
-    GetLogEntry = result
-    mLock.ReleaseLock
 End Function
 
-''' <summary>
-''' すべてのログエントリをクリア（テスト用）
-''' </summary>
-Private Sub ClearLogs()
-    mLock.AcquireLock
-    Set mLogEntries = New Collection
-    mLock.ReleaseLock
+Public Function ContainsMessage(ByVal searchText As String) As Boolean
+    Dim i As Long
+    For i = 1 To mLogCount
+        If InStr(1, mLogEntries(i).Message, searchText, vbTextCompare) > 0 Then
+            ContainsMessage = True
+            Exit Function
+        End If
+    Next i
+    ContainsMessage = False
+End Function
+
+Public Sub ClearLogs()
+    mLogCount = 0
+    ResetCounters
 End Sub
 
-''' <summary>
-''' 特定のモジュールからのログエントリ数を取得（テスト用）
-''' </summary>
-''' <param name="moduleName">対象のモジュール名</param>
-''' <returns>指定されたモジュールのログエントリ数</returns>
-Private Function GetLogCountForModule(ByVal moduleName As String) As LogOperationResult
-    mLock.AcquireLock
-    On Error GoTo ErrorHandler
-    
-    Dim result As LogOperationResult
-    result.Success = True
-    
-    Dim count As Long
-    Dim i As Long
-    Dim entry As LogEntry
-    
-    For i = 1 To mLogEntries.Count
-        entry = mLogEntries(i)
-        If entry.ModuleName = moduleName Then
-            count = count + 1
-        End If
-    Next i
-    
-    result.Value = count
-    GetLogCountForModule = result
-    mLock.ReleaseLock
-    Exit Function
+Private Sub ResetCounters()
+    mDebugLogCount = 0
+    mInfoLogCount = 0
+    mWarnLogCount = 0
+    mErrorLogCount = 0
+End Sub
 
-ErrorHandler:
-    result.Success = False
-    With result.ErrorDetail
-        .Code = ErrUnexpected
-        .Description = "モジュール別ログ数の取得中にエラーが発生しました: " & Err.Description
-        .Category = ECGeneral
-        .Source = MODULE_NAME
-        .ProcedureName = "GetLogCountForModule"
-        .StackTrace = modStackTrace.GetStackTrace()
-        .OccurredAt = Now
-    End With
-    GetLogCountForModule = result
-    mLock.ReleaseLock
-End Function
-
-''' <summary>
-''' 特定のエラーコードのログエントリ数を取得（テスト用）
-''' </summary>
-''' <param name="errorCode">対象のエラーコード</param>
-''' <returns>指定されたエラーコードのログエントリ数</returns>
-Private Function GetLogCountForErrorCode(ByVal errorCode As ErrorCode) As LogOperationResult
-    mLock.AcquireLock
-    On Error GoTo ErrorHandler
-    
-    Dim result As LogOperationResult
-    result.Success = True
-    
-    Dim count As Long
-    Dim i As Long
-    Dim entry As LogEntry
-    
-    For i = 1 To mLogEntries.Count
-        entry = mLogEntries(i)
-        If entry.ErrorCode = errorCode Then
-            count = count + 1
-        End If
-    Next i
-    
-    result.Value = count
-    GetLogCountForErrorCode = result
-    mLock.ReleaseLock
-    Exit Function
-
-ErrorHandler:
-    result.Success = False
-    With result.ErrorDetail
-        .Code = ErrUnexpected
-        .Description = "エラーコード別ログ数の取得中にエラーが発生しました: " & Err.Description
-        .Category = ECGeneral
-        .Source = MODULE_NAME
-        .ProcedureName = "GetLogCountForErrorCode"
-        .StackTrace = modStackTrace.GetStackTrace()
-        .OccurredAt = Now
-    End With
-    GetLogCountForErrorCode = result
-    mLock.ReleaseLock
-End Function
-
-''' <summary>
-''' 最後のログエントリを取得（テスト用）
-''' </summary>
-''' <returns>最後のログエントリ、ログが空の場合は空文字列</returns>
-Private Function GetLastLogEntry() As LogOperationResult
-    mLock.AcquireLock
-    On Error GoTo ErrorHandler
-    
-    Dim result As LogOperationResult
-    result.Success = True
-    
-    If mLogEntries.Count = 0 Then
-        result.Success = False
-        With result.ErrorDetail
-            .Code = ErrNoData
-            .Description = "ログエントリが存在しません"
-            .Category = ECValidation
-            .Source = MODULE_NAME
-            .ProcedureName = "GetLastLogEntry"
-            .StackTrace = modStackTrace.GetStackTrace()
-            .OccurredAt = Now
-        End With
-        GetLastLogEntry = result
-        mLock.ReleaseLock
-        Exit Function
+'*******************************************************************************
+' テスト用のヘルパーメソッド
+'*******************************************************************************
+Public Function GetLastLogEntry() As String
+    If mLogCount = 0 Then
+        GetLastLogEntry = ""
+    Else
+        GetLastLogEntry = GetLogEntry(mLogCount)
     End If
-    
-    GetLastLogEntry = GetLogEntry(mLogEntries.Count)
-    mLock.ReleaseLock
-    Exit Function
+End Function
 
-ErrorHandler:
-    result.Success = False
-    With result.ErrorDetail
-        .Code = ErrUnexpected
-        .Description = "最後のログエントリの取得中にエラーが発生しました: " & Err.Description
-        .Category = ECGeneral
-        .Source = MODULE_NAME
-        .ProcedureName = "GetLastLogEntry"
-        .StackTrace = modStackTrace.GetStackTrace()
-        .OccurredAt = Now
-    End With
-    GetLastLogEntry = result
-    mLock.ReleaseLock
+Public Function GetLogEntriesByLevel(ByVal Level As String) As Long
+    Dim count As Long
+    Dim i As Long
+    For i = 1 To mLogCount
+        If mLogEntries(i).Level = Level Then count = count + 1
+    Next i
+    GetLogEntriesByLevel = count
 End Function

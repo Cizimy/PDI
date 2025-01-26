@@ -9,6 +9,8 @@ Attribute VB_PredefinedId = False
 Attribute VB_Exposed = False
 Option Explicit
 
+Implements IConnectionPool
+
 ' ======================
 ' モジュール情報
 ' ======================
@@ -17,7 +19,6 @@ Private Const MODULE_NAME As String = "ConnectionPool"
 ' ======================
 ' 定数定義
 ' ======================
-Private Const MAX_POOL_SIZE As Long = 5
 Private Const CONNECTION_TIMEOUT As Long = 30 ' 秒
 
 ' ======================
@@ -34,12 +35,14 @@ Private mConnectionString As String
 Private mPoolSize As Long
 Private mLock As clsLock
 Private mPerformanceMonitor As clsPerformanceMonitor
+Private mLogger As ILogger
 Private mConfig As IDatabaseConfig
 
 ' ======================
 ' 初期化・終了処理
 ' ======================
 Private Sub Class_Initialize()
+    Dim MAX_POOL_SIZE As Long
     ReDim mConnections(1 To MAX_POOL_SIZE)
     mPoolSize = 0
     Set mLock = New clsLock
@@ -48,6 +51,7 @@ End Sub
 
 Private Sub Class_Terminate()
     Dim i As Long
+    Dim MAX_POOL_SIZE As Long
     For i = 1 To MAX_POOL_SIZE
         If Not mConnections(i).Connection Is Nothing Then
             If mConnections(i).Connection.State = 1 Then ' adStateOpen
@@ -58,6 +62,7 @@ Private Sub Class_Terminate()
     Next i
     Set mLock = Nothing
     Set mConfig = Nothing
+    Set mLogger = Nothing
     Set mPerformanceMonitor = Nothing
 End Sub
 
@@ -69,16 +74,24 @@ End Sub
 ''' コネクションプールを初期化します
 ''' </summary>
 ''' <param name="config">データベース設定を提供するインターフェース</param>
-Public Sub Initialize(ByVal config As IDatabaseConfig)
+''' <param name="performanceMonitor">パフォーマンスモニター</param>
+''' <param name="lock">ロックオブジェクト</param>
+''' <param name="logger">ロガー</param>
+Public Sub Initialize(ByVal config As IDatabaseConfig, _
+                     ByVal performanceMonitor As IPerformanceMonitor, _
+                     ByVal lock As ILock, _
+                     ByVal logger As ILogger)
     Set mConfig = config
+    Set mPerformanceMonitor = performanceMonitor
+    Set mLock = lock
+    Set mLogger = logger
     mConnectionString = mConfig.GetConnectionString
 End Sub
 
 ''' <summary>
-''' コネクションを取得します
+''' データベース接続を取得します（IConnectionPool実装）
 ''' </summary>
-''' <returns>データベース接続オブジェクト</returns>
-Public Function GetConnection() As Object
+Private Function IConnectionPool_AcquireConnection() As Object
     On Error GoTo ErrorHandler
     mPerformanceMonitor.StartMeasurement "Get Database Connection"
     
@@ -92,7 +105,7 @@ Public Function GetConnection() As Object
             If ValidateConnection(mConnections(i).Connection) Then
                 mConnections(i).InUse = True
                 mConnections(i).LastUsed = Now
-                Set GetConnection = mConnections(i).Connection
+                Set IConnectionPool_AcquireConnection = mConnections(i).Connection
                 GoTo Cleanup
             Else
                 ' 無効なコネクションを破棄して再作成
@@ -100,7 +113,7 @@ Public Function GetConnection() As Object
                 If Not mConnections(i).Connection Is Nothing Then
                     mConnections(i).InUse = True
                     mConnections(i).LastUsed = Now
-                    Set GetConnection = mConnections(i).Connection
+                    Set IConnectionPool_AcquireConnection = mConnections(i).Connection
                     GoTo Cleanup
                 End If
             End If
@@ -108,13 +121,14 @@ Public Function GetConnection() As Object
     Next i
     
     ' 新しいコネクションを作成（プールサイズが上限に達していない場合）
+    Dim MAX_POOL_SIZE As Long
+    MAX_POOL_SIZE = mConfig.GetMaxPoolSize
     If mPoolSize < MAX_POOL_SIZE Then
         mPoolSize = mPoolSize + 1
         Set mConnections(mPoolSize).Connection = CreateNewConnection()
         If Not mConnections(mPoolSize).Connection Is Nothing Then
             mConnections(mPoolSize).InUse = True
             mConnections(mPoolSize).LastUsed = Now
-            Set GetConnection = mConnections(mPoolSize).Connection
             GoTo Cleanup
         End If
     End If
@@ -142,14 +156,14 @@ ErrorHandler:
     
     If Not mLock Is Nothing Then mLock.ReleaseLock
     mPerformanceMonitor.EndMeasurement "Get Database Connection"
-    Set GetConnection = Nothing
+    Set IConnectionPool_AcquireConnection = Nothing
 End Function
 
 ''' <summary>
-''' コネクションを解放します
+''' データベース接続を解放します（IConnectionPool実装）
 ''' </summary>
 ''' <param name="connection">解放するコネクション</param>
-Public Sub ReleaseConnection(ByVal connection As Object)
+Private Sub IConnectionPool_ReleaseConnection(ByVal connection As Object)
     If connection Is Nothing Then Exit Sub
     
     mLock.AcquireLock
@@ -166,6 +180,40 @@ Public Sub ReleaseConnection(ByVal connection As Object)
     mLock.ReleaseLock
 End Sub
 
+''' <summary>
+''' 現在のアクティブな接続数を取得します（IConnectionPool実装）
+''' </summary>
+Private Property Get IConnectionPool_ActiveConnections() As Long
+    Dim count As Long
+    Dim i As Long
+    For i = 1 To mPoolSize
+        If mConnections(i).InUse Then count = count + 1
+    Next i
+    IConnectionPool_ActiveConnections = count
+End Property
+
+''' <summary>
+''' プールの最大接続数を取得または設定します（IConnectionPool実装）
+''' </summary>
+Private Property Get IConnectionPool_MaxConnections() As Long
+    IConnectionPool_MaxConnections = mConfig.GetMaxPoolSize
+End Property
+
+Private Property Let IConnectionPool_MaxConnections(ByVal value As Long)
+    ' 設定は無視 - 設定はIDatabaseConfigで管理
+End Property
+
+''' <summary>
+''' 接続タイムアウト時間を取得または設定します（IConnectionPool実装）
+''' </summary>
+Private Property Get IConnectionPool_ConnectionTimeout() As Long
+    IConnectionPool_ConnectionTimeout = mConfig.GetConnectionTimeout
+End Property
+
+Private Property Let IConnectionPool_ConnectionTimeout(ByVal value As Long)
+    ' 設定は無視 - 設定はIDatabaseConfigで管理
+End Property
+
 ' ======================
 ' プライベートメソッド
 ' ======================
@@ -177,6 +225,11 @@ Private Function CreateNewConnection() As Object
     On Error GoTo ErrorHandler
     mPerformanceMonitor.StartMeasurement "Create Database Connection"
     
+    ' 接続文字列の検証
+    If Not ValidateConnectionString(mConnectionString) Then
+        mLogger.LogError MODULE_NAME, "CreateNewConnection", "不正な接続文字列です: " & mConnectionString
+        Exit Function
+    End If
     mLock.AcquireLock
     
     Dim conn As Object
@@ -184,8 +237,19 @@ Private Function CreateNewConnection() As Object
     conn.ConnectionString = mConnectionString
     conn.ConnectionTimeout = CONNECTION_TIMEOUT
     
-    ' データベース接続の作成
-    conn.Open
+    ' リトライ処理を実装
+    Dim retryCount As Long
+    Dim retryInterval As Long
+    retryCount = mConfig.GetRetryCount
+    retryInterval = mConfig.GetRetryInterval
+    
+    Do While retryCount >= 0
+        On Error Resume Next
+        conn.Open
+        If Err.Number = 0 Then Exit Do
+        retryCount = retryCount - 1
+        If retryCount >= 0 Then Sleep retryInterval
+    Loop
     
     Set CreateNewConnection = conn
     
@@ -195,6 +259,7 @@ Cleanup:
     Exit Function
     
 ErrorHandler:
+    mLogger.LogError MODULE_NAME, "CreateNewConnection", "接続の作成に失敗しました: " & Err.Description
     Set CreateNewConnection = Nothing
     Resume Cleanup
 End Function
@@ -214,6 +279,25 @@ Private Function ValidateConnection(ByVal connection As Object) As Boolean
         ValidateConnection = False
     End If
     On Error GoTo 0
+End Function
+
+''' <summary>
+''' 接続文字列を検証します
+''' </summary>
+Private Function ValidateConnectionString(ByVal connectionString As String) As Boolean
+    If Len(Trim(connectionString)) = 0 Then
+        ValidateConnectionString = False
+        Exit Function
+    End If
+    
+    ' 基本的な接続文字列の形式チェック
+    If InStr(1, connectionString, "Provider=", vbTextCompare) = 0 And _
+       InStr(1, connectionString, "Driver=", vbTextCompare) = 0 Then
+        ValidateConnectionString = False
+        Exit Function
+    End If
+    
+    ValidateConnectionString = True
 End Function
 
 ' ======================

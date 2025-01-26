@@ -140,9 +140,7 @@ End Property
 ''' </summary>
 ''' <returns>現在のスタックの深さ</returns>
 Public Property Get Count() As Long
-    mLock.AcquireLock
     Count = modStackTrace.StackDepth
-    mLock.ReleaseLock
 End Property
 
 ' ======================

@@ -34,6 +34,7 @@ Private Sub Class_Initialize()
     If Not modFileIO.IsInitialized Then
         modFileIO.InitializeModule
     End If
+    modFileIO.SetFileSystemLock mLock
     
     Set mLock = New clsLock
     Set mPerformanceMonitor = New clsPerformanceMonitor

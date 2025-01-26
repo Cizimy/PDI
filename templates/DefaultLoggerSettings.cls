@@ -12,80 +12,82 @@ Option Explicit
 Implements ILoggerSettings
 
 ' ======================
+' モジュール情報
+' ======================
+Private Const MODULE_NAME As String = "DefaultLoggerSettings"
+
+' ======================
 ' メンバ変数
 ' ======================
-Private mLogLevel As LogLevelEnum
-Private mLogDestination As ILogDestination
+Private mAppConfig As IAppConfig
+Private mLogLevel As LogLevel
+Private mLogDestinations As Collection
 Private mLogFilePath As String
 Private mLogTableName As String
 Private mLogEventSource As String
 Private mTimerInterval As Long
-Private mConnectionString As String
+Private mFileOperations As IFileOperations
+Private mConnectionPool As IConnectionPool
+Private mEventLog As IEventLog
+Private mDatabaseConfig As IDatabaseConfig
 
 ' ======================
 ' 初期化・終了処理
 ' ======================
-''' <summary>
-''' ロガー設定を初期化します。
-''' </summary>
-''' <param name="connectionString">データベース接続文字列（オプション）。
-''' 指定しない場合、ファイルログのみが有効になります。</param>
-''' <param name="logLevel">ログレベル（オプション、デフォルト：INFO）</param>
-''' <param name="logFilePath">ログファイルパス（オプション、デフォルト：アプリケーションパス）</param>
-''' <param name="logTableName">ログテーブル名（オプション、デフォルト：AppLog）</param>
-''' <param name="logEventSource">イベントソース名（オプション、デフォルト：アプリケーション名）</param>
-''' <param name="timerInterval">タイマー間隔（オプション、デフォルト：1000ms）</param>
-Public Sub Initialize(ByVal connectionString As String, _
-                     Optional ByVal logLevel As LogLevelEnum = LOG_LEVEL_INFO, _
-                     Optional ByVal logFilePath As String = "", _
-                     Optional ByVal logTableName As String = "AppLog", _
-                     Optional ByVal logEventSource As String = "", _
-                     Optional ByVal timerInterval As Long = 1000)
-    On Error GoTo ErrorHandler
-    
-    mLogLevel = logLevel
-    Set mLogDestination = New FileLogDestination
-    mLogFilePath = IIf(logFilePath = "", App.Path & "\" & DEFAULT_LOG_FILE, logFilePath)
-    mLogTableName = logTableName
-    mLogEventSource = IIf(logEventSource = "", APPLICATION_NAME, logEventSource)
-    mTimerInterval = timerInterval
-    mConnectionString = connectionString
-    
-    Exit Sub
-
-ErrorHandler:
-    Dim errDetail As ErrorInfo
-    With errDetail
-        .Code = ErrUnexpected
-        .Description = "ロガー設定の初期化中にエラーが発生しました: " & Err.Description
-        .Category = ECGeneral
-        .Source = "DefaultLoggerSettings"
-        .ProcedureName = "Class_Initialize"
-        .StackTrace = modStackTrace.GetStackTrace()
-        .OccurredAt = Now
-    End With
-    modError.HandleError errDetail
-End Sub
-
 Private Sub Class_Initialize()
-    ' デフォルト設定で初期化
-    Initialize "", LOG_LEVEL_INFO, "", "AppLog", "", 1000
+    Set mLogDestinations = New Collection
+    mTimerInterval = 1000 ' デフォルト値: 1秒
 End Sub
 
 Private Sub Class_Terminate()
-    Set mLogDestination = Nothing
+    Set mAppConfig = Nothing
+    Set mLogDestinations = Nothing
+    Set mFileOperations = Nothing
+    Set mConnectionPool = Nothing
+    Set mEventLog = Nothing
+    Set mDatabaseConfig = Nothing
+End Sub
+
+' ======================
+' 公開メソッド
+' ======================
+Public Sub Initialize(ByVal appConfig As IAppConfig, _
+                     ByVal fileOperations As IFileOperations, _
+                     ByVal connectionPool As IConnectionPool, _
+                     ByVal eventLog As IEventLog, _
+                     ByVal databaseConfig As IDatabaseConfig)
+    Set mAppConfig = appConfig
+    Set mFileOperations = fileOperations
+    Set mConnectionPool = connectionPool
+    Set mEventLog = eventLog
+    Set mDatabaseConfig = databaseConfig
+    
+    ' 設定の読み込み
+    LoadSettings
 End Sub
 
 ' ======================
 ' ILoggerSettings実装
 ' ======================
-Private Property Get ILoggerSettings_LogLevel() As LogLevelEnum
+Private Property Get ILoggerSettings_LogLevel() As LogLevel
     ILoggerSettings_LogLevel = mLogLevel
 End Property
 
-Private Property Get ILoggerSettings_LogDestination() As ILogDestination
-    Set ILoggerSettings_LogDestination = mLogDestination
+Private Property Let ILoggerSettings_LogLevel(ByVal value As LogLevel)
+    mLogLevel = value
 End Property
+
+Private Function ILoggerSettings_GetLogDestinations() As Variant
+    Dim result() As String
+    ReDim result(1 To mLogDestinations.Count)
+    
+    Dim i As Long
+    For i = 1 To mLogDestinations.Count
+        result(i) = mLogDestinations(i)
+    Next i
+    
+    ILoggerSettings_GetLogDestinations = result
+End Function
 
 Private Property Get ILoggerSettings_LogFilePath() As String
     ILoggerSettings_LogFilePath = mLogFilePath
@@ -103,135 +105,87 @@ Private Property Get ILoggerSettings_TimerInterval() As Long
     ILoggerSettings_TimerInterval = mTimerInterval
 End Property
 
-Private Property Get ILoggerSettings_ConnectionString() As String
-    ILoggerSettings_ConnectionString = mConnectionString
-End Property
-
-' ======================
-' パブリックプロパティ
-' ======================
-Public Property Let LogLevel(ByVal Value As LogLevelEnum)
-    mLogLevel = Value
-End Property
-
-Public Property Set LogDestination(ByVal Value As ILogDestination)
-    Set mLogDestination = Value
-End Property
-
-Public Property Let LogFilePath(ByVal Value As String)
-    mLogFilePath = Value
-End Property
-
-Public Property Let LogTableName(ByVal Value As String)
-    mLogTableName = Value
-End Property
-
-Public Property Let LogEventSource(ByVal Value As String)
-    mLogEventSource = Value
-End Property
-
-Public Property Let TimerInterval(ByVal Value As Long)
-    mTimerInterval = Value
-End Property
-
-Public Property Let ConnectionString(ByVal Value As String)
-    mConnectionString = Value
-End Property
-
-' ======================
-' テストサポート機能（開発環境専用）
-' 警告: これらのメソッドは開発時のテスト目的でのみ使用し、
-' 本番環境では使用しないでください。
-' ======================
-#If DEBUG Then
-''' <summary>
-''' デバッグ用の設定を作成（テスト用）
-''' 詳細なログ出力と高頻度な更新を行う設定を生成します
-''' </summary>
-Private Function CreateDebugSettings() As DefaultLoggerSettings
-    On Error GoTo ErrorHandler
-    
-    Set CreateDebugSettings = New DefaultLoggerSettings
-    With CreateDebugSettings
-        .LogLevel = LOG_LEVEL_DEBUG
-        Set .LogDestination = New ConsoleLogDestination
-        .TimerInterval = 100 ' より頻繁な更新
-    End With
-    Exit Function
-
-ErrorHandler:
-    Dim errDetail As ErrorInfo
-    With errDetail
-        .Code = ErrUnexpected
-        .Description = "デバッグ用ロガー設定の作成中にエラーが発生しました: " & Err.Description
-        .Category = ECGeneral
-        .Source = "DefaultLoggerSettings"
-        .ProcedureName = "CreateDebugSettings"
-        .StackTrace = modStackTrace.GetStackTrace()
-        .OccurredAt = Now
-    End With
-    modError.HandleError errDetail
-    Set CreateDebugSettings = Nothing
+Private Function ILoggerSettings_GetFileOperations() As IFileOperations
+    Set ILoggerSettings_GetFileOperations = mFileOperations
 End Function
 
-''' <summary>
-''' 本番用の設定を作成（テスト用）
-''' 標準的なログレベルと低頻度な更新を行う設定を生成します
-''' </summary>
-Private Function CreateProductionSettings() As DefaultLoggerSettings
-    On Error GoTo ErrorHandler
-    
-    Set CreateProductionSettings = New DefaultLoggerSettings
-    With CreateProductionSettings
-        .LogLevel = LOG_LEVEL_INFO
-        Set .LogDestination = New FileLogDestination
-        .TimerInterval = 5000 ' より低頻度な更新
-    End With
-    Exit Function
-
-ErrorHandler:
-    Dim errDetail As ErrorInfo
-    With errDetail
-        .Code = ErrUnexpected
-        .Description = "本番用ロガー設定の作成中にエラーが発生しました: " & Err.Description
-        .Category = ECGeneral
-        .Source = "DefaultLoggerSettings"
-        .ProcedureName = "CreateProductionSettings"
-        .StackTrace = modStackTrace.GetStackTrace()
-        .OccurredAt = Now
-    End With
-    modError.HandleError errDetail
-    Set CreateProductionSettings = Nothing
+Private Function ILoggerSettings_GetConnectionPool() As IConnectionPool
+    Set ILoggerSettings_GetConnectionPool = mConnectionPool
 End Function
 
-''' <summary>
-''' データベースログ用の設定を作成（テスト用）
-''' データベースへのログ出力に特化した設定を生成します
-''' </summary>
-Private Function CreateDatabaseSettings() As DefaultLoggerSettings
-    On Error GoTo ErrorHandler
-    
-    Set CreateDatabaseSettings = New DefaultLoggerSettings
-    With CreateDatabaseSettings
-        .LogLevel = LOG_LEVEL_INFO
-        Set .LogDestination = New DatabaseLogDestination
-        .LogTableName = "SystemLog"
-        .TimerInterval = 2000
-    End With
-    Exit Function
-
-ErrorHandler:
-    Dim errDetail As ErrorInfo
-    With errDetail
-        .Code = ErrUnexpected
-        .Description = "データベース用ロガー設定の作成中にエラーが発生しました: " & Err.Description
-        .Category = ECGeneral
-        .Source = "DefaultLoggerSettings"
-        .ProcedureName = "CreateDatabaseSettings"
-        .StackTrace = modStackTrace.GetStackTrace()
-        .OccurredAt = Now
-    End With
-    modError.HandleError errDetail
-    Set CreateDatabaseSettings = Nothing
+Private Function ILoggerSettings_GetEventLog() As IEventLog
+    Set ILoggerSettings_GetEventLog = mEventLog
 End Function
-#End If
+
+Private Function ILoggerSettings_GetDatabaseConfig() As IDatabaseConfig
+    Set ILoggerSettings_GetDatabaseConfig = mDatabaseConfig
+End Function
+
+Private Function ILoggerSettings_ShouldLog(ByVal destination As String, ByVal level As LogLevel) As Boolean
+    ' 指定された出力先が有効で、ログレベルが現在の設定以上の場合にログを出力
+    Dim i As Long
+    For i = 1 To mLogDestinations.Count
+        If mLogDestinations(i) = destination Then
+            ILoggerSettings_ShouldLog = (level >= mLogLevel)
+            Exit Function
+        End If
+    Next i
+    
+    ILoggerSettings_ShouldLog = False
+End Function
+
+Private Function ILoggerSettings_FormatLogMessage(ByVal logLevel As String, _
+                                                ByVal message As String, _
+                                                ByVal stackTrace As String, _
+                                                ByVal errorCode As Long) As String
+    Dim result As String
+    result = Format$(Now, "yyyy/mm/dd hh:nn:ss") & " " & _
+             "[" & logLevel & "] " & _
+             IIf(errorCode <> 0, "(Code: " & errorCode & ") ", "") & _
+             message
+             
+    If Len(stackTrace) > 0 Then
+        result = result & vbCrLf & "Stack Trace: " & stackTrace
+    End If
+    
+    ILoggerSettings_FormatLogMessage = result
+End Function
+
+' ======================
+' プライベートメソッド
+' ======================
+Private Sub LoadSettings()
+    If mAppConfig Is Nothing Then Exit Sub
+    
+    ' ログレベルの読み込み
+    mLogLevel = mAppConfig.GetValue("Logging", "Level", LOG_LEVEL_INFO)
+    
+    ' 出力先の読み込み
+    Dim destinations As String
+    destinations = mAppConfig.GetValue("Logging", "Destinations", "File")
+    ParseDestinations destinations
+    
+    ' ファイル出力設定
+    mLogFilePath = mAppConfig.GetValue("Logging", "FilePath", "log\application.log")
+    
+    ' データベース出力設定
+    mLogTableName = mAppConfig.GetValue("Logging", "TableName", "ApplicationLog")
+    
+    ' イベントログ出力設定
+    mLogEventSource = mAppConfig.GetValue("Logging", "EventSource", "PDI Logger")
+    
+    ' タイマー間隔設定
+    mTimerInterval = CLng(mAppConfig.GetValue("Logging", "TimerInterval", "1000"))
+End Sub
+
+Private Sub ParseDestinations(ByVal destinations As String)
+    Set mLogDestinations = New Collection
+    
+    Dim parts() As String
+    parts = Split(destinations, ",")
+    
+    Dim i As Long
+    For i = LBound(parts) To UBound(parts)
+        mLogDestinations.Add Trim$(parts(i))
+    Next i
+End Sub

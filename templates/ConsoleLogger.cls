@@ -2,7 +2,7 @@ VERSION 1.0 CLASS
 BEGIN
   MultiUse = -1  'True
 END
-Attribute VB_Name = "FileLogger"
+Attribute VB_Name = "ConsoleLogger"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredefinedId = False
@@ -14,17 +14,20 @@ Implements ILogger
 ' ======================
 ' モジュール情報
 ' ======================
-Private Const MODULE_NAME As String = "FileLogger"
+Private Const MODULE_NAME As String = "ConsoleLogger"
 
 ' ======================
 ' メンバ変数
 ' ======================
-Private mFileOperations As IFileOperations
-Private mLock As ILock
 Private mPerformanceMonitor As IPerformanceMonitor
-Private mLogFilePath As String
-Private Const MAX_RETRY_COUNT As Long = 3
-Private Const RETRY_DELAY_MS As Long = 1000
+Private mUseColors As Boolean
+
+' ANSIエスケープシーケンス用の色コード
+Private Const ANSI_RESET As String = vbNullString
+Private Const ANSI_RED As String = vbNullString
+Private Const ANSI_YELLOW As String = vbNullString
+Private Const ANSI_GREEN As String = vbNullString
+Private Const ANSI_BLUE As String = vbNullString
 
 ' ======================
 ' 初期化・終了処理
@@ -34,22 +37,16 @@ Private Sub Class_Initialize()
 End Sub
 
 Private Sub Class_Terminate()
-    Set mFileOperations = Nothing
-    Set mLock = Nothing
     Set mPerformanceMonitor = Nothing
 End Sub
 
 ' ======================
 ' 公開メソッド
 ' ======================
-Public Sub Initialize(ByVal fileOperations As IFileOperations, _
-                     ByVal lock As ILock, _
-                     ByVal performanceMonitor As IPerformanceMonitor, _
-                     ByVal logFilePath As String)
-    Set mFileOperations = fileOperations
-    Set mLock = lock
+Public Sub Initialize(ByVal performanceMonitor As IPerformanceMonitor, _
+                     Optional ByVal useColors As Boolean = False)
     Set mPerformanceMonitor = performanceMonitor
-    mLogFilePath = logFilePath
+    mUseColors = useColors
 End Sub
 
 ' ======================
@@ -59,33 +56,26 @@ Private Sub ILogger_Log(ByVal logLevel As String, _
                        ByVal message As String, _
                        Optional ByVal stackTrace As String, _
                        Optional ByVal errorCode As Long)
-    If mFileOperations Is Nothing Then Exit Sub
+    If mPerformanceMonitor Is Nothing Then Exit Sub
     
-    mPerformanceMonitor.StartMeasurement "FileLogger_Log"
-    mLock.AcquireLock
+    mPerformanceMonitor.StartMeasurement "ConsoleLogger_Log"
     
     On Error GoTo ErrorHandler
     
+    ' ログメッセージの組み立てと出力
     Dim logMessage As String
     logMessage = BuildLogMessage(logLevel, message, stackTrace, errorCode)
-    
-    Dim retryCount As Long
-    Do While retryCount < MAX_RETRY_COUNT
-        If WriteLogToFile(logMessage) Then Exit Do
-        retryCount = retryCount + 1
-        If retryCount < MAX_RETRY_COUNT Then Sleep RETRY_DELAY_MS
-    Loop
+    WriteToConsole logMessage, logLevel
     
 Cleanup:
-    mLock.ReleaseLock
-    mPerformanceMonitor.EndMeasurement "FileLogger_Log"
+    mPerformanceMonitor.EndMeasurement "ConsoleLogger_Log"
     Exit Sub
     
 ErrorHandler:
     Dim errDetail As ErrorInfo
     With errDetail
         .Code = ErrUnexpected
-        .Description = "ファイルログ出力中にエラーが発生しました: " & Err.Description
+        .Description = "コンソールログ出力中にエラーが発生しました: " & Err.Description
         .Category = ECGeneral
         .Source = MODULE_NAME
         .ProcedureName = "ILogger_Log"
@@ -110,17 +100,26 @@ Private Function BuildLogMessage(ByVal logLevel As String, _
                      IIf(Len(stackTrace) > 0, vbCrLf & "Stack Trace: " & stackTrace, "")
 End Function
 
-Private Function WriteLogToFile(ByVal logMessage As String) As Boolean
-    On Error Resume Next
-    
-    ' ファイルの存在確認と作成
-    If Not mFileOperations.FileExists(mLogFilePath) Then
-        mFileOperations.CreateFile mLogFilePath
+Private Sub WriteToConsole(ByVal logMessage As String, ByVal logLevel As String)
+    If Not mUseColors Then
+        Debug.Print logMessage
+        Exit Sub
     End If
     
-    ' ログメッセージの書き込み
-    mFileOperations.AppendText mLogFilePath, logMessage & vbCrLf
+    ' ログレベルに応じた色付け
+    Dim colorCode As String
+    Select Case UCase$(logLevel)
+        Case "ERROR", "FATAL"
+            colorCode = ANSI_RED
+        Case "WARNING"
+            colorCode = ANSI_YELLOW
+        Case "SUCCESS"
+            colorCode = ANSI_GREEN
+        Case "INFO"
+            colorCode = ANSI_BLUE
+        Case Else
+            colorCode = ANSI_RESET
+    End Select
     
-    WriteLogToFile = (Err.Number = 0)
-    On Error GoTo 0
-End Function
+    Debug.Print colorCode & logMessage & ANSI_RESET
+End Sub

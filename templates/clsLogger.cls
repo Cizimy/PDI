@@ -20,11 +20,12 @@ Private Const MODULE_NAME As String = "clsLogger"
 ' メンバ変数
 ' ======================
 Private mSettings As ILoggerSettings
-Private mLogQueue As Queue
-Private mDatabaseConfig As IDatabaseConfig
-Private mConnectionPool As ConnectionPool
-Private mLock As clsLock
+Private mLogQueue As IQueue
+Private mLock As ILock
 Private mTimerID As LongPtr
+Private mLoggers As Object ' Dictionary of ILogger instances
+Private mIsProcessing As Boolean
+Private mWorkerThread As Object
 Private mPerformanceMonitor As clsPerformanceMonitor
 Private mIsInitialized As Boolean
 Private Const MAX_RETRY_COUNT As Long = 3
@@ -40,9 +41,8 @@ Public Event Logged(ByVal logMessage As String, ByVal logLevel As LogLevel)
 ' 初期化・終了処理
 ' ======================
 Private Sub Class_Initialize()
-    Set mLogQueue = New Queue
-    Set mConnectionPool = New ConnectionPool
-    Set mLock = New clsLock
+    Set mLoggers = CreateObject("Scripting.Dictionary")
+    Set mLogQueue = New QueueImpl ' QueueImplはIQueueを実装
     Set mPerformanceMonitor = New clsPerformanceMonitor
 End Sub
 
@@ -52,11 +52,18 @@ Private Sub Class_Terminate()
         mTimerID = 0
     End If
     
+    If Not mWorkerThread Is Nothing Then
+        ' ワーカースレッドの終了を待機
+        mIsProcessing = False
+        While mWorkerThread.Status = 1 ' 実行中
+            Sleep 100
+        Wend
+    End If
+    
     Set mLogQueue = Nothing
-    Set mConnectionPool = Nothing
     Set mLock = Nothing
     Set mPerformanceMonitor = Nothing
-    Set mDatabaseConfig = Nothing
+    Set mLoggers = Nothing
     Set mSettings = Nothing
     
     mIsInitialized = False
@@ -65,22 +72,49 @@ End Sub
 ' ======================
 ' 公開メソッド
 ' ======================
-Public Sub Configure(ByVal settings As ILoggerSettings, ByVal dbConfig As IDatabaseConfig)
+Public Sub Configure(ByVal settings As ILoggerSettings, _
+                    ByVal queue As IQueue, _
+                    ByVal lock As ILock, _
+                    ByVal performanceMonitor As IPerformanceMonitor)
     Set mSettings = settings
-    Set mDatabaseConfig = dbConfig
+    Set mLogQueue = queue
+    Set mLock = lock
+    Set mPerformanceMonitor = performanceMonitor
     
-    ' コネクションプールの初期化
-    If Not mSettings Is Nothing And Not mDatabaseConfig Is Nothing Then
-        mConnectionPool.Initialize mDatabaseConfig.GetConnectionString()
+    ' ログ出力先の設定
+    InitializeLoggers
+    
+    ' ワーカースレッドの開始
+    StartWorkerThread
+    
+    mIsInitialized = True
+End Sub
+
+Public Sub SetLogger(ByVal destination As String, ByVal logger As ILogger)
+    If mLoggers.Exists(destination) Then
+        mLoggers.Remove destination
     End If
+    mLoggers.Add destination, logger
+End Sub
+
+Private Sub InitializeLoggers()
+    ' 既存のロガーをクリア
+    mLoggers.RemoveAll
+    
+    ' 設定に基づいてロガーを初期化
+    Dim destinations As Variant
+    destinations = mSettings.GetLogDestinations()
+    
+    Dim i As Long
+    For i = LBound(destinations) To UBound(destinations)
+        SetLogger destinations(i), CreateLogger(destinations(i))
+    Next i
     
     ' タイマーの設定
     If mTimerID <> 0 Then
         KillTimer 0, mTimerID
     End If
     mTimerID = SetTimer(0, 0, mSettings.TimerInterval, AddressOf TimerProc)
-    
-    mIsInitialized = True
 End Sub
 
 ' ======================
@@ -166,17 +200,15 @@ Private Sub ProcessLogQueue()
         Dim logEntry As Variant
         logEntry = mLogQueue.Dequeue
         
-        ' ログ出力先に応じた処理
-        Select Case mSettings.LogDestination
-            Case LOG_DESTINATION_FILE
-                WriteToFile logEntry
-            Case LOG_DESTINATION_DATABASE
-                WriteToDatabase logEntry
-            Case LOG_DESTINATION_EVENTLOG
-                WriteToEventLog logEntry
-            Case LOG_DESTINATION_CONSOLE
-                WriteToConsole logEntry
-        End Select
+        ' 各ロガーでログを処理
+        Dim destination As Variant
+        For Each destination In mLoggers.Keys
+            If mSettings.ShouldLog(destination, logEntry(2)) Then
+                Dim logger As ILogger
+                Set logger = mLoggers(destination)
+                logger.Log CStr(logEntry(2)), CStr(logEntry(1)), CStr(logEntry(3)), CLng(logEntry(0))
+            End If
+        Next destination
         
         ' イベント発行
         RaiseEvent Logged(logEntry(1), logEntry(2))
@@ -201,193 +233,53 @@ ErrorHandler:
     Resume Cleanup
 End Sub
 
-Private Sub WriteToFile(ByVal logEntry As Variant)
-    On Error GoTo ErrorHandler
-    
-    Dim retryCount As Long
-    fDim ileNum As Integer
-    Dim logMessage As String
-    
-    logMessage = Format$(logEntry(3), "yyyy/mm/dd hh:nn:ss") & " " & _
-                 "[" & logEntry(0) & "] " & _
-                 IIf(logEntry(2) <> 0, "(Code: " & logEntry(2) & ") ", "") & _
-                 logEntry(1)
-    
-    Do While retryCount < MAX_RETRY_COUNT
-        On Error Resume Next
-        fileNum = FreeFile
-        Open mSettings.LogFilePath For Append As #fileNum
-        Print #fileNum, logMessage
-        Close #fileNum
-        
-        If Err.Number = 0 Then
-            Exit Sub
-        End If
-        
-        retryCount = retryCount + 1
-        If retryCount < MAX_RETRY_COUNT Then
-            Sleep RETRY_DELAY_MS
-        End If
-    Loop
-    
-    On Error GoTo ErrorHandler
-    ' ファイルへの書き込みが失敗した場合、代替出力先を試行
-    WriteToFallbackDestination logMessage, "ファイルログ出力失敗"
-    Exit Sub
-    
-ErrorHandler:
-    WriteToFallbackDestination logMessage, "ファイルログ出力で予期せぬエラー: " & Err.Description
-End Sub
+Private Function CreateLogger(ByVal destination As String) As ILogger
+    Select Case destination
+        Case "File"
+            Dim fileLogger As New FileLogger
+            fileLogger.Initialize mSettings.GetFileOperations(), _
+                                mLock, _
+                                mPerformanceMonitor, _
+                                mSettings.LogFilePath
+            Set CreateLogger = fileLogger
+            
+        Case "Database"
+            Dim dbLogger As New DatabaseLogger
+            dbLogger.Initialize mSettings.GetConnectionPool(), _
+                              mLock, _
+                              mPerformanceMonitor, _
+                              mSettings.GetDatabaseConfig(), _
+                              mSettings.LogTableName
+            Set CreateLogger = dbLogger
+            
+        Case "EventLog"
+            Dim eventLogger As New EventLogLogger
+            eventLogger.Initialize mSettings.GetEventLog(), _
+                                 mLock, _
+                                 mPerformanceMonitor, _
+                                 mSettings.LogEventSource
+            Set CreateLogger = eventLogger
+            
+        Case "Console"
+            Dim consoleLogger As New ConsoleLogger
+            consoleLogger.Initialize mPerformanceMonitor, True
+            Set CreateLogger = consoleLogger
+            
+        Case Else
+            Err.Raise vbObjectError + 1, "CreateLogger", "不明なログ出力先: " & destination
+    End Select
+End Function
 
-Private Sub WriteToFallbackDestination(ByVal message As String, ByVal errorContext As String)
-    On Error Resume Next
-   
-    M' イベントログへの出力を試みる
-    modWindowsAPI.WriteToEventLog "PDI Logger", errorContext & vbCrLf & message, EVENTLOG_WARNING_TYPE
-  
-    oc' 緊急用ファイルへの出力を試みる
-    Dim fso As Object
-    Set fso = CreateObject("Scripting.FileSystemObject")
-  
-    = Dim emergencyPath As String
-    emergencyPath = Environ$("TEMP") & EMERGENCY_LOG_PATH
-    
-    Dim ts As Object
-    Set ts = fso.OpenTextFile(emergencyPath, 8, True)
-    If Not ts Is Nothing Then
-        ts.WriteLine Now & ": " & errorContext
-        ts.WriteLine message
-        ts.WriteLine String(50, "-")
-        ts.Close
-    End If
-    Set fso = Nothing
-End Sub
-
-Private Sub WriteToDatabase(ByVal logEntry As Variant)
-    On Error GoTo ErrorHandler
-    
-    Dim conn As Object
-    Set conn = Nothing
-    Dim retryCount As Long
-    
-    Do While retryCount < MAX_RETRY_COUNT
-        On Error Resume Next
-        mPerformanceMonitor.StartMeasurement "Database Connection"
-        Set conn = mConnectionPool.GetConnection()
-    
-    
-        If Not conn Is Nothing Then
-            mPerformanceMonitor.StartMeasurement "Database Insert"
-            Dim cmd As Object
-            Set cmd = CreateObject("ADODB.Command")
-            With cmd
-                .ActiveConnection = conn
-                .CommandText = "INSERT INTO " & mSettings.LogTableName & " (LogTime, ModuleName, LogLevel, Message) VALUES (?, ?, ?, ?)"
-                .Parameters.Append .CreateParameter("LogTime", 7, 1, , logEntry(3))
-                .Parameters.Append .CreateParameter("ModuleName", 200, 1, 255, logEntry(0))
-                .Parameters.Append .CreateParameter("LogLevel", 3, 1, , logEntry(2))
-                .Parameters.Append .CreateParameter("Message", 200, 1, 4000, logEntry(1))
-                .Execute
-            End With
-        
-    
-            If Err.Number = 0 Then
-                mConnectionPool.ReleaseConnection conn
-                mPerformanceMonitor.EndMeasurement "Database Connection"
-                mPerformanceMonitor.EndMeasurement "Database Insert"
-                    End If
-        End If
-        
-        retryCount = retryCount + 1
-        If retryCount < MAX_RETRY_COUNT Then
-            If Not conn Is Nothing Then
-            Exit Sub
-    
-        mConnectionPool.ReleaseConnection conn
-                Set conn = Nothing
-            End If
-    
-        Sleep RETRY_DELAY_MS
-        End If
-    Loop
-    
-    On Error GoTo ErrorHandler
-    ' データベースへの書き込みが失敗した場合、ファイルに出力
-    Dim logMessage As String
-    logMessage = Format$(logEntry(3), "yyyy/mm/dd hh:nn:ss") & " " & _
-                 "[" & logEntry(0) & "] " & _
-                 IIf(logEntry(2) <> 0, "(Code: " & logEntry(2) & ") ", "") & _
-                 logEntry(1)
-    
-    WriteToFallbackDestination logMessage, "データベースログ出力失敗"
-    Exit Sub
-    
-ErrorHandler:
-    If Not conn Is Nothing Then
-        mPerformanceMonitor.EndMeasurement "Database Connection"
-        mPerformanceMonitor.EndMeasurement "Database Insert"
-        mConnectionPool.ReleaseConnection conn
-    End If
-    
-    WriteToFallbackDestination logMessage, "データベースログ出力で予期せぬエラー: " & Err.Description
-End Sub
-
-Private Sub WriteToEventLog(ByVal logEntry As Variant)
-    On Error GoTo ErrorHandler
-    
-    Dim objShell As Object
-    Set objShell = Nothing
-    
-    Try:
-        ' WScript.Shellオブジェクトの作成
-        Set objShell = CreateObject("WScript.Shell")
-        If objShell Is Nothing Then
-            Err.Raise ErrEventLogCreateFailed, "WriteToEventLog", "WScript.Shellオブジェクトの作成に失敗しました。"
-        End If
-        
-        ' イベントの種別を決定
-        Dim eventType As Integer
-        Select Case logEntry(2)
-            Case LOG_LEVEL_ERROR, LOG_LEVEL_FATAL
-                eventType = 1 ' ERROR
-            Case LOG_LEVEL_WARNING
-                eventType = 2 ' WARNING
-            Case Else
-                eventType = 4 ' INFORMATION
-        End Select
-    
-    
-        ' イベントログへの書き込み
-        If Len(mSettings.LogEventSource) = 0 Then
-            Err.Raise ErrEventLogSourceInvalid, "WriteToEventLog", "イベントログソースが指定されていません。"
-        End If
-        
-        objShell.LogEvent eventType, logEntry(1), mSettings.LogEventSource
-    
-    Cleanup:
-        If Not objShell Is Nothing Then Set objShell = Nothing
-        Exit Sub
-    
-    ErrorHandler:
-        Dim errDetail As ErrorInfo
-        With errDetail
-            .Code = IIf(Err.Number = ErrEventLogCreateFailed, ErrEventLogCreateFailed, ErrEventLogWriteFailed)
-            .Description = "イベントログへの書き込みに失敗しました: " & Err.Description
-            .Category = ECSystem
-            .Source = MODULE_NAME
-            .ProcedureName = "WriteToEventLog"
-            .StackTrace = modStackTrace.GetStackTrace()
-            .OccurredAt = Now
-        End With
-        modError.HandleError errDetail
-        GoTo Cleanup
-End Sub
-
-Private Sub WriteToConsole(ByVal logEntry As Variant)
-    Debug.Print Format$(logEntry(3), "yyyy/mm/dd hh:nn:ss") & " " & _
-                "[" & logEntry(0) & "] " & _
-                IIf(logEntry(2) <> 0, "(Code: " & logEntry(2) & ") ", "") & _
-                logEntry(1)
+' ワーカースレッドの作成と開始
+Private Sub StartWorkerThread()
+    Set mWorkerThread = CreateObject("WScript.Shell").Exec( _
+        "cmd /c powershell -Command {" & _
+        "    while ($true) {" & _
+        "        if (-not $global:isProcessing) { break }" & _
+        "        Start-Sleep -Milliseconds " & mSettings.TimerInterval & _
+        "    }" & _
+        "}")
+    mIsProcessing = True
 End Sub
 
 ' ======================

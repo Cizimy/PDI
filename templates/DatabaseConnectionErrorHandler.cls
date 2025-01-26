@@ -20,12 +20,26 @@ Private Const MODULE_NAME As String = "DatabaseConnectionErrorHandler"
 Private Const DEFAULT_RETRY_INTERVAL As Long = 1000 ' ミリ秒
 Private Const MAX_RETRY_COUNT As Long = 3
 
+' ======================
+' プライベート変数
+' ======================
+Private mConnectionString As String
+
 Implements IErrorHandler
 
 ' ======================
 ' シングルトンインスタンス
 ' ======================
 Private Shared instance As DatabaseConnectionErrorHandler
+
+' ======================
+' 初期化処理
+' ======================
+Public Sub Initialize(ByVal connectionString As String)
+    If connectionString = "" Then Exit Sub
+    mConnectionString = connectionString
+End Sub
+
 
 ' ======================
 ' ファクトリメソッド
@@ -35,6 +49,7 @@ Public Function Create() As DatabaseConnectionErrorHandler
     
     If instance Is Nothing Then
         Set instance = New DatabaseConnectionErrorHandler
+        instance.Initialize modConfig.Settings.DatabaseConnectionString
     End If
     Set Create = instance
     Exit Function
@@ -96,7 +111,7 @@ Private Function AttemptRetry(ByRef errorDetail As ErrorInfo) As Boolean
         ' リトライ試行をログに記録
         Dim loggerSettings As DefaultLoggerSettings
         Set loggerSettings = New DefaultLoggerSettings
-        loggerSettings.Initialize modConfig.Settings.DatabaseConnectionString
+        loggerSettings.Initialize mConnectionString
         With New clsLogger
             .Configure loggerSettings
             .Log MODULE_NAME, _
@@ -130,7 +145,7 @@ Private Function TryDatabaseConnection() As Boolean
     Set conn = CreateObject("ADODB.Connection")
     
     ' 接続文字列は設定から取得
-    conn.Open modConfig.Settings.DatabaseConnectionString
+    conn.Open mConnectionString
     
     If Err.Number = 0 Then
         conn.Close
@@ -147,7 +162,7 @@ Private Sub LogError(ByRef errorDetail As ErrorInfo)
     ' エラーログの出力
     Dim loggerSettings As DefaultLoggerSettings
     Set loggerSettings = New DefaultLoggerSettings
-    loggerSettings.Initialize modConfig.Settings.DatabaseConnectionString
+    loggerSettings.Initialize mConnectionString
     With New clsLogger
         .Configure loggerSettings
     

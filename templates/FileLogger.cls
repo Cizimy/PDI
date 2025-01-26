@@ -31,12 +31,16 @@ Private mPerformanceMonitor As clsPerformanceMonitor
 ' ======================
 ' 初期化・終了処理
 ' ======================
-Private Sub Class_Initialize()
+Public Sub Initialize(ByVal settings As ILoggerSettings)
     mLogLevel = LevelInfo
     mLogDestination = DestFile
-    mLogFilePath = modConfig.Settings.LogFilePath
+    mLogFilePath = settings.LogFilePath
     Set mLock = New clsLock
     Set mPerformanceMonitor = New clsPerformanceMonitor
+End Sub
+
+Private Sub Class_Initialize()
+    ' 初期化は Initialize メソッドで行う
 End Sub
 
 Private Sub Class_Terminate()

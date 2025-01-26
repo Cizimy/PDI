@@ -59,7 +59,9 @@ Public Function GetConnectionString() As String
     lock.AcquireLock
     
     ' 設定から接続文字列を取得
-    GetConnectionString = modConfig.Settings.DatabaseConnectionString
+    Dim settings As ConfigurationSettings
+    settings = modConfig.Settings
+    GetConnectionString = settings.DatabaseConnectionString
 
     lock.ReleaseLock
     

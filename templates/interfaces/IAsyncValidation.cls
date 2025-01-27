@@ -34,6 +34,73 @@ Public Event PerformanceAlert(ByVal validationId As String, ByVal metricType As 
 Public Event CacheUpdated(ByVal validationId As String, ByVal isCached As Boolean, ByVal cacheSize As Long)
 Public Event StateChanged(ByVal validationId As String, ByVal oldState As ValidationState, ByVal newState As ValidationState)
 
+' オプション定義
+'@Description("非同期バリデーションのオプションを定義する列挙型")
+Public Enum AsyncValidationOptions
+    avoNone = 0                  ' オプションなし
+    avoContinueOnError = 1       ' エラー発生時も処理を続行
+    avoCacheResults = 2          ' 結果をキャッシュする
+    avoSuppressEvents = 4        ' イベントを発生させない
+    avoHighPriority = 8          ' 高優先度で実行
+    avoLowPriority = 16          ' 低優先度で実行
+End Enum
+
+'@Description("バッチバリデーションのオプションを定義する列挙型")
+Public Enum BatchValidationOptions
+    bvoNone = 0                  ' オプションなし
+    bvoFailFast = 1             ' エラー発生時に即座に処理を停止
+    bvoIgnoreDuplicates = 2      ' 重複するアイテムを無視
+    bvoTransaction = 4          ' バッチ全体をトランザクションとして扱う
+End Enum
+
+'@Description("キャンセルのオプションを定義する列挙型")
+Public Enum CancellationOptions
+    coNone = 0                   ' オプションなし
+    coForce = 1                 ' 強制的にキャンセル
+    coTimeout = 2               ' キャンセル処理のタイムアウトを指定
+End Enum
+
+'@Description("待機のオプションを定義する列挙型")
+Public Enum WaitOptions
+    woNone = 0                   ' オプションなし
+    woPartial = 1              ' 部分的な完了を許可
+    woIgnoreCancelled = 2       ' キャンセルされたタスクを無視
+End Enum
+
+'@Description("バリデーションフィルターを定義する列挙型")
+Public Enum ValidationFilter
+    vfNone = 0                   ' フィルタリングなし
+    vfByRuleName = 1            ' ルール名でフィルタリング
+    vfByStatus = 2              ' 状態（成功/失敗）でフィルタリング
+    vfByErrorType = 4            ' エラータイプでフィルタリング
+End Enum
+
+'@Description("結果取得のオプションを定義する列挙型")
+Public Enum ResultOptions
+    roNone = 0                   ' オプションなし
+    roDetailed = 1              ' 詳細な結果を取得
+    roSummary = 2               ' 概要結果を取得
+End Enum
+
+'@Description("優先度変更のオプションを定義する列挙型")
+Public Enum PriorityOptions
+    poNone = 0                   ' オプションなし
+    poReorderQueue = 1          ' キューを優先度で再構築
+End Enum
+
+'@Description("永続化のオプションを定義する列挙型")
+Public Enum PersistenceOptions
+    psoNone = 0                  ' オプションなし
+    psoDatabase = 1             ' データベースに永続化
+    psoFile = 2                 ' ファイルに永続化
+End Enum
+
+'@Description("リソース制限のオプションを定義する列挙型")
+Public Enum ResourceLimitOptions
+    rloNone = 0                  ' オプションなし
+    rloOverride = 1              ' 既存の制限を上書き
+End Enum
+
 ''' <summary>
 ''' 非同期バリデーションを開始します
 ''' </summary>
@@ -183,7 +250,7 @@ End Function
 ''' <param name="validationId">バリデーションID</param>
 ''' <param name="options">取得オプション（オプション）</param>
 ''' <returns>バリデーション結果（完了していない場合はNothing）</returns>
-Public Function TryGetResults(ByVal validationId As String, Optional ByVal options As ResultOptions) As Variant
+Public Function TryGetResults(ByVal validationId As String, Optional ByVal options As ResultOptions) As ValidationResult
 End Function
 
 ''' <summary>
@@ -206,6 +273,11 @@ End Function
 ''' - 優先度の範囲チェック
 ''' - キューの再構築
 ''' - 実行中タスクへの影響考慮
+''' 
+''' パフォーマンスに関する注意:
+''' - `poReorderQueue` オプションを使用すると、キュー全体を優先度に基づいて再構築するため、
+'''   大きなキューではパフォーマンスに影響を与える可能性があります。
+'''   頻繁な優先度変更は避けるようにしてください。
 ''' </remarks>
 Public Sub ChangePriority(ByVal validationId As String, ByVal newPriority As ValidationPriority, Optional ByVal options As PriorityOptions)
 End Sub

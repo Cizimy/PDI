@@ -9,163 +9,190 @@ Attribute VB_PredefinedId = False
 Attribute VB_Exposed = True
 Option Explicit
 
-'@Description("バリデーション結果を格納するクラス")
-'@Remarks("設定値の検証結果と詳細情報を保持")
+'@Description("バリデーション結果の詳細情報を保持するクラス")
 
-' メンバ変数
-Private mIsValid As Boolean
-Private mErrors As Collection
-Private mWarnings As Collection
-Private mValidatedRules As Collection
-Private mState As ValidationState
-Private mStartTime As Date
-Private mEndTime As Date
-Private mValidatedSettingCount As Long
+' メンバー変数
+Private mSuccess As Boolean              ' 検証成功フラグ
+Private mErrorMessage As String          ' エラーメッセージ
+Private mExecutionTime As Double         ' 実行時間（ミリ秒）
+Private mResults As Collection           ' 個々のルール結果を格納
+Private mValidationId As String          ' バリデーションID
+Private mStartTime As Date               ' 開始時刻
+Private mEndTime As Date                 ' 終了時刻
+Private mRuleCounts As Collection        ' ルール別実行回数
+Private mErrorDetails As Collection      ' エラー詳細情報
+Private mPerformanceMetrics As Collection ' パフォーマンスメトリクス
 
-'@Description("クラスの初期化")
+' イベント
+Public Event ResultUpdated(ByVal propertyName As String, ByVal oldValue As Variant, ByVal newValue As Variant)
+
 Private Sub Class_Initialize()
-    Set mErrors = New Collection
-    Set mWarnings = New Collection
-    Set mValidatedRules = New Collection
-    mIsValid = True
-    mState = vsNotStarted
-    mValidatedSettingCount = 0
+    Set mResults = New Collection
+    Set mRuleCounts = New Collection
+    Set mErrorDetails = New Collection
+    Set mPerformanceMetrics = New Collection
+    mSuccess = False
+    mErrorMessage = ""
+    mExecutionTime = 0
+    mValidationId = ""
+    mStartTime = Now
+    mEndTime = Now
 End Sub
 
-'@Description("クラスの終了処理")
-Private Sub Class_Terminate()
-    Set mErrors = Nothing
-    Set mWarnings = Nothing
-    Set mValidatedRules = Nothing
-End Sub
-
-'@Description("バリデーション結果が有効かどうか")
-Public Property Get IsValid() As Boolean
-    IsValid = mIsValid
+'@Description("検証が成功したかどうかを取得または設定します")
+Public Property Get Success() As Boolean
+    Success = mSuccess
 End Property
 
-Public Property Let IsValid(ByVal value As Boolean)
-    mIsValid = value
+Public Property Let Success(ByVal value As Boolean)
+    Dim oldValue As Boolean
+    oldValue = mSuccess
+    mSuccess = value
+    RaiseEvent ResultUpdated("Success", oldValue, value)
 End Property
 
-'@Description("エラーメッセージのコレクション")
-Public Property Get Errors() As Collection
-    Set Errors = mErrors
+'@Description("エラーメッセージを取得または設定します")
+Public Property Get ErrorMessage() As String
+    ErrorMessage = mErrorMessage
 End Property
 
-Public Property Set Errors(ByVal value As Collection)
-    Set mErrors = value
+Public Property Let ErrorMessage(ByVal value As String)
+    Dim oldValue As String
+    oldValue = mErrorMessage
+    mErrorMessage = value
+    RaiseEvent ResultUpdated("ErrorMessage", oldValue, value)
 End Property
 
-'@Description("警告メッセージのコレクション")
-Public Property Get Warnings() As Collection
-    Set Warnings = mWarnings
+'@Description("実行時間を取得または設定します")
+Public Property Get ExecutionTime() As Double
+    ExecutionTime = mExecutionTime
 End Property
 
-Public Property Set Warnings(ByVal value As Collection)
-    Set mWarnings = value
+Public Property Let ExecutionTime(ByVal value As Double)
+    Dim oldValue As Double
+    oldValue = mExecutionTime
+    mExecutionTime = value
+    RaiseEvent ResultUpdated("ExecutionTime", oldValue, value)
 End Property
 
-'@Description("検証されたルールのコレクション")
-Public Property Get ValidatedRules() As Collection
-    Set ValidatedRules = mValidatedRules
+'@Description("個々のルール結果のコレクションを取得します")
+Public Property Get Results() As Collection
+    Set Results = mResults
 End Property
 
-Public Property Set ValidatedRules(ByVal value As Collection)
-    Set mValidatedRules = value
+'@Description("バリデーションIDを取得または設定します")
+Public Property Get ValidationId() As String
+    ValidationId = mValidationId
 End Property
 
-'@Description("バリデーションの状態")
-Public Property Get State() As ValidationState
-    State = mState
+Public Property Let ValidationId(ByVal value As String)
+    Dim oldValue As String
+    oldValue = mValidationId
+    mValidationId = value
+    RaiseEvent ResultUpdated("ValidationId", oldValue, value)
 End Property
 
-Public Property Let State(ByVal value As ValidationState)
-    mState = value
-End Property
-
-'@Description("バリデーション開始時刻")
+'@Description("開始時刻を取得または設定します")
 Public Property Get StartTime() As Date
     StartTime = mStartTime
 End Property
 
 Public Property Let StartTime(ByVal value As Date)
+    Dim oldValue As Date
+    oldValue = mStartTime
     mStartTime = value
+    RaiseEvent ResultUpdated("StartTime", oldValue, value)
 End Property
 
-'@Description("バリデーション終了時刻")
+'@Description("終了時刻を取得または設定します")
 Public Property Get EndTime() As Date
     EndTime = mEndTime
 End Property
 
 Public Property Let EndTime(ByVal value As Date)
+    Dim oldValue As Date
+    oldValue = mEndTime
     mEndTime = value
+    RaiseEvent ResultUpdated("EndTime", oldValue, value)
 End Property
 
-'@Description("検証された設定の数")
-Public Property Get ValidatedSettingCount() As Long
-    ValidatedSettingCount = mValidatedSettingCount
+'@Description("ルール別実行回数を取得します")
+Public Property Get RuleCounts() As Collection
+    Set RuleCounts = mRuleCounts
 End Property
 
-Public Property Let ValidatedSettingCount(ByVal value As Long)
-    mValidatedSettingCount = value
+'@Description("エラー詳細情報を取得します")
+Public Property Get ErrorDetails() As Collection
+    Set ErrorDetails = mErrorDetails
 End Property
 
-'@Description("エラーを追加する")
-'@Param("errorMessage: エラーメッセージ")
-Public Sub AddError(ByVal errorMessage As String)
-    mErrors.Add errorMessage
-    mIsValid = False
-End Sub
+'@Description("パフォーマンスメトリクスを取得します")
+Public Property Get PerformanceMetrics() As Collection
+    Set PerformanceMetrics = mPerformanceMetrics
+End Property
 
-'@Description("警告を追加する")
-'@Param("warningMessage: 警告メッセージ")
-Public Sub AddWarning(ByVal warningMessage As String)
-    mWarnings.Add warningMessage
-End Sub
-
-'@Description("検証ルールを追加する")
-'@Param("ruleName: ルール名")
-'@Param("ruleResult: ルールの検証結果")
-Public Sub AddValidatedRule(ByVal ruleName As String, ByVal ruleResult As Boolean)
-    Dim ruleInfo As New Dictionary
-    ruleInfo.Add "Name", ruleName
-    ruleInfo.Add "Result", ruleResult
-    ruleInfo.Add "Timestamp", Now
-    mValidatedRules.Add ruleInfo
-End Sub
-
-'@Description("バリデーション結果の要約を取得する")
-'@Return("要約文字列")
-Public Function GetSummary() As String
-    Dim summary As String
-    summary = "バリデーション結果:" & vbCrLf
-    summary = summary & "- 有効性: " & IIf(mIsValid, "有効", "無効") & vbCrLf
-    summary = summary & "- 状態: " & GetStateName(mState) & vbCrLf
-    summary = summary & "- エラー数: " & mErrors.Count & vbCrLf
-    summary = summary & "- 警告数: " & mWarnings.Count & vbCrLf
-    summary = summary & "- 検証ルール数: " & mValidatedRules.Count & vbCrLf
-    summary = summary & "- 検証設定数: " & mValidatedSettingCount & vbCrLf
-    
-    If mStartTime <> 0 And mEndTime <> 0 Then
-        summary = summary & "- 実行時間: " & Format$(mEndTime - mStartTime, "hh:nn:ss") & vbCrLf
+'@Description("結果を追加します")
+'@Param("result: 追加する結果")
+Public Sub AddResult(ByVal result As ResultItem)
+    mResults.Add result
+    UpdateRuleCount result.RuleName
+    If Not result.Success Then
+        mErrorDetails.Add result
     End If
-    
-    GetSummary = summary
+End Sub
+
+'@Description("ルールの実行回数を更新します")
+'@Param("ruleName: ルール名")
+Private Sub UpdateRuleCount(ByVal ruleName As String)
+    On Error Resume Next
+    mRuleCounts(ruleName) = mRuleCounts(ruleName) + 1
+    If Err.Number <> 0 Then
+        mRuleCounts.Add 1, ruleName
+    End If
+    On Error GoTo 0
+End Sub
+
+'@Description("パフォーマンスメトリクスを追加します")
+'@Param("metricName: メトリクス名")
+'@Param("value: メトリクス値")
+Public Sub AddPerformanceMetric(ByVal metricName As String, ByVal value As Double)
+    Dim metric As New Dictionary
+    metric.Add "Name", metricName
+    metric.Add "Value", value
+    metric.Add "Timestamp", Now
+    mPerformanceMetrics.Add metric
+End Sub
+
+'@Description("結果をJSONフォーマットで取得します")
+Public Function ToJSON() As String
+    Dim json As String
+    json = "{"
+    json = json & """Success"": " & LCase(CStr(mSuccess)) & ","
+    json = json & """ErrorMessage"": """ & JsonEscape(mErrorMessage) & ""","
+    json = json & """ExecutionTime"": " & mExecutionTime & ","
+    json = json & """ValidationId"": """ & mValidationId & ""","
+    json = json & """StartTime"": """ & Format(mStartTime, "yyyy-mm-dd hh:nn:ss") & ""","
+    json = json & """EndTime"": """ & Format(mEndTime, "yyyy-mm-dd hh:nn:ss") & """"
+    json = json & "}"
+    ToJSON = json
 End Function
 
-'@Description("バリデーション状態名を取得する")
-'@Param("state: ValidationState列挙型の値")
-'@Return("状態名")
-Private Function GetStateName(ByVal state As ValidationState) As String
-    Select Case state
-        Case vsNotStarted: GetStateName = "未開始"
-        Case vsPending: GetStateName = "保留中"
-        Case vsRunning: GetStateName = "実行中"
-        Case vsPaused: GetStateName = "一時停止"
-        Case vsCompleted: GetStateName = "完了"
-        Case vsFailed: GetStateName = "失敗"
-        Case vsCancelled: GetStateName = "キャンセル"
-        Case Else: GetStateName = "不明"
-    End Select
+'@Description("JSON文字列のエスケープ処理を行います")
+'@Param("text: エスケープする文字列")
+Private Function JsonEscape(ByVal text As String) As String
+    JsonEscape = Replace(Replace(Replace(text, "\", "\\"), """", "\"""), vbCrLf, "\n")
 End Function
+
+'@Description("結果をクリアします")
+Public Sub Clear()
+    Set mResults = New Collection
+    Set mRuleCounts = New Collection
+    Set mErrorDetails = New Collection
+    Set mPerformanceMetrics = New Collection
+    mSuccess = False
+    mErrorMessage = ""
+    mExecutionTime = 0
+    mValidationId = ""
+    mStartTime = Now
+    mEndTime = Now
+End Sub

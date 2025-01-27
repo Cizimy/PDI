@@ -4,112 +4,104 @@ BEGIN
 END
 Attribute VB_Name = "MockPerformanceMonitor"
 Attribute VB_GlobalNameSpace = False
-Attribute VB_Creatable = True
+Attribute VB_Creatable = False
 Attribute VB_PredefinedId = False
 Attribute VB_Exposed = False
 Option Explicit
 
 Implements IPerformanceMonitor
 
-' モック用の内部状態
-Private Type MeasurementInfo
-    StartTime As Date
-    EndTime As Date
-    Category As String
-End Type
+Private mEnabled As Boolean
+Private mStartCallCount As Long
+Private mEndCallCount As Long
+Private mMetrics As Collection
+Private mCurrentOperation As String
 
-Private mMeasurements() As MeasurementInfo
-Private mMeasurementCount As Long
-Private mMaxMeasurements As Long
-
-'*******************************************************************************
-' 初期化
-'*******************************************************************************
 Private Sub Class_Initialize()
-    mMaxMeasurements = 100
-    ReDim mMeasurements(1 To mMaxMeasurements)
-    mMeasurementCount = 0
+    mEnabled = True
+    Set mMetrics = New Collection
+    ResetCounters
 End Sub
 
-'*******************************************************************************
-' IPerformanceMonitor インターフェースの実装
-'*******************************************************************************
-Private Sub IPerformanceMonitor_StartMeasurement(ByVal category As String)
-    If mMeasurementCount >= mMaxMeasurements Then Exit Sub
+Private Sub Class_Terminate()
+    Set mMetrics = Nothing
+End Sub
+
+'@Description("パフォーマンス監視の有効/無効を設定")
+Public Property Let Enabled(ByVal value As Boolean)
+    mEnabled = value
+End Property
+
+'@Description("パフォーマンス監視の有効/無効を取得")
+Public Property Get Enabled() As Boolean
+    Enabled = mEnabled
+End Property
+
+'@Description("StartMeasurementの呼び出し回数を取得")
+Public Property Get StartCallCount() As Long
+    StartCallCount = mStartCallCount
+End Property
+
+'@Description("EndMeasurementの呼び出し回数を取得")
+Public Property Get EndCallCount() As Long
+    EndCallCount = mEndCallCount
+End Property
+
+'@Description("記録されたメトリクスを取得")
+Public Property Get Metrics() As Collection
+    Set Metrics = mMetrics
+End Property
+
+'@Description("カウンターをリセット")
+Public Sub ResetCounters()
+    mStartCallCount = 0
+    mEndCallCount = 0
+    Set mMetrics = New Collection
+    mCurrentOperation = ""
+End Sub
+
+'@Description("メトリクスを追加")
+Public Sub AddMetric(ByVal operationName As String, ByVal executionTime As Double)
+    Dim metric As New Dictionary
+    metric.Add "Operation", operationName
+    metric.Add "ExecutionTime", executionTime
+    metric.Add "Timestamp", Now
+    mMetrics.Add metric
+End Sub
+
+' IPerformanceMonitor実装
+
+Private Sub IPerformanceMonitor_StartMeasurement(ByVal operationName As String)
+    If Not mEnabled Then Exit Sub
     
-    mMeasurementCount = mMeasurementCount + 1
-    With mMeasurements(mMeasurementCount)
-        .StartTime = Now
-        .Category = category
-    End With
+    mStartCallCount = mStartCallCount + 1
+    mCurrentOperation = operationName
 End Sub
 
-Private Sub IPerformanceMonitor_EndMeasurement(ByVal category As String)
-    Dim i As Long
-    For i = mMeasurementCount To 1 Step -1
-        If mMeasurements(i).Category = category Then
-            mMeasurements(i).EndTime = Now
-            Exit Sub
-        End If
-    Next i
-End Sub
-
-'*******************************************************************************
-' モック用のヘルパーメソッド
-'*******************************************************************************
-Public Function GetMeasurementCount() As Long
-    GetMeasurementCount = mMeasurementCount
-End Function
-
-Public Function GetMeasurementDuration(ByVal index As Long) As Double
-    If index < 1 Or index > mMeasurementCount Then
-        GetMeasurementDuration = 0
-        Exit Function
+Private Sub IPerformanceMonitor_EndMeasurement()
+    If Not mEnabled Then Exit Sub
+    
+    mEndCallCount = mEndCallCount + 1
+    
+    If mCurrentOperation <> "" Then
+        ' 実行時間をシミュレート（0.1秒）
+        AddMetric mCurrentOperation, 0.1
+        mCurrentOperation = ""
     End If
-    
-    With mMeasurements(index)
-        If .EndTime = #12:00:00 AM# Then
-            GetMeasurementDuration = 0
-        Else
-            GetMeasurementDuration = DateDiff("s", .StartTime, .EndTime)
-        End If
-    End With
-End Function
-
-Public Function GetMeasurementCategory(ByVal index As Long) As String
-    If index < 1 Or index > mMeasurementCount Then
-        GetMeasurementCategory = ""
-        Exit Function
-    End If
-    
-    GetMeasurementCategory = mMeasurements(index).Category
-End Function
-
-Public Sub ResetMeasurements()
-    mMeasurementCount = 0
 End Sub
 
-'*******************************************************************************
-' テスト用のヘルパーメソッド
-'*******************************************************************************
-Public Function HasMeasurement(ByVal category As String) As Boolean
-    Dim i As Long
-    For i = 1 To mMeasurementCount
-        If mMeasurements(i).Category = category Then
-            HasMeasurement = True
-            Exit Function
-        End If
-    Next i
-    HasMeasurement = False
+Private Function IPerformanceMonitor_GetMetrics() As Collection
+    Set IPerformanceMonitor_GetMetrics = mMetrics
 End Function
 
-Public Function GetCompletedMeasurementCount() As Long
-    Dim count As Long
-    Dim i As Long
-    For i = 1 To mMeasurementCount
-        If mMeasurements(i).EndTime <> #12:00:00 AM# Then
-            count = count + 1
-        End If
-    Next i
-    GetCompletedMeasurementCount = count
-End Function
+Private Sub IPerformanceMonitor_ClearMetrics()
+    Set mMetrics = New Collection
+End Sub
+
+Private Property Get IPerformanceMonitor_Enabled() As Boolean
+    IPerformanceMonitor_Enabled = mEnabled
+End Property
+
+Private Property Let IPerformanceMonitor_Enabled(ByVal value As Boolean)
+    mEnabled = value
+End Property

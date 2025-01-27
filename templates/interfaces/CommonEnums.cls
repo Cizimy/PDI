@@ -43,6 +43,85 @@ Public Enum ValidationPriority
     vpHighest = 4   ' 最高優先度（最初に実行される検証）
 End Enum
 
+'@Description("設定オプションを定義する列挙型")
+'@Remarks("設定値の取得・設定時のオプションを指定")
+Public Enum SettingOptions
+    soNone = 0              ' オプションなし
+    soEncrypt = 1           ' 設定値を暗号化する
+    soValidate = 2          ' 設定値を検証する
+    soLogHistory = 4        ' 設定変更履歴を記録する
+    soCache = 8             ' 設定値をキャッシュする
+    soEnvironmentSpecific = 16 ' 環境固有の設定として扱う
+End Enum
+
+'@Description("読み込みオプションを定義する列挙型")
+'@Remarks("設定ファイルからの読み込み時のオプションを指定")
+Public Enum LoadOptions
+    loNone = 0              ' オプションなし
+    loDecrypt = 1           ' 設定値を復号化する
+    loValidate = 2          ' 設定値を検証する
+    loApplyEnvironment = 4  ' 環境固有の設定を適用する
+    loMerge = 8             ' 既存の設定とマージする
+End Enum
+
+'@Description("保存オプションを定義する列挙型")
+'@Remarks("設定ファイルへの保存時のオプションを指定")
+Public Enum SaveOptions
+    soNone = 0              ' オプションなし
+    soEncrypt = 1           ' 設定値を暗号化する
+    soBackup = 2            ' 保存前にバックアップを作成する
+    soFormat = 4            ' 設定ファイルを整形して保存する
+    soAtomic = 8            ' アトミックな書き込みを行う
+End Enum
+
+'@Description("暗号化オプションを定義する列挙型")
+'@Remarks("暗号化操作時のオプションを指定")
+Public Enum EncryptionOptions
+    eoNone = 0              ' オプションなし
+    eoRotateKey = 1         ' 新しいキーで暗号化する
+    eoReEncrypt = 2         ' 既存の設定を新しいキーで再暗号化する
+    eoSetKeyVersion = 4     ' キーバージョンを設定する
+End Enum
+
+'@Description("環境オプションを定義する列挙型")
+'@Remarks("環境設定時のオプションを指定")
+Public Enum EnvironmentOptions
+    enoNone = 0             ' オプションなし
+    enoReload = 1           ' 環境変更時に設定を再読み込みする
+    enoValidate = 2         ' 環境変更時に設定を検証する
+    enoNotify = 4           ' 環境変更を通知する
+End Enum
+
+'@Description("検証オプションを定義する列挙型")
+'@Remarks("設定値の検証時のオプションを指定")
+Public Enum ValidationOptions
+    voNone = 0              ' オプションなし
+    voFull = 1              ' すべての設定を検証する
+    voChangedOnly = 2       ' 変更された設定のみ検証する
+    voEnvironment = 4       ' 環境固有の設定を検証する
+    voDataType = 8          ' データ型の検証を行う
+    voRange = 16            ' 値の範囲を検証する
+    voDependency = 32       ' 依存関係を検証する
+End Enum
+
+'@Description("履歴オプションを定義する列挙型")
+'@Remarks("設定履歴の取得時のオプションを指定")
+Public Enum HistoryOptions
+    hoNone = 0              ' オプションなし
+    hoLimit = 1             ' 取得する履歴の数を制限する
+    hoSort = 2              ' 履歴をソートする
+    hoFilter = 4            ' 履歴をフィルタリングする
+End Enum
+
+'@Description("復元オプションを定義する列挙型")
+'@Remarks("バックアップからの復元時のオプションを指定")
+Public Enum RestoreOptions
+    roNone = 0              ' オプションなし
+    roValidate = 1          ' 復元前に設定を検証する
+    roMerge = 2             ' 既存の設定とマージする
+    roNotify = 4            ' 復元を通知する
+End Enum
+
 '@Description("バリデーション状態を定義する列挙型")
 '@Remarks("バリデーションの現在の実行状態を表す")
 Public Enum ValidationState
@@ -55,57 +134,6 @@ Public Enum ValidationState
     vsCancelled = 6    ' キャンセル
 End Enum
 
-'@Description("エラー回復状態を定義する列挙型")
-'@Remarks("エラーからの回復処理の状態を表す")
-Public Enum RecoveryState
-    rsNotStarted = 0    ' 未開始
-    rsAttempting = 1    ' 回復試行中
-    rsSucceeded = 2     ' 回復成功
-    rsFailed = 3        ' 回復失敗
-    rsPartial = 4       ' 部分的に回復
-    rsAborted = 5       ' 中断
-End Enum
-
-'@Description("通知配信状態を定義する列挙型")
-'@Remarks("通知の配信状態を表す")
-Public Enum DeliveryState
-    dsQueued = 0        ' キュー待ち
-    dsProcessing = 1    ' 処理中
-    dsDelivered = 2     ' 配信済み
-    dsFailed = 3        ' 配信失敗
-    dsRetrying = 4      ' 再試行中
-    dsThrottled = 5     ' スロットル中
-    dsExpired = 6       ' 期限切れ
-End Enum
-
-'@Description("リソース状態を定義する列挙型")
-'@Remarks("システムリソースの状態を表す")
-Public Enum ResourceState
-    rsAvailable = 0     ' 利用可能
-    rsLow = 1          ' 残り少ない
-    rsCritical = 2     ' 危機的状態
-    rsExhausted = 3    ' 枯渇
-    rsUnknown = 4      ' 不明
-End Enum
-
-'@Description("キャッシュ状態を定義する列挙型")
-'@Remarks("キャッシュエントリの状態を表す")
-Public Enum CacheState
-    csValid = 0        ' 有効
-    csExpired = 1      ' 期限切れ
-    csInvalid = 2      ' 無効
-    csUpdating = 3     ' 更新中
-End Enum
-
-'@Description("バリデーション依存関係の種類を定義する列挙型")
-'@Remarks("バリデーションルール間の依存関係を表す")
-Public Enum ValidationDependencyType
-    vdtRequired = 0    ' 必須（依存先が成功する必要がある）
-    vdtOptional = 1    ' オプション（依存先の結果に影響されない）
-    vdtExclusive = 2   ' 排他的（依存先が失敗する必要がある）
-    vdtConditional = 3 ' 条件付き（条件に応じて依存関係が変化）
-End Enum
-
 '@Description("パフォーマンスメトリクスの種類を定義する列挙型")
 '@Remarks("システムの各種パフォーマンス指標を表す")
 Public Enum MetricType
@@ -115,13 +143,4 @@ Public Enum MetricType
     mtResourceUsage = 3  ' リソース使用率
     mtQueueLength = 4   ' キュー長
     mtLatency = 5       ' レイテンシ
-End Enum
-
-'@Description("バリデーション検証レベルを定義する列挙型")
-'@Remarks("バリデーションの詳細度を表す")
-Public Enum ValidationLevel
-    vlBasic = 0        ' 基本的な検証
-    vlNormal = 1       ' 通常の検証
-    vlStrict = 2       ' 厳密な検証
-    vlComplete = 3     ' 完全な検証
 End Enum

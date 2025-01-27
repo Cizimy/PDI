@@ -4,192 +4,182 @@ BEGIN
 END
 Attribute VB_Name = "ErrorInfo"
 Attribute VB_GlobalNameSpace = False
-Attribute VB_Creatable = True
+Attribute VB_Creatable = False
 Attribute VB_PredefinedId = False
-Attribute VB_Exposed = False
+Attribute VB_Exposed = True
 Option Explicit
 
-' ======================
-' プロパティ
-' ======================
-Private mCode As Long
-Private mDescription As String
-Private mCategory As ErrorCodeCategory
-Private mSource As String
-Private mProcedureName As String
-Private mStackTrace As String
-Private mOccurredAt As Date
-Private mSeverity As ErrorSeverity
-Private mAdditionalInfo As Collection
-Private mInnerError As ErrorInfo
-Private mRecoveryAttempted As Boolean
-Private mRecoverySuccessful As Boolean
+'@Description("エラー情報を格納するクラス")
 
-' ======================
-' 列挙型
-' ======================
-Public Enum ErrorSeverity
-    ESInfo = 1
-    ESWarning = 2
-    ESError = 3
-    ESCritical = 4
-End Enum
+'@Description("エラーコード")
+Public ErrorCode As ErrorCode
 
-' ======================
-' プロパティ
-' ======================
-Public Property Get Code() As Long
-    Code = mCode
-End Property
-Public Property Let Code(ByVal value As Long)
-    mCode = value
-End Property
+'@Description("エラーメッセージ")
+Public Message As String
 
-Public Property Get Description() As String
-    Description = mDescription
-End Property
-Public Property Let Description(ByVal value As String)
-    mDescription = value
-End Property
+'@Description("エラー発生時刻")
+Public Timestamp As Date
 
-Public Property Get Category() As ErrorCodeCategory
-    Category = mCategory
-End Property
-Public Property Let Category(ByVal value As ErrorCodeCategory)
-    mCategory = value
-End Property
+'@Description("エラー発生モジュール")
+Public SourceModule As String
 
-Public Property Get Source() As String
-    Source = mSource
-End Property
-Public Property Let Source(ByVal value As String)
-    mSource = value
-End Property
+'@Description("エラー発生プロシージャ")
+Public SourceProcedure As String
 
-Public Property Get ProcedureName() As String
-    ProcedureName = mProcedureName
-End Property
-Public Property Let ProcedureName(ByVal value As String)
-    mProcedureName = value
-End Property
+'@Description("エラー発生時のライン番号")
+Public SourceLine As Long
 
-Public Property Get StackTrace() As String
-    StackTrace = mStackTrace
-End Property
-Public Property Let StackTrace(ByVal value As String)
-    mStackTrace = value
-End Property
+'@Description("追加のエラー情報")
+Public AdditionalInfo As Variant
 
-Public Property Get OccurredAt() As Date
-    OccurredAt = mOccurredAt
-End Property
-Public Property Let OccurredAt(ByVal value As Date)
-    mOccurredAt = value
-End Property
+'@Description("エラーの根本原因")
+Public RootCause As String
 
-Public Property Get Severity() As ErrorSeverity
-    Severity = mSeverity
-End Property
-Public Property Let Severity(ByVal value As ErrorSeverity)
-    mSeverity = value
-End Property
+'@Description("エラーの影響範囲")
+Public ImpactArea As String
 
-Public Property Get InnerError() As ErrorInfo
-    Set InnerError = mInnerError
-End Property
-Public Property Set InnerError(ByVal value As ErrorInfo)
-    Set mInnerError = value
-End Property
+'@Description("エラーの推奨される対策")
+Public RemediationSteps As String
 
-Public Property Get RecoveryAttempted() As Boolean
-    RecoveryAttempted = mRecoveryAttempted
-End Property
-Public Property Let RecoveryAttempted(ByVal value As Boolean)
-    mRecoveryAttempted = value
-End Property
+'@Description("エラー発生時のスタックトレース")
+Public StackTrace As String
 
-Public Property Get RecoverySuccessful() As Boolean
-    RecoverySuccessful = mRecoverySuccessful
-End Property
-Public Property Let RecoverySuccessful(ByVal value As Boolean)
-    mRecoverySuccessful = value
-End Property
+'@Description("エラーの重大度")
+Public Severity As ErrorSeverity
 
-' ======================
-' 初期化
-' ======================
+'@Description("エラーのカテゴリ")
+Public Category As ErrorCategory
+
+'@Description("エラーの状態")
+Public Status As ErrorStatus
+
+'@Description("エラーの処理試行回数")
+Public RetryCount As Long
+
+'@Description("最後の処理試行時刻")
+Public LastRetryTimestamp As Date
+
+'@Description("エラーに関連するリソース")
+Public RelatedResources As Collection
+
+'@Description("エラーのタグ")
+Public Tags As Collection
+
 Private Sub Class_Initialize()
-    Set mAdditionalInfo = New Collection
+    Set RelatedResources = New Collection
+    Set Tags = New Collection
+    Timestamp = Now
+    Status = esNew
+    RetryCount = 0
 End Sub
 
-' ======================
-' パブリックメソッド
-' ======================
-Public Sub AddAdditionalInfo(ByVal key As String, ByVal value As Variant)
-    On Error Resume Next
-    mAdditionalInfo.Remove key
-    On Error GoTo 0
-    mAdditionalInfo.Add value, key
+Private Sub Class_Terminate()
+    Set RelatedResources = Nothing
+    Set Tags = Nothing
 End Sub
 
-Public Function GetAdditionalInfo(ByVal key As String) As Variant
-    On Error Resume Next
-    GetAdditionalInfo = mAdditionalInfo(key)
-    On Error GoTo 0
-End Function
-
-Public Function HasAdditionalInfo(ByVal key As String) As Boolean
-    On Error Resume Next
-    Dim temp As Variant
-    temp = mAdditionalInfo(key)
-    HasAdditionalInfo = (Err.Number = 0)
-    On Error GoTo 0
-End Function
-
-Public Function Clone() As ErrorInfo
-    Dim result As New ErrorInfo
-    With result
-        .Code = mCode
-        .Description = mDescription
-        .Category = mCategory
-        .Source = mSource
-        .ProcedureName = mProcedureName
-        .StackTrace = mStackTrace
-        .OccurredAt = mOccurredAt
-        .Severity = mSeverity
-        .RecoveryAttempted = mRecoveryAttempted
-        .RecoverySuccessful = mRecoverySuccessful
-        If Not mInnerError Is Nothing Then
-            Set .InnerError = mInnerError.Clone
-        End If
-        
-        ' 追加情報のコピー
-        Dim key As Variant
-        For Each key In mAdditionalInfo
-            .AddAdditionalInfo CStr(key), mAdditionalInfo(key)
-        Next key
-    End With
-    Set Clone = result
-End Function
-
+'@Description("エラー情報を文字列形式で取得します")
 Public Function ToString() As String
     Dim result As String
-    result = "Error Details:" & vbCrLf & _
-            "Code: " & mCode & vbCrLf & _
-            "Description: " & mDescription & vbCrLf & _
-            "Category: " & mCategory & vbCrLf & _
-            "Source: " & mSource & vbCrLf & _
-            "Procedure: " & mProcedureName & vbCrLf & _
-            "Occurred At: " & Format(mOccurredAt, "yyyy/mm/dd hh:nn:ss") & vbCrLf & _
-            "Severity: " & mSeverity & vbCrLf & _
-            "Recovery Attempted: " & mRecoveryAttempted & vbCrLf & _
-            "Recovery Successful: " & mRecoverySuccessful & vbCrLf & _
-            "Stack Trace: " & vbCrLf & mStackTrace
     
-    If Not mInnerError Is Nothing Then
-        result = result & vbCrLf & vbCrLf & "Inner Error:" & vbCrLf & _
-                mInnerError.ToString
-    End If
+    result = "Error Information:" & vbCrLf & _
+             "----------------" & vbCrLf & _
+             "Code: " & ErrorCode & vbCrLf & _
+             "Message: " & Message & vbCrLf & _
+             "Time: " & Format(Timestamp, "yyyy/mm/dd hh:nn:ss") & vbCrLf & _
+             "Module: " & SourceModule & vbCrLf & _
+             "Procedure: " & SourceProcedure & vbCrLf & _
+             "Line: " & SourceLine & vbCrLf & _
+             "Severity: " & Severity & vbCrLf & _
+             "Category: " & Category & vbCrLf & _
+             "Status: " & Status & vbCrLf & _
+             "Root Cause: " & RootCause & vbCrLf & _
+             "Impact Area: " & ImpactArea & vbCrLf & _
+             "Retry Count: " & RetryCount
     
     ToString = result
+End Function
+
+'@Description("エラー情報をクローンします")
+Public Function Clone() As ErrorInfo
+    Dim newInfo As ErrorInfo
+    Set newInfo = New ErrorInfo
+    
+    With newInfo
+        .ErrorCode = Me.ErrorCode
+        .Message = Me.Message
+        .Timestamp = Me.Timestamp
+        .SourceModule = Me.SourceModule
+        .SourceProcedure = Me.SourceProcedure
+        .SourceLine = Me.SourceLine
+        .AdditionalInfo = Me.AdditionalInfo
+        .RootCause = Me.RootCause
+        .ImpactArea = Me.ImpactArea
+        .RemediationSteps = Me.RemediationSteps
+        .StackTrace = Me.StackTrace
+        .Severity = Me.Severity
+        .Category = Me.Category
+        .Status = Me.Status
+        .RetryCount = Me.RetryCount
+        .LastRetryTimestamp = Me.LastRetryTimestamp
+        
+        ' コレクションのコピー
+        Dim item As Variant
+        For Each item In Me.RelatedResources
+            .RelatedResources.Add item
+        Next
+        
+        For Each item In Me.Tags
+            .Tags.Add item
+        Next
+    End With
+    
+    Set Clone = newInfo
+End Function
+
+'@Description("エラー情報を検証します")
+Public Function Validate() As Boolean
+    ' 必須フィールドの検証
+    If ErrorCode = 0 Then Exit Function
+    If Len(Message) = 0 Then Exit Function
+    If Len(SourceModule) = 0 Then Exit Function
+    If Len(SourceProcedure) = 0 Then Exit Function
+    
+    Validate = True
+End Function
+
+'@Description("エラー情報をマージします")
+Public Sub MergeWith(ByVal other As ErrorInfo)
+    If other Is Nothing Then Exit Sub
+    
+    ' 空の場合のみ更新
+    If Len(Me.RootCause) = 0 Then Me.RootCause = other.RootCause
+    If Len(Me.ImpactArea) = 0 Then Me.ImpactArea = other.ImpactArea
+    If Len(Me.RemediationSteps) = 0 Then Me.RemediationSteps = other.RemediationSteps
+    
+    ' コレクションのマージ
+    Dim item As Variant
+    For Each item In other.RelatedResources
+        If Not Contains(Me.RelatedResources, item) Then
+            Me.RelatedResources.Add item
+        End If
+    Next
+    
+    For Each item In other.Tags
+        If Not Contains(Me.Tags, item) Then
+            Me.Tags.Add item
+        End If
+    Next
+End Sub
+
+'@Description("コレクションに要素が含まれているかチェックします")
+Private Function Contains(ByVal col As Collection, ByVal item As Variant) As Boolean
+    Dim existing As Variant
+    For Each existing In col
+        If existing = item Then
+            Contains = True
+            Exit Function
+        End If
+    Next
+    Contains = False
 End Function

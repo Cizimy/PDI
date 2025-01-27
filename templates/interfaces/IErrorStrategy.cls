@@ -9,19 +9,33 @@ Attribute VB_PredefinedId = False
 Attribute VB_Exposed = True
 Option Explicit
 
-'@Description("エラーからの回復戦略を定義するインターフェース")
+'@Description("エラーからの回復戦略を定義し、段階的な回復処理とフォールバックメカニズムを提供するインターフェース")
+
+' 定数定義
+Private Const DEFAULT_RETRY_COUNT As Long = 3           ' デフォルトのリトライ回数
+Private Const DEFAULT_RETRY_INTERVAL_MS As Long = 1000  ' デフォルトのリトライ間隔（1秒）
+Private Const MAX_RETRY_COUNT As Long = 10              ' 最大リトライ回数
+Private Const MAX_RECOVERY_CHAIN As Long = 5            ' 最大回復チェーン数
+Private Const RECOVERY_TIMEOUT_MS As Long = 30000       ' 回復処理のタイムアウト時間（30秒）
+Private Const MIN_BACKOFF_MS As Long = 100              ' 最小バックオフ時間（100ミリ秒）
+Private Const MAX_BACKOFF_MS As Long = 30000           ' 最大バックオフ時間（30秒）
 
 ' イベント定義
-Public Event RecoveryAttemptStarted(ByVal errorInfo As ErrorInfo)
-Public Event RecoveryAttemptCompleted(ByVal errorInfo As ErrorInfo, ByVal success As Boolean)
-Public Event RecoveryProgressChanged(ByVal errorInfo As ErrorInfo, ByVal progressPercentage As Long)
-Public Event FallbackStrategyActivated(ByVal errorInfo As ErrorInfo, ByVal fallbackStrategy As IErrorStrategy)
+Public Event RecoveryAttemptStarted(ByVal errorInfo As ErrorInfo, ByVal context As RecoveryContext)
+Public Event RecoveryAttemptCompleted(ByVal errorInfo As ErrorInfo, ByVal success As Boolean, ByVal metrics As RecoveryMetrics)
+Public Event RecoveryProgressChanged(ByVal errorInfo As ErrorInfo, ByVal progressPercentage As Long, ByVal currentPhase As String)
+Public Event FallbackStrategyActivated(ByVal errorInfo As ErrorInfo, ByVal fallbackStrategy As IErrorStrategy, ByVal reason As String)
+Public Event RecoveryChainExecuted(ByVal chainId As String, ByVal successCount As Long, ByVal failureCount As Long)
+Public Event ResourceExhausted(ByVal resourceType As String, ByVal currentUsage As Long, ByVal limit As Long)
+Public Event PerformanceAlert(ByVal metricType As String, ByVal currentValue As Double, ByVal threshold As Double)
+Public Event ErrorPatternDetected(ByVal patternType As String, ByVal frequency As Long, ByVal timeWindow As Long)
 
 ''' <summary>
 ''' エラーからの回復を試みます
 ''' </summary>
 ''' <param name="errorInfo">エラー情報</param>
 ''' <param name="context">回復コンテキスト（オプション）</param>
+''' <param name="options">回復オプション（オプション）</param>
 ''' <returns>回復成功時True、失敗時False</returns>
 ''' <remarks>
 ''' エラー処理要件：
@@ -30,6 +44,8 @@ Public Event FallbackStrategyActivated(ByVal errorInfo As ErrorInfo, ByVal fallb
 ''' - リソースの適切な解放
 ''' - 回復不可能な状態の検出
 ''' - イベントの適切な発行
+''' - メトリクスの収集
+''' - パターンの分析
 ''' 
 ''' 実装時の注意点：
 ''' 1. 再帰的な回復処理を避けること
@@ -37,19 +53,31 @@ Public Event FallbackStrategyActivated(ByVal errorInfo As ErrorInfo, ByVal fallb
 ''' 3. リソースリークを防ぐこと
 ''' 4. デッドロックを防ぐこと
 ''' 5. 回復の進捗を通知すること
+''' 6. パフォーマンスを監視すること
 ''' </remarks>
-Public Function RecoverFromError(ByRef errorInfo As ErrorInfo, Optional ByVal context As Variant) As Boolean
+Public Function RecoverFromError(ByRef errorInfo As ErrorInfo, Optional ByVal context As RecoveryContext, Optional ByVal options As RecoveryOptions) As Boolean
+End Function
+
+''' <summary>
+''' 回復チェーンを作成します
+''' </summary>
+''' <param name="strategies">チェーンに含める戦略のコレクション</param>
+''' <returns>チェーンID</returns>
+Public Function CreateRecoveryChain(ByVal strategies As Collection) As String
 End Function
 
 ''' <summary>
 ''' 最大リトライ回数を設定します
 ''' </summary>
+''' <param name="value">リトライ回数</param>
+''' <param name="options">リトライオプション（オプション）</param>
 ''' <remarks>
 ''' - 0以上の値を設定すること
 ''' - デフォルト値は3
 ''' - 実行中の回復処理への影響を考慮
+''' - バックオフ戦略の適用
 ''' </remarks>
-Public Property Let MaxRetryCount(ByVal value As Long)
+Public Property Let MaxRetryCount(ByVal value As Long, Optional ByVal options As RetryOptions)
 End Property
 
 ''' <summary>
@@ -65,6 +93,7 @@ End Property
 ''' - 値が大きいほど優先度が高い
 ''' - 複数の回復戦略がある場合、優先度の高い順に実行される
 ''' - 同じ優先度の場合、登録順で実行
+''' - チェーン内での順序も考慮
 ''' </remarks>
 Public Property Get Priority() As Long
 End Property
@@ -72,18 +101,23 @@ End Property
 ''' <summary>
 ''' 回復戦略の優先度を設定します
 ''' </summary>
-Public Property Let Priority(ByVal value As Long)
+''' <param name="value">優先度</param>
+''' <param name="options">優先度オプション（オプション）</param>
+Public Property Let Priority(ByVal value As Long, Optional ByVal options As PriorityOptions)
 End Property
 
 ''' <summary>
 ''' リトライ間隔（ミリ秒）を設定します
 ''' </summary>
+''' <param name="value">間隔（ミリ秒）</param>
+''' <param name="options">間隔オプション（オプション）</param>
 ''' <remarks>
 ''' - 0以上の値を設定すること
 ''' - デフォルト値は1000（1秒）
 ''' - 指数バックオフを考慮
+''' - システム負荷を考慮
 ''' </remarks>
-Public Property Let RetryInterval(ByVal value As Long)
+Public Property Let RetryInterval(ByVal value As Long, Optional ByVal options As IntervalOptions)
 End Property
 
 ''' <summary>
@@ -95,25 +129,30 @@ End Property
 ''' <summary>
 ''' 回復戦略の説明を取得します
 ''' </summary>
+''' <param name="locale">ロケール（オプション）</param>
+''' <returns>戦略の説明</returns>
 ''' <remarks>
 ''' - ログ出力やデバッグ用
 ''' - 具体的な回復方法を説明する文字列を返すこと
 ''' - 多言語対応を考慮
+''' - メトリクス情報を含める
 ''' </remarks>
-Public Property Get Description() As String
-End Property
+Public Function GetDescription(Optional ByVal locale As String) As String
+End Function
 
 ''' <summary>
 ''' フォールバック戦略を設定します
 ''' </summary>
 ''' <param name="strategy">フォールバック戦略</param>
+''' <param name="options">フォールバックオプション（オプション）</param>
 ''' <remarks>
 ''' エラー処理要件：
 ''' - 循環参照の検出
 ''' - 戦略の有効性確認
 ''' - リソースの確保
+''' - チェーンの整合性確認
 ''' </remarks>
-Public Sub SetFallbackStrategy(ByVal strategy As IErrorStrategy)
+Public Sub SetFallbackStrategy(ByVal strategy As IErrorStrategy, Optional ByVal options As FallbackOptions)
 End Sub
 
 ''' <summary>
@@ -125,48 +164,55 @@ End Property
 ''' <summary>
 ''' 回復処理の進捗状況を取得します
 ''' </summary>
-Public Property Get Progress() As Long
-End Property
+''' <param name="includeMetrics">メトリクスを含めるかどうか</param>
+Public Function GetProgress(Optional ByVal includeMetrics As Boolean = False) As RecoveryProgress
+End Function
 
 ''' <summary>
 ''' エラー種別ごとの回復方法を設定します
 ''' </summary>
 ''' <param name="errorCode">エラーコード</param>
 ''' <param name="recoveryAction">回復アクション</param>
-Public Sub SetRecoveryAction(ByVal errorCode As ErrorCode, ByVal recoveryAction As IRecoveryAction)
+''' <param name="options">アクションオプション（オプション）</param>
+Public Sub SetRecoveryAction(ByVal errorCode As ErrorCode, ByVal recoveryAction As IRecoveryAction, Optional ByVal options As ActionOptions)
 End Sub
 
 ''' <summary>
 ''' エラー種別ごとの回復方法を取得します
 ''' </summary>
 ''' <param name="errorCode">エラーコード</param>
-Public Function GetRecoveryAction(ByVal errorCode As ErrorCode) As IRecoveryAction
+''' <param name="includeMetrics">メトリクスを含めるかどうか</param>
+Public Function GetRecoveryAction(ByVal errorCode As ErrorCode, Optional ByVal includeMetrics As Boolean = False) As IRecoveryAction
 End Function
 
 ''' <summary>
 ''' 回復履歴を取得します
 ''' </summary>
+''' <param name="filter">フィルタ条件（オプション）</param>
 ''' <returns>回復試行の履歴コレクション</returns>
-Public Function GetRecoveryHistory() As Collection
+Public Function GetRecoveryHistory(Optional ByVal filter As RecoveryHistoryFilter) As Collection
 End Function
 
 ''' <summary>
 ''' 回復戦略の状態を検証します
 ''' </summary>
+''' <param name="validationLevel">検証レベル（オプション）</param>
 ''' <returns>有効な場合True</returns>
-Public Function Validate() As Boolean
+Public Function Validate(Optional ByVal validationLevel As ValidationLevel = vlNormal) As Boolean
 End Function
 
 ''' <summary>
 ''' リソースを解放します
 ''' </summary>
-Public Sub Cleanup()
+''' <param name="options">クリーンアップオプション（オプション）</param>
+Public Sub Cleanup(Optional ByVal options As CleanupOptions)
 End Sub
 
 ''' <summary>
 ''' 回復処理をキャンセルします
 ''' </summary>
-Public Sub CancelRecovery()
+''' <param name="options">キャンセルオプション（オプション）</param>
+Public Sub CancelRecovery(Optional ByVal options As CancellationOptions)
 End Sub
 
 ''' <summary>
@@ -185,4 +231,26 @@ End Property
 ''' トランザクションをサポートしているかどうかを取得します
 ''' </summary>
 Public Property Get SupportsTransactions() As Boolean
+End Property
+
+''' <summary>
+''' パフォーマンス指標を取得します
+''' </summary>
+''' <returns>パフォーマンス情報のコレクション</returns>
+Public Function GetPerformanceMetrics() As Collection
+End Function
+
+''' <summary>
+''' エラーパターンを分析します
+''' </summary>
+''' <param name="timeWindow">分析期間（ミリ秒）</param>
+''' <returns>パターン分析結果のコレクション</returns>
+Public Function AnalyzeErrorPatterns(ByVal timeWindow As Long) As Collection
+End Function
+
+''' <summary>
+''' バックオフ戦略を設定します
+''' </summary>
+''' <param name="strategy">バックオフ戦略</param>
+Public Property Let BackoffStrategy(ByVal strategy As IBackoffStrategy)
 End Property

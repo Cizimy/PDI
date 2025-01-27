@@ -9,31 +9,24 @@ Attribute VB_PredefinedId = False
 Attribute VB_Exposed = False
 Option Explicit
 
-' ======================
-' ファイル操作インターフェース
-' ======================
+'@Description("高レベルなファイル操作とメタデータ管理を提供するインターフェース")
 
-''' <remarks>
-''' このインターフェースを実装するクラスは、以下のエラー処理を実装する必要があります：
-'''
-''' 1. 共通のエラー処理要件
-'''    - ファイルパスの検証（存在確認、アクセス権限、パス長など）
-'''    - ファイルロックの適切な管理
-'''    - リソースの確実な解放（ファイルハンドルなど）
-'''    - エラー情報の適切なログ記録
-'''    - エラーの種類に応じた適切なエラーコードの設定
-'''
-''' 2. エラー発生時の戻り値
-'''    - Boolean型を返すメソッド：失敗時はFalseを返す
-'''    - String型を返すメソッド：エラー時は空文字列を返す
-'''    - バイト配列を返すメソッド：エラー時は空配列を返す
-'''
-''' 3. エラーの種類と対応
-'''    - ErrFileNotFound: ファイルが存在しない
-'''    - ErrFileAccessDenied: アクセス権限がない
-'''    - ErrFileInvalidFormat: ファイル形式が不正
-'''    - その他のシステムエラー
-''' </remarks>
+' 定数定義
+Private Const MAX_FILE_SIZE As Long = 2147483648   ' 最大ファイルサイズ（2GB）
+Private Const MAX_PATH_LENGTH As Long = 260        ' 最大パス長
+Private Const BUFFER_SIZE As Long = 8192           ' バッファサイズ（8KB）
+Private Const MAX_RETRY_COUNT As Long = 3          ' 最大リトライ回数
+Private Const LOCK_TIMEOUT_MS As Long = 5000       ' ロックタイムアウト（5秒）
+Private Const CLEANUP_INTERVAL_MS As Long = 300000 ' クリーンアップ間隔（5分）
+
+' イベント定義
+Public Event FileOperationStarted(ByVal operationType As String, ByVal filePath As String)
+Public Event FileOperationCompleted(ByVal operationType As String, ByVal filePath As String, ByVal success As Boolean)
+Public Event SecurityViolation(ByVal operationType As String, ByVal details As String)
+Public Event ProgressUpdated(ByVal operationType As String, ByVal progress As Double)
+Public Event MetadataChanged(ByVal filePath As String, ByVal metadataType As String)
+Public Event PerformanceAlert(ByVal metricType As String, ByVal currentValue As Double, ByVal threshold As Double)
+Public Event ResourceExhausted(ByVal resourceType As String, ByVal details As String)
 
 ' テキストファイル操作
 ''' <summary>
@@ -41,16 +34,11 @@ Option Explicit
 ''' </summary>
 ''' <param name="filePath">ファイルパス</param>
 ''' <param name="encoding">文字エンコーディング（オプション）</param>
-''' <returns>ファイルの内容、エラー時は空文字列</returns>
-''' <remarks>
-''' エラー処理要件：
-''' - ファイルの存在確認
-''' - エンコーディングの検証
-''' - ファイルロックの確認
-''' - メモリ不足への対応
-''' </remarks>
+''' <param name="options">読み込みオプション（オプション）</param>
+''' <returns>ファイルの内容</returns>
 Public Function ReadTextFile(ByVal filePath As String, _
-                           Optional ByVal encoding As String) As String
+                           Optional ByVal encoding As String, _
+                           Optional ByVal options As TextReadOptions) As String
 End Function
 
 ''' <summary>
@@ -58,20 +46,11 @@ End Function
 ''' </summary>
 ''' <param name="filePath">ファイルパス</param>
 ''' <param name="content">書き込む内容</param>
-''' <param name="append">追記モード（オプション）</param>
-''' <param name="encoding">文字エンコーディング（オプション）</param>
+''' <param name="options">書き込みオプション（オプション）</param>
 ''' <returns>成功時True、失敗時False</returns>
-''' <remarks>
-''' エラー処理要件：
-''' - 書き込み権限の確認
-''' - ディスク容量の確認
-''' - 既存ファイルのバックアップ
-''' - 書き込み失敗時の復旧処理
-''' </remarks>
 Public Function WriteTextFile(ByVal filePath As String, _
                             ByVal content As String, _
-                            Optional ByVal append As Boolean = False, _
-                            Optional ByVal encoding As String) As Boolean
+                            Optional ByVal options As TextWriteOptions) As Boolean
 End Function
 
 ' バイナリファイル操作
@@ -79,14 +58,10 @@ End Function
 ''' バイナリファイルを読み込みます
 ''' </summary>
 ''' <param name="filePath">ファイルパス</param>
-''' <returns>ファイルのバイトデータ、エラー時は空配列</returns>
-''' <remarks>
-''' エラー処理要件：
-''' - ファイルサイズの検証
-''' - メモリ使用量の監視
-''' - 破損ファイルの検出
-''' </remarks>
-Public Function ReadBinaryFile(ByVal filePath As String) As Byte()
+''' <param name="options">読み込みオプション（オプション）</param>
+''' <returns>ファイルのバイトデータ</returns>
+Public Function ReadBinaryFile(ByVal filePath As String, _
+                             Optional ByVal options As BinaryReadOptions) As Byte()
 End Function
 
 ''' <summary>
@@ -94,15 +69,11 @@ End Function
 ''' </summary>
 ''' <param name="filePath">ファイルパス</param>
 ''' <param name="data">書き込むバイトデータ</param>
+''' <param name="options">書き込みオプション（オプション）</param>
 ''' <returns>成功時True、失敗時False</returns>
-''' <remarks>
-''' エラー処理要件：
-''' - データの整合性チェック
-''' - 部分書き込みの防止
-''' - 書き込み失敗時のロールバック
-''' </remarks>
 Public Function WriteBinaryFile(ByVal filePath As String, _
-                              ByRef data() As Byte) As Boolean
+                              ByRef data() As Byte, _
+                              Optional ByVal options As BinaryWriteOptions) As Boolean
 End Function
 
 ' ファイルシステム操作
@@ -110,85 +81,109 @@ End Function
 ''' ファイルの存在を確認します
 ''' </summary>
 ''' <param name="filePath">ファイルパス</param>
+''' <param name="options">確認オプション（オプション）</param>
 ''' <returns>存在する場合True、それ以外はFalse</returns>
-''' <remarks>
-''' エラー処理要件：
-''' - パスの妥当性検証
-''' - アクセス権限の確認
-''' - ネットワークパスの考慮
-''' </remarks>
-Public Function FileExists(ByVal filePath As String) As Boolean
+Public Function FileExists(ByVal filePath As String, _
+                         Optional ByVal options As FileCheckOptions) As Boolean
 End Function
 
 ''' <summary>
 ''' フォルダの存在を確認します
 ''' </summary>
 ''' <param name="folderPath">フォルダパス</param>
+''' <param name="options">確認オプション（オプション）</param>
 ''' <returns>存在する場合True、それ以外はFalse</returns>
-''' <remarks>
-''' エラー処理要件：
-''' - パスの妥当性検証
-''' - アクセス権限の確認
-''' - シンボリックリンクの考慮
-''' </remarks>
-Public Function FolderExists(ByVal folderPath As String) As Boolean
+Public Function FolderExists(ByVal folderPath As String, _
+                           Optional ByVal options As FolderCheckOptions) As Boolean
 End Function
 
 ''' <summary>
 ''' フォルダを作成します
 ''' </summary>
 ''' <param name="folderPath">フォルダパス</param>
+''' <param name="options">作成オプション（オプション）</param>
 ''' <returns>成功時True、失敗時False</returns>
-''' <remarks>
-''' エラー処理要件：
-''' - 親フォルダの存在確認
-''' - 作成権限の確認
-''' - 既存フォルダの処理
-''' </remarks>
-Public Function CreateFolder(ByVal folderPath As String) As Boolean
+Public Function CreateFolder(ByVal folderPath As String, _
+                           Optional ByVal options As FolderCreateOptions) As Boolean
 End Function
 
 ''' <summary>
 ''' ファイルを削除します
 ''' </summary>
 ''' <param name="filePath">ファイルパス</param>
+''' <param name="options">削除オプション（オプション）</param>
 ''' <returns>成功時True、失敗時False</returns>
-''' <remarks>
-''' エラー処理要件：
-''' - 削除権限の確認
-''' - ファイルロックの確認
-''' - 読み取り専用属性の処理
-''' </remarks>
-Public Function DeleteFile(ByVal filePath As String) As Boolean
+Public Function DeleteFile(ByVal filePath As String, _
+                         Optional ByVal options As FileDeleteOptions) As Boolean
 End Function
 
 ''' <summary>
 ''' フォルダを削除します
 ''' </summary>
 ''' <param name="folderPath">フォルダパス</param>
+''' <param name="options">削除オプション（オプション）</param>
 ''' <returns>成功時True、失敗時False</returns>
-''' <remarks>
-''' エラー処理要件：
-''' - フォルダの空確認
-''' - 削除権限の確認
-''' - サブフォルダの処理
-''' </remarks>
-Public Function DeleteFolder(ByVal folderPath As String) As Boolean
+Public Function DeleteFolder(ByVal folderPath As String, _
+                           Optional ByVal options As FolderDeleteOptions) As Boolean
 End Function
 
-' パス操作
+' メタデータ操作
 ''' <summary>
-''' 相対パスから絶対パスを取得します
+''' ファイルのメタデータを取得します
 ''' </summary>
-''' <param name="relativePath">相対パス</param>
-''' <param name="basePath">基準パス（オプション）</param>
-''' <returns>絶対パス、エラー時は空文字列</returns>
-''' <remarks>
-''' エラー処理要件：
-''' - パスの妥当性検証
-''' - 循環参照の検出
-''' - パス長の制限チェック
-''' </remarks>
-Public Function GetAbsolutePath(ByVal relativePath As String, _
-                              Optional ByVal basePath As String) As String
+''' <param name="filePath">ファイルパス</param>
+''' <returns>メタデータ情報</returns>
+Public Function GetMetadata(ByVal filePath As String) As FileMetadata
 End Function
+
+''' <summary>
+''' ファイルのメタデータを設定します
+''' </summary>
+''' <param name="filePath">ファイルパス</param>
+''' <param name="metadata">メタデータ情報</param>
+''' <returns>成功時True、失敗時False</returns>
+Public Function SetMetadata(ByVal filePath As String, _
+                          ByVal metadata As FileMetadata) As Boolean
+End Function
+
+' セキュリティ操作
+''' <summary>
+''' ファイルのアクセス権を設定します
+''' </summary>
+''' <param name="filePath">ファイルパス</param>
+''' <param name="permissions">アクセス権設定</param>
+''' <returns>成功時True、失敗時False</returns>
+Public Function SetPermissions(ByVal filePath As String, _
+                             ByVal permissions As FilePermissions) As Boolean
+End Function
+
+''' <summary>
+''' ファイルを暗号化します
+''' </summary>
+''' <param name="filePath">ファイルパス</param>
+''' <param name="options">暗号化オプション（オプション）</param>
+''' <returns>成功時True、失敗時False</returns>
+Public Function EncryptFile(ByVal filePath As String, _
+                          Optional ByVal options As EncryptionOptions) As Boolean
+End Function
+
+' パフォーマンス監視
+''' <summary>
+''' パフォーマンス指標を取得します
+''' </summary>
+''' <returns>パフォーマンス情報のコレクション</returns>
+Public Function GetPerformanceMetrics() As Collection
+End Function
+
+''' <summary>
+''' ファイル操作の状態を検証します
+''' </summary>
+''' <returns>有効な場合True</returns>
+Public Function Validate() As Boolean
+End Function
+
+''' <summary>
+''' リソースを解放します
+''' </summary>
+Public Sub Cleanup()
+End Sub

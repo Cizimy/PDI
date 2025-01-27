@@ -9,95 +9,150 @@ Attribute VB_PredefinedId = False
 Attribute VB_Exposed = False
 Option Explicit
 
+'@Description("暗号化操作と鍵管理を提供し、セキュアな暗号化機能を実装するインターフェース")
+
+' 定数定義
+Private Const MAX_KEY_SIZE As Long = 4096          ' 最大鍵サイズ（ビット）
+Private Const MIN_KEY_SIZE As Long = 128           ' 最小鍵サイズ（ビット）
+Private Const DEFAULT_ITERATION_COUNT As Long = 10000 ' デフォルトの反復回数
+Private Const MAX_SALT_SIZE As Long = 32           ' 最大ソルトサイズ（バイト）
+Private Const KEY_ROTATION_INTERVAL As Long = 7776000000 ' 鍵のローテーション間隔（90日）
+Private Const CACHE_DURATION_MS As Long = 300000   ' キャッシュの有効期間（5分）
+
+' イベント定義
+Public Event KeyGenerated(ByVal keyId As String, ByVal keySize As Long)
+Public Event KeyRotated(ByVal oldKeyId As String, ByVal newKeyId As String)
+Public Event EncryptionCompleted(ByVal dataSize As Long, ByVal executionTime As Double)
+Public Event DecryptionCompleted(ByVal dataSize As Long, ByVal executionTime As Double)
+Public Event SecurityAlert(ByVal alertType As String, ByVal severity As Long)
+Public Event AlgorithmChanged(ByVal oldAlgorithm As String, ByVal newAlgorithm As String)
+Public Event PerformanceAlert(ByVal metricType As String, ByVal currentValue As Double, ByVal threshold As Double)
+Public Event AuditLog(ByVal operation As String, ByVal details As String)
+
 ''' <summary>
-''' 暗号化操作のインターフェース
+''' 暗号化コンテキストを初期化します
 ''' </summary>
+''' <param name="options">初期化オプション（オプション）</param>
+''' <returns>成功時True、失敗時False</returns>
 ''' <remarks>
-''' このインターフェースは、Windows CryptoAPIを使用した暗号化操作を提供します。
-''' ハッシュ生成、鍵導出、データの暗号化/復号化などの機能を含みます。
+''' エラー処理要件：
+''' - プロバイダーの検証
+''' - アルゴリズムの互換性確認
+''' - リソースの確保
+''' - セキュリティ要件の検証
 ''' </remarks>
-
-''' <summary>
-''' 暗号化コンテキストを取得します
-''' </summary>
-''' <param name="container">コンテナ名</param>
-''' <param name="provider">プロバイダー名</param>
-''' <param name="provType">プロバイダータイプ</param>
-''' <param name="flags">フラグ</param>
-''' <returns>成功時True、失敗時False</returns>
-Public Function CryptAcquireContext(ByVal container As String, _
-                                  ByVal provider As String, _
-                                  ByVal provType As Long, _
-                                  ByVal flags As Long) As Boolean
-End Function
-
-''' <summary>
-''' ハッシュオブジェクトを作成します
-''' </summary>
-''' <param name="algorithm">ハッシュアルゴリズム</param>
-''' <returns>成功時True、失敗時False</returns>
-Public Function CryptCreateHash(ByVal algorithm As Long) As Boolean
-End Function
-
-''' <summary>
-''' データのハッシュ値を計算します
-''' </summary>
-''' <param name="data">ハッシュ化するデータ</param>
-''' <param name="dataLen">データ長</param>
-''' <returns>成功時True、失敗時False</returns>
-Public Function CryptHashData(ByRef data As Any, _
-                            ByVal dataLen As Long) As Boolean
-End Function
-
-''' <summary>
-''' 鍵を導出します
-''' </summary>
-''' <param name="algorithm">暗号化アルゴリズム</param>
-''' <param name="flags">フラグ</param>
-''' <returns>成功時True、失敗時False</returns>
-Public Function CryptDeriveKey(ByVal algorithm As Long, _
-                             ByVal flags As Long) As Boolean
+Public Function Initialize(Optional ByVal options As CryptoOptions) As Boolean
 End Function
 
 ''' <summary>
 ''' データを暗号化します
 ''' </summary>
 ''' <param name="data">暗号化するデータ</param>
-''' <param name="dataLen">データ長</param>
-''' <param name="bufLen">バッファ長</param>
-''' <returns>成功時True、失敗時False</returns>
-Public Function CryptEncrypt(ByRef data As Any, _
-                           ByRef dataLen As Long, _
-                           ByVal bufLen As Long) As Boolean
+''' <param name="options">暗号化オプション（オプション）</param>
+''' <returns>暗号化されたデータ</returns>
+''' <remarks>
+''' エラー処理要件：
+''' - データの検証
+''' - 鍵の有効性確認
+''' - メモリ使用量の監視
+''' - パフォーマンスの最適化
+''' </remarks>
+Public Function Encrypt(ByRef data As Variant, Optional ByVal options As EncryptionOptions) As Variant
 End Function
 
 ''' <summary>
 ''' データを復号化します
 ''' </summary>
 ''' <param name="data">復号化するデータ</param>
-''' <param name="dataLen">データ長</param>
-''' <returns>成功時True、失敗時False</returns>
-Public Function CryptDecrypt(ByRef data As Any, _
-                           ByRef dataLen As Long) As Boolean
+''' <param name="options">復号化オプション（オプション）</param>
+''' <returns>復号化されたデータ</returns>
+Public Function Decrypt(ByRef data As Variant, Optional ByVal options As DecryptionOptions) As Variant
 End Function
 
 ''' <summary>
-''' 鍵を破棄します
+''' ハッシュ値を計算します
 ''' </summary>
-''' <returns>成功時True、失敗時False</returns>
-Public Function CryptDestroyKey() As Boolean
+''' <param name="data">ハッシュ化するデータ</param>
+''' <param name="algorithm">ハッシュアルゴリズム（オプション）</param>
+''' <returns>ハッシュ値</returns>
+Public Function ComputeHash(ByRef data As Variant, Optional ByVal algorithm As String) As String
 End Function
 
 ''' <summary>
-''' ハッシュオブジェクトを破棄します
+''' 鍵を生成します
 ''' </summary>
-''' <returns>成功時True、失敗時False</returns>
-Public Function CryptDestroyHash() As Boolean
+''' <param name="keySize">鍵サイズ（ビット）</param>
+''' <param name="options">生成オプション（オプション）</param>
+''' <returns>鍵ID</returns>
+Public Function GenerateKey(ByVal keySize As Long, Optional ByVal options As KeyGenerationOptions) As String
 End Function
 
 ''' <summary>
-''' 暗号化コンテキストを解放します
+''' 鍵を導出します
 ''' </summary>
-''' <returns>成功時True、失敗時False</returns>
-Public Function CryptReleaseContext() As Boolean
+''' <param name="password">パスワード</param>
+''' <param name="salt">ソルト</param>
+''' <param name="options">導出オプション（オプション）</param>
+''' <returns>導出された鍵</returns>
+Public Function DeriveKey(ByVal password As String, ByVal salt As Variant, Optional ByVal options As KeyDerivationOptions) As Variant
+End Function
+
+''' <summary>
+''' 鍵をローテーションします
+''' </summary>
+''' <param name="keyId">現在の鍵ID</param>
+''' <param name="options">ローテーションオプション（オプション）</param>
+''' <returns>新しい鍵ID</returns>
+Public Function RotateKey(ByVal keyId As String, Optional ByVal options As KeyRotationOptions) As String
+End Function
+
+''' <summary>
+''' 鍵を検証します
+''' </summary>
+''' <param name="keyId">鍵ID</param>
+''' <returns>有効な場合True</returns>
+Public Function ValidateKey(ByVal keyId As String) As Boolean
+End Function
+
+''' <summary>
+''' セキュリティ監査を実行します
+''' </summary>
+''' <param name="options">監査オプション（オプション）</param>
+''' <returns>監査結果</returns>
+Public Function PerformSecurityAudit(Optional ByVal options As AuditOptions) As SecurityAuditResult
+End Function
+
+''' <summary>
+''' パフォーマンス指標を取得します
+''' </summary>
+''' <returns>パフォーマンス情報のコレクション</returns>
+Public Function GetPerformanceMetrics() As Collection
+End Function
+
+''' <summary>
+''' 暗号化アルゴリズムを設定します
+''' </summary>
+''' <param name="algorithm">アルゴリズム名</param>
+''' <param name="options">アルゴリズムオプション（オプション）</param>
+Public Sub SetAlgorithm(ByVal algorithm As String, Optional ByVal options As AlgorithmOptions)
+End Sub
+
+''' <summary>
+''' 現在の暗号化アルゴリズムを取得します
+''' </summary>
+''' <returns>アルゴリズム名</returns>
+Public Function GetCurrentAlgorithm() As String
+End Function
+
+''' <summary>
+''' リソースを解放します
+''' </summary>
+Public Sub Cleanup()
+End Sub
+
+''' <summary>
+''' 暗号化操作の状態を検証します
+''' </summary>
+''' <returns>有効な場合True</returns>
+Public Function Validate() As Boolean
 End Function

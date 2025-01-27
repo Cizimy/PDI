@@ -12,21 +12,27 @@ Option Explicit
 '@Description("エラー処理とリカバリを提供するインターフェース")
 
 ' 定数定義
-Private Const MAX_RETRY_COUNT As Long = 3           ' 最大リトライ回数
-Private Const RETRY_DELAY_MS As Long = 1000         ' リトライ間隔（1秒）
-Private Const MAX_ERROR_QUEUE As Long = 1000        ' エラーキューの最大サイズ
-Private Const DEFAULT_TIMEOUT_MS As Long = 30000    ' デフォルトタイムアウト（30秒）
-Private Const MAX_RECOVERY_ATTEMPTS As Long = 5     ' 最大回復試行回数
-Private Const CLEANUP_INTERVAL_MS As Long = 300000  ' クリーンアップ間隔（5分）
+Private Const DEFAULT_MAX_RETRY_COUNT As Long = 3    ' デフォルトの最大リトライ回数
+Private Const DEFAULT_RETRY_INTERVAL As Long = 1000  ' デフォルトのリトライ間隔（1秒）
+Private Const MIN_RETRY_INTERVAL As Long = 100       ' 最小リトライ間隔（100ミリ秒）
+Private Const MAX_RETRY_INTERVAL As Long = 30000     ' 最大リトライ間隔（30秒）
+Private Const DEFAULT_TIMEOUT_MS As Long = 30000     ' デフォルトタイムアウト（30秒）
+Private Const MAX_RECOVERY_ATTEMPTS As Long = 5      ' 最大回復試行回数
+Private Const CLEANUP_INTERVAL_MS As Long = 300000   ' クリーンアップ間隔（5分）
+
+' リトライ設定用の列挙型
+Public Enum RetryBehavior
+    rbLinear = 0        ' 線形バックオフ
+    rbExponential = 1   ' 指数バックオフ
+    rbFibonacci = 2     ' フィボナッチバックオフ
+    rbCustom = 3        ' カスタムバックオフ
+End Enum
 
 ' イベント定義
 Public Event ErrorHandlingStarted(ByVal errorInfo As ErrorInfo, ByVal priority As ErrorPriority)
 Public Event ErrorHandlingCompleted(ByVal errorInfo As ErrorInfo, ByVal success As Boolean)
-Public Event RecoveryAttempted(ByVal errorInfo As ErrorInfo, ByVal attempt As Long, ByVal success As Boolean)
-Public Event RetryAttempted(ByVal errorInfo As ErrorInfo, ByVal attempt As Long)
+Public Event RetryAttempted(ByVal errorInfo As ErrorInfo, ByVal attempt As Long, ByVal success As Boolean)
 Public Event ResourceReleased(ByVal resourceType As String, ByVal success As Boolean)
-Public Event ErrorQueued(ByVal errorInfo As ErrorInfo, ByVal queuePosition As Long)
-Public Event PerformanceAlert(ByVal metricType As String, ByVal currentValue As Double, ByVal threshold As Double)
 
 ''' <summary>
 ''' エラーを処理します
@@ -48,21 +54,16 @@ Public Function HandleError(ByRef errorInfo As ErrorInfo, _
 End Function
 
 ''' <summary>
-''' エラーからの回復を試みます
-''' </summary>
-''' <param name="errorInfo">エラー情報</param>
-''' <param name="options">回復オプション（オプション）</param>
-''' <returns>回復成功時True</returns>
-Public Function AttemptRecovery(ByRef errorInfo As ErrorInfo, _
-                              Optional ByVal options As RecoveryOptions) As Boolean
-End Function
-
-''' <summary>
 ''' リトライ処理を実行します
 ''' </summary>
 ''' <param name="operation">実行する操作</param>
 ''' <param name="options">リトライオプション（オプション）</param>
 ''' <returns>実行結果</returns>
+''' <remarks>
+''' - リトライ回数と間隔は構成済みの設定を使用
+''' - 指数バックオフを適用
+''' - リトライ結果は統計情報に自動的に記録
+''' </remarks>
 Public Function RetryOperation(ByVal operation As IRetryableOperation, _
                              Optional ByVal options As RetryOptions) As OperationResult
 End Function
@@ -94,32 +95,63 @@ Public Function ReleaseResource(ByVal resource As Object, _
 End Function
 
 ''' <summary>
-''' エラーをキューに追加します
+''' リトライ設定を構成します
 ''' </summary>
-''' <param name="errorInfo">エラー情報</param>
-''' <param name="options">キューオプション（オプション）</param>
-Public Sub QueueError(ByRef errorInfo As ErrorInfo, Optional ByVal options As QueueOptions)
+''' <param name="maxRetryCount">最大リトライ回数</param>
+''' <param name="retryInterval">リトライ間隔（ミリ秒）</param>
+''' <param name="behavior">リトライの挙動</param>
+''' <param name="options">リトライオプション（オプション）</param>
+Public Sub ConfigureRetry(ByVal maxRetryCount As Long, ByVal retryInterval As Long, _
+                        Optional ByVal behavior As RetryBehavior = rbLinear, _
+                        Optional ByVal options As RetryOptions)
 End Sub
 
 ''' <summary>
-''' キューのエラーを処理します
+''' 現在のリトライ設定を取得します
 ''' </summary>
-''' <param name="options">処理オプション（オプション）</param>
-Public Sub ProcessErrorQueue(Optional ByVal options As ProcessOptions)
+''' <returns>リトライ設定のディクショナリ</returns>
+Public Function GetRetryConfiguration() As Dictionary
+End Function
+
+''' <summary>
+''' リトライ間隔を計算します
+''' </summary>
+''' <param name="attempt">現在の試行回数</param>
+''' <returns>次のリトライまでの待機時間（ミリ秒）</returns>
+Public Function CalculateRetryInterval(ByVal attempt As Long) As Long
+End Function
+
+''' <summary>
+''' カスタムバックオフ戦略を設定します
+''' </summary>
+''' <param name="strategy">バックオフ戦略を計算する関数</param>
+Public Sub SetCustomBackoffStrategy(ByVal strategy As IBackoffStrategy)
 End Sub
 
 ''' <summary>
 ''' エラー処理の統計を取得します
 ''' </summary>
+''' <param name="errorManager">統計情報を提供するErrorManager</param>
 ''' <returns>統計情報</returns>
-Public Function GetHandlingStatistics() As HandlingStatistics
+''' <remarks>
+''' - 統計情報はclsErrorManagerのErrorStatisticsオブジェクトから取得
+''' - ハンドラー固有の統計のみを返す
+''' - グローバルな統計はErrorManagerから直接取得すること
+''' </remarks>
+Public Function GetHandlingStatistics(ByVal errorManager As clsErrorManager) As HandlingStatistics
 End Function
 
 ''' <summary>
 ''' パフォーマンス指標を取得します
 ''' </summary>
+''' <param name="errorManager">メトリクスを提供するErrorManager</param>
 ''' <returns>パフォーマンス情報のコレクション</returns>
-Public Function GetPerformanceMetrics() As Collection
+''' <remarks>
+''' - メトリクスはclsErrorManagerのErrorStatisticsオブジェクトから取得
+''' - ハンドラー固有のメトリクスのみを返す
+''' - システム全体のメトリクスはErrorManagerから直接取得すること
+''' </remarks>
+Public Function GetPerformanceMetrics(ByVal errorManager As clsErrorManager) As Collection
 End Function
 
 ''' <summary>

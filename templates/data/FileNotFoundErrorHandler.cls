@@ -19,8 +19,8 @@ Private Const MODULE_NAME As String = "FileNotFoundErrorHandler"
 ' ======================
 Private mLock As ILock
 Private mLogger As ILogger
-Private mEmergencyLogger As IEmergencyLogger
 Private mUserNotifier As IUserNotifier
+Private mErrorManager As clsErrorManager
 Private mFileOperations As IFileOperations
 
 Implements IErrorHandler
@@ -31,7 +31,7 @@ Implements IErrorHandler
 Public Function Create( _
     ByVal lock As ILock, _
     ByVal logger As ILogger, _
-    ByVal emergencyLogger As IEmergencyLogger, _
+    ByVal errorManager As clsErrorManager, _
     ByVal userNotifier As IUserNotifier, _
     ByVal fileOperations As IFileOperations _
 ) As FileNotFoundErrorHandler
@@ -50,10 +50,10 @@ Public Function Create( _
         End If
         Set .Logger = logger
         
-        If emergencyLogger Is Nothing Then
-            Err.Raise 5, "FileNotFoundErrorHandler.Create", "IEmergencyLogger is required"
+        If errorManager Is Nothing Then
+            Err.Raise 5, "FileNotFoundErrorHandler.Create", "clsErrorManager is required"
         End If
-        Set .EmergencyLogger = emergencyLogger
+        Set .ErrorManager = errorManager
         
         If userNotifier Is Nothing Then
             Err.Raise 5, "FileNotFoundErrorHandler.Create", "IUserNotifier is required"
@@ -78,8 +78,8 @@ Public Property Set Logger(ByVal value As ILogger)
     Set mLogger = value
 End Property
 
-Public Property Set EmergencyLogger(ByVal value As IEmergencyLogger)
-    Set mEmergencyLogger = value
+Public Property Set ErrorManager(ByVal value As clsErrorManager)
+    Set mErrorManager = value
 End Property
 
 Public Property Set UserNotifier(ByVal value As IUserNotifier)
@@ -213,7 +213,8 @@ Private Sub LogError(ByRef errorDetail As ErrorInfo)
     
     ' 重要なエラーは緊急ログにも記録
     If errorDetail.Severity >= ESError Then
-        mEmergencyLogger.LogEmergency MODULE_NAME, errorDetail.ToString
+        ' エラーマネージャーを使用して緊急ログを記録
+        mErrorManager.HandleError errorDetail, ehoEmergencyLog
     End If
     
     Exit Sub
@@ -232,7 +233,7 @@ ErrorHandler:
         .Severity = ESError
         Set .InnerError = errorDetail.Clone
     End With
-    modError.HandleError errDetail
+    mErrorManager.HandleError errDetail
 End Sub
 
 Private Sub NotifyUser(ByRef errorDetail As ErrorInfo, ByVal style As VbMsgBoxStyle)

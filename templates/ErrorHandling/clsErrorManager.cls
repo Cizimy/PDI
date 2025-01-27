@@ -17,15 +17,27 @@ Private mErrorHistory As Collection
 Private mErrorStatistics As ErrorStatistics
 Private mLastError As ErrorInfo
 Private mIsInitialized As Boolean
+Private mMessageResource As ErrorMessageResource
+Private mRecoveryStrategies As Collection
 
 ' 定数
 Private Const MAX_RETRY_ATTEMPTS As Long = 3
 Private Const RETRY_DELAY_MS As Long = 1000
+Private Const MAX_EMERGENCY_LOG_SIZE As Long = 1000
+Private Const EMERGENCY_LOG_FLUSH_INTERVAL As Long = 1000
+Private Const MAX_RECOVERY_CHAIN_LENGTH As Long = 5
+
+' イベント定義
+Public Event EmergencyLogWritten(ByVal message As String, ByVal severity As EmergencyLevel)
+Public Event RecoveryProgressChanged(ByVal errorInfo As ErrorInfo, ByVal progressPercentage As Long)
+Public Event RecoveryChainExecuted(ByVal chainId As String, ByVal successCount As Long, ByVal failureCount As Long)
 
 Private Sub Class_Initialize()
     Set mErrorHandlers = CreateObject("Scripting.Dictionary")
     Set mErrorHistory = New Collection
     Set mErrorStatistics = New ErrorStatistics
+    Set mMessageResource = New ErrorMessageResource
+    Set mRecoveryStrategies = New Collection
     mIsInitialized = True
 End Sub
 
@@ -80,6 +92,17 @@ Private Function IError_HandleError(ByRef errorInfo As ErrorInfo, Optional ByVal
         If AttemptRetry(errorInfo) Then
             IError_HandleError = True
             Exit Function
+        End If
+        
+        ' リトライ失敗時は回復チェーンを試行
+        Dim recoveryChain As Collection
+        Set recoveryChain = CreateRecoveryChain(errorInfo)
+        
+        If recoveryChain.Count > 0 Then
+            If ExecuteRecoveryChain(recoveryChain, errorInfo) Then
+                IError_HandleError = True
+                Exit Function
+            End If
         End If
     End If
     
@@ -353,26 +376,192 @@ Private Sub LogError(ByVal errorInfo As ErrorInfo)
 End Sub
 
 Private Sub LogEmergencyError(ByVal errorInfo As ErrorInfo)
-    ' エマージェンシーログの実装
-    Debug.Print "Emergency error logged: " & errorInfo.Message
+    On Error GoTo ErrorHandler
+    
+    ' 多言語対応メッセージの生成
+    Dim message As String
+    message = mMessageResource.GetMessage(errorInfo.ErrorCode)
+    
+    ' エラーメッセージのフォーマット
+    Dim formattedMessage As String
+    formattedMessage = FormatErrorMessage(message, errorInfo)
+    
+    ' イベントログへの出力を試みる
+    WriteToEventLog formattedMessage
+    
+    ' ファイルへの出力を試みる
+    WriteToEmergencyFile formattedMessage
+    
+    ' イベントの発行
+    RaiseEvent EmergencyLogWritten(message, errorInfo.Severity)
+    
+    Exit Sub
+
+ErrorHandler:
+    Debug.Print "Error in LogEmergencyError: " & Err.Description
+    Resume Next
 End Sub
 
-Private Function AttemptRetry(ByVal errorInfo As ErrorInfo) As Boolean
-    Dim attempt As Long
+Private Function FormatErrorMessage(ByVal message As String, ByRef errorInfo As ErrorInfo) As String
+    Dim builder As String
+    builder = Now & " [EMERGENCY] " & message
     
-    For attempt = 1 To MAX_RETRY_ATTEMPTS
-        Sleep RETRY_DELAY_MS
+    With errorInfo
+        builder = builder & vbCrLf & _
+                 "コード: " & .ErrorCode & vbCrLf & _
+                 "重大度: " & .Severity & vbCrLf & _
+                 "説明: " & .Description & vbCrLf & _
+                 "ソース: " & .SourceModule & "." & .SourceProcedure & vbCrLf & _
+                 "発生時刻: " & .OccurredAt & vbCrLf & _
+                 "スタックトレース: " & vbCrLf & .StackTrace
+    End With
+    
+    FormatErrorMessage = builder
+End Function
+
+Private Sub WriteToEventLog(ByVal message As String)
+    On Error Resume Next
+    modWindowsAPI.WriteToEventLog "PDI Error", message, EVENTLOG_ERROR_TYPE
+End Sub
+
+Private Sub WriteToEmergencyFile(ByVal message As String)
+    On Error Resume Next
+    
+    Dim fso As Object
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    
+    Dim logPath As String
+    logPath = GetEmergencyLogPath()
+    
+    Dim logFile As Object
+    Set logFile = fso.OpenTextFile(logPath, 8, True) ' 8: ForAppending, Create if doesn't exist
+    logFile.WriteLine message
+    logFile.Close
+    
+    Set logFile = Nothing
+    Set fso = Nothing
+End Sub
+
+Private Function GetEmergencyLogPath() As String
+    ' エマージェンシーログのパスを取得
+    GetEmergencyLogPath = App.Path & "\emergency.log"
+End Function
+
+Private Function AttemptRetry(ByVal errorInfo As ErrorInfo) As Boolean
+    On Error GoTo ErrorHandler
+    
+    Dim attempt As Long
+    Dim handler As IErrorHandler
+    Dim backoffInterval As Long
+    Dim retryCount As Long
+    Dim retryInterval As Long
+    Dim retryOptions As RetryOptions
+    
+    ' エラーコードに対応するハンドラーを取得
+    If Not mErrorHandlers.Exists(errorInfo.ErrorCode) Then
+        Exit Function
+    End If
+    
+    ' ハンドラーからリトライ設定を取得
+    Set handler = mErrorHandlers(errorInfo.ErrorCode)(1)
+    retryCount = handler.MaxRetryCount
+    retryInterval = handler.RetryInterval
+    
+    ' リトライオプションの設定
+    Set retryOptions = New RetryOptions
+    retryOptions.UseExponentialBackoff = True
+    retryOptions.MaxAttempts = retryCount
+    retryOptions.BaseInterval = retryInterval
+    
+    For attempt = 1 To retryCount
+        ' 指数バックオフの計算
+        backoffInterval = CalculateBackoffInterval(attempt, retryInterval)
+        Sleep backoffInterval
         
-        ' リトライ処理の実装
-        ' ここでは単純な例として、3回目で成功すると仮定
-        If attempt = 3 Then
-            AttemptRetry = True
-            Exit Function
+        ' 進捗の通知
+        RaiseEvent RecoveryProgressChanged(errorInfo, (attempt / retryCount) * 100)
+        
+        ' 各ハンドラーでリトライを試行
+        For Each handler In mErrorHandlers(errorInfo.ErrorCode)
+            ' リトライ操作の作成
+            Dim operation As IRetryableOperation
+            Set operation = CreateRetryOperation(errorInfo, handler)
+            
+            ' リトライの実行
+            Dim result As OperationResult
+            Set result = handler.RetryOperation(operation, retryOptions)
+            
+            If result.Success Then
+                ' 統計情報の更新
+                mErrorStatistics.IncrementRetrySuccess
+                AttemptRetry = True
+                Exit Function
+            End If
+        Next handler
+        
+        ' 統計情報の更新
+        errorInfo.RetryCount = attempt
+        errorInfo.LastRetryTimestamp = Now
+        
+        ' エラーキューの処理（必要な場合のみ）
+        If ShouldProcessQueue(errorInfo) Then
+            ProcessErrorQueue errorInfo
         End If
     Next attempt
     
     AttemptRetry = False
+    Exit Function
+    
+ErrorHandler:
+    Debug.Print "Error in AttemptRetry: " & Err.Description
+    AttemptRetry = False
 End Function
+
+Private Function CalculateBackoffInterval(ByVal attempt As Long, ByVal baseInterval As Long) As Long
+    ' 指数バックオフの計算
+    Dim interval As Long
+    interval = baseInterval * (2 ^ (attempt - 1))
+    
+    ' 最大値を制限
+    If interval > MAX_BACKOFF_INTERVAL Then
+        interval = MAX_BACKOFF_INTERVAL
+    End If
+    
+    CalculateBackoffInterval = interval
+End Function
+
+Private Function CreateRetryOperation(ByVal errorInfo As ErrorInfo, ByVal handler As IErrorHandler) As IRetryableOperation
+    ' リトライ可能な操作を作成
+    Dim operation As New RetryableOperation
+    operation.Initialize errorInfo, handler
+    Set CreateRetryOperation = operation
+End Function
+
+Private Function ShouldProcessQueue(ByVal errorInfo As ErrorInfo) As Boolean
+    ' キュー処理の必要性を判断
+    ShouldProcessQueue = (errorInfo.RetryCount Mod 2 = 0) ' 例：2回に1回処理
+End Function
+
+Private Sub ProcessErrorQueue(ByRef errorInfo As ErrorInfo)
+    On Error GoTo ErrorHandler
+    
+    ' エラーキューの処理をIErrorStrategyに委譲
+    Dim strategy As IErrorStrategy
+    For Each strategy In mRecoveryStrategies
+        If strategy.SupportsErrorCode(errorInfo.ErrorCode) Then
+            ' RecoverFromErrorメソッドを使用してエラー回復を試みる
+            If strategy.RecoverFromError(errorInfo) Then
+                ' 回復成功時の処理
+                mErrorStatistics.IncrementRecoverySuccess
+                Exit Sub
+            End If
+        End If
+    Next strategy
+    Exit Sub
+    
+ErrorHandler:
+    Debug.Print "Error in ProcessErrorQueue: " & Err.Description
+End Sub
 
 Private Sub NotifyUser(ByVal errorInfo As ErrorInfo)
     ' ユーザー通知の実装
@@ -403,6 +592,219 @@ End Sub
 Private Sub GenerateRecommendations(ByRef result As ErrorAnalysisResult)
     ' 推奨対策の生成
 End Sub
+
+'#Region "Recovery Chain Management"
+
+Private Function CreateRecoveryChain(ByVal errorInfo As ErrorInfo) As RecoveryChain
+    On Error GoTo ErrorHandler
+    
+    Dim chain As New RecoveryChain
+    Dim strategy As IErrorStrategy
+    Dim metadata As New Dictionary
+    
+    ' チェーンのメタデータを設定
+    metadata.Add "ErrorCode", errorInfo.ErrorCode
+    metadata.Add "Severity", errorInfo.Severity
+    metadata.Add "CreatedAt", Now
+    metadata.Add "MaxLength", MAX_RECOVERY_CHAIN_LENGTH
+    
+    chain.Initialize metadata
+    
+    ' エラーコードに基づいて適切な回復戦略を選択
+    For Each strategy In mRecoveryStrategies
+        If strategy.SupportsErrorCode(errorInfo.ErrorCode) Then
+            ' 戦略の詳細情報を追加
+            Dim strategyInfo As New Dictionary
+            strategyInfo.Add "Priority", strategy.Priority
+            strategyInfo.Add "Description", strategy.GetDescription()
+            strategyInfo.Add "SupportsAsync", strategy.SupportsAsyncRecovery
+            strategyInfo.Add "SupportsTransactions", strategy.SupportsTransactions
+            
+            ' 戦略をチェーンに追加
+            chain.AddStrategy strategy, strategyInfo
+        End If
+        
+        ' チェーンの長さを制限
+        If chain.StrategyCount >= MAX_RECOVERY_CHAIN_LENGTH Then
+            Exit For
+        End If
+    Next strategy
+    
+    ' 優先度でソート
+    chain.SortByPriority
+    
+    ' チェーンの検証
+    If Not chain.Validate Then
+        Err.Raise vbObjectError + 1, "CreateRecoveryChain", "Invalid recovery chain"
+    End If
+    
+    Set CreateRecoveryChain = chain
+    Exit Function
+    
+ErrorHandler:
+    Debug.Print "Error in CreateRecoveryChain: " & Err.Description
+    Set CreateRecoveryChain = New RecoveryChain
+End Function
+
+Private Sub SortRecoveryChain(ByRef chain As Collection)
+    ' 優先度に基づいてチェーンをソート
+    Dim i As Long, j As Long
+    Dim tempStrategy As IErrorStrategy
+    
+    For i = 1 To chain.Count - 1
+        For j = i + 1 To chain.Count
+            If chain(i).Priority < chain(j).Priority Then
+                Set tempStrategy = chain(i)
+                Set chain(i) = chain(j)
+                Set chain(j) = tempStrategy
+            End If
+        Next j
+    Next i
+End Sub
+
+Private Function ExecuteRecoveryChain(ByVal chain As RecoveryChain, ByRef errorInfo As ErrorInfo) As Boolean
+    On Error GoTo ErrorHandler
+    
+    Dim strategy As IErrorStrategy
+    Dim strategyInfo As Dictionary
+    Dim executionContext As New Dictionary
+    Dim progress As Long
+    
+    ' 実行コンテキストの初期化
+    executionContext.Add "StartTime", Now
+    executionContext.Add "ChainId", chain.ChainId
+    executionContext.Add "ErrorInfo", errorInfo
+    
+    ' チェーンの実行前検証
+    If Not chain.Validate Then
+        Err.Raise vbObjectError + 1, "ExecuteRecoveryChain", "Invalid recovery chain state"
+    End If
+    
+    ' 各戦略を実行
+    For Each strategy In chain.Strategies
+        ' 戦略の情報を取得
+        Set strategyInfo = chain.GetStrategyInfo(strategy)
+        
+        ' 進捗状況の更新と通知
+        progress = chain.CalculateProgress()
+        RaiseEvent RecoveryProgressChanged(errorInfo, progress)
+        
+        ' 実行コンテキストの更新
+        executionContext("CurrentStrategy") = strategyInfo("Description")
+        executionContext("CurrentPriority") = strategyInfo("Priority")
+        
+        ' トランザクションのサポートを確認
+        If strategyInfo("SupportsTransactions") Then
+            ' トランザクション内で実行
+            If ExecuteStrategyWithTransaction(strategy, errorInfo, executionContext) Then
+                chain.IncrementSuccessCount
+                ExecuteRecoveryChain = True
+                Exit For
+            End If
+        Else
+            ' 通常実行
+            If strategy.RecoverFromError(errorInfo) Then
+                chain.IncrementSuccessCount
+                ExecuteRecoveryChain = True
+                Exit For
+            End If
+        End If
+        
+        ' 失敗をカウント
+        chain.IncrementFailureCount
+        
+        ' フォールバック戦略の確認と実行
+        If strategy.FallbackStrategy IsNot Nothing Then
+            executionContext("UsingFallback") = True
+            If ExecuteStrategyWithFallback(strategy.FallbackStrategy, errorInfo, executionContext) Then
+                chain.IncrementSuccessCount
+                ExecuteRecoveryChain = True
+                Exit For
+            End If
+        End If
+    Next strategy
+    
+    ' 実行結果の記録
+    executionContext.Add "EndTime", Now
+    executionContext.Add "Duration", DateDiff("s", executionContext("StartTime"), Now)
+    chain.RecordExecution executionContext
+    
+    ' チェーン実行結果の通知
+    RaiseEvent RecoveryChainExecuted(chain.ChainId, chain.SuccessCount, chain.FailureCount)
+    Exit Function
+    
+ErrorHandler:
+    Debug.Print "Error in ExecuteRecoveryChain: " & Err.Description
+    If Not chain Is Nothing Then
+        chain.RecordError Err.Description
+    End If
+    ExecuteRecoveryChain = False
+End Function
+
+Private Function ExecuteStrategyWithTransaction(ByVal strategy As IErrorStrategy, ByRef errorInfo As ErrorInfo, ByVal context As Dictionary) As Boolean
+    On Error GoTo ErrorHandler
+    
+    ' トランザクションの開始
+    BeginTransaction
+    
+    If strategy.RecoverFromError(errorInfo) Then
+        CommitTransaction
+        ExecuteStrategyWithTransaction = True
+    Else
+        RollbackTransaction
+        ExecuteStrategyWithTransaction = False
+    End If
+    Exit Function
+    
+ErrorHandler:
+    If IsInTransaction Then
+        RollbackTransaction
+    End If
+    ExecuteStrategyWithTransaction = False
+End Function
+
+Private Function ExecuteStrategyWithFallback(ByVal fallbackStrategy As IErrorStrategy, ByRef errorInfo As ErrorInfo, ByVal context As Dictionary) As Boolean
+    On Error GoTo ErrorHandler
+    
+    ' フォールバック実行前の状態を保存
+    Dim originalState As Dictionary
+    Set originalState = CopyDictionary(context)
+    
+    If fallbackStrategy.RecoverFromError(errorInfo) Then
+        ExecuteStrategyWithFallback = True
+    Else
+        ' 状態を復元
+        RestoreContext context, originalState
+        ExecuteStrategyWithFallback = False
+    End If
+    Exit Function
+    
+ErrorHandler:
+    Debug.Print "Error in ExecuteStrategyWithFallback: " & Err.Description
+    ExecuteStrategyWithFallback = False
+End Function
+
+Private Function CopyDictionary(ByVal source As Dictionary) As Dictionary
+    Dim result As New Dictionary
+    Dim key As Variant
+    
+    For Each key In source.Keys
+        result.Add key, source(key)
+    Next
+    
+    Set CopyDictionary = result
+End Function
+
+Private Sub RestoreContext(ByRef target As Dictionary, ByVal source As Dictionary)
+    Dim key As Variant
+    
+    target.RemoveAll
+    For Each key In source.Keys
+        target.Add key, source(key)
+    Next
+End Sub
+
+'#End Region
 
 Private Sub Sleep(ByVal milliseconds As Long)
     ' スリープ処理の実装

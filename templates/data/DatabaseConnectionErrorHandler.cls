@@ -36,7 +36,7 @@ Private mConnectionString As String
 Private mFallbackConnectionString As String
 Private mLock As ILock
 Private mLogger As ILogger
-Private mEmergencyLogger As IEmergencyLogger
+Private mErrorManager As clsErrorManager
 Private mConfig As IDatabaseConfig
 Private mUserNotifier As IUserNotifier
 Private mPerformanceMonitor As IPerformanceMonitor
@@ -52,7 +52,7 @@ Implements IErrorHandler
 Public Function Create( _
     ByVal lock As ILock, _
     ByVal logger As ILogger, _
-    ByVal emergencyLogger As IEmergencyLogger, _
+    ByVal errorManager As clsErrorManager, _
     ByVal config As IDatabaseConfig, _
     ByVal userNotifier As IUserNotifier, _
     ByVal performanceMonitor As IPerformanceMonitor _
@@ -68,8 +68,8 @@ Public Function Create( _
         ValidateDependency logger, "ILogger"
         Set .Logger = logger
         
-        ValidateDependency emergencyLogger, "IEmergencyLogger"
-        Set .EmergencyLogger = emergencyLogger
+        ValidateDependency errorManager, "clsErrorManager"
+        Set .ErrorManager = errorManager
         
         ValidateDependency config, "IDatabaseConfig"
         Set .Config = config
@@ -95,8 +95,8 @@ Public Property Set Logger(ByVal value As ILogger)
     Set mLogger = value
 End Property
 
-Public Property Set EmergencyLogger(ByVal value As IEmergencyLogger)
-    Set mEmergencyLogger = value
+Public Property Set ErrorManager(ByVal value As clsErrorManager)
+    Set mErrorManager = value
 End Property
 
 Public Property Set Config(ByVal value As IDatabaseConfig)

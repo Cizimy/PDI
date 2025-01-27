@@ -21,49 +21,54 @@ Private Const MIN_BACKOFF_MS As Long = 100              ' 最小バックオフ�
 Private Const MAX_BACKOFF_MS As Long = 30000           ' 最大バックオフ時間（30秒）
 
 ' イベント定義
-Public Event RecoveryAttemptStarted(ByVal errorInfo As ErrorInfo, ByVal context As RecoveryContext)
-Public Event RecoveryAttemptCompleted(ByVal errorInfo As ErrorInfo, ByVal success As Boolean, ByVal metrics As RecoveryMetrics)
-Public Event RecoveryProgressChanged(ByVal errorInfo As ErrorInfo, ByVal progressPercentage As Long, ByVal currentPhase As String)
+Public Event RecoveryChainStarted(ByVal chainId As String, ByVal strategies As Collection)
+Public Event RecoveryChainCompleted(ByVal chainId As String, ByVal successCount As Long, ByVal failureCount As Long)
 Public Event FallbackStrategyActivated(ByVal errorInfo As ErrorInfo, ByVal fallbackStrategy As IErrorStrategy, ByVal reason As String)
-Public Event RecoveryChainExecuted(ByVal chainId As String, ByVal successCount As Long, ByVal failureCount As Long)
-Public Event ResourceExhausted(ByVal resourceType As String, ByVal currentUsage As Long, ByVal limit As Long)
-Public Event PerformanceAlert(ByVal metricType As String, ByVal currentValue As Double, ByVal threshold As Double)
-Public Event ErrorPatternDetected(ByVal patternType As String, ByVal frequency As Long, ByVal timeWindow As Long)
+Public Event StrategyExecutionStarted(ByVal strategyId As String, ByVal priority As Long)
+Public Event StrategyExecutionCompleted(ByVal strategyId As String, ByVal success As Boolean)
 
 ''' <summary>
 ''' エラーからの回復を試みます
 ''' </summary>
 ''' <param name="errorInfo">エラー情報</param>
+''' <param name="errorManager">エラーマネージャー</param>
 ''' <param name="context">回復コンテキスト（オプション）</param>
 ''' <param name="options">回復オプション（オプション）</param>
 ''' <returns>回復成功時True、失敗時False</returns>
 ''' <remarks>
 ''' エラー処理要件：
-''' - リトライ回数の管理
+''' - エラーマネージャーと連携した回復処理
 ''' - タイムアウト処理
 ''' - リソースの適切な解放
 ''' - 回復不可能な状態の検出
 ''' - イベントの適切な発行
 ''' - メトリクスの収集
 ''' - パターンの分析
-''' 
+'''
 ''' 実装時の注意点：
-''' 1. 再帰的な回復処理を避けること
+''' 1. エラーマネージャーのコンテキストを利用すること
 ''' 2. 回復処理自体のエラーを適切に処理すること
 ''' 3. リソースリークを防ぐこと
 ''' 4. デッドロックを防ぐこと
 ''' 5. 回復の進捗を通知すること
 ''' 6. パフォーマンスを監視すること
 ''' </remarks>
-Public Function RecoverFromError(ByRef errorInfo As ErrorInfo, Optional ByVal context As RecoveryContext, Optional ByVal options As RecoveryOptions) As Boolean
+Public Function RecoverFromError(ByRef errorInfo As ErrorInfo, ByVal errorManager As clsErrorManager, Optional ByVal context As RecoveryContext, Optional ByVal options As RecoveryOptions) As Boolean
 End Function
 
 ''' <summary>
 ''' 回復チェーンを作成します
 ''' </summary>
 ''' <param name="strategies">チェーンに含める戦略のコレクション</param>
-''' <returns>チェーンID</returns>
-Public Function CreateRecoveryChain(ByVal strategies As Collection) As String
+''' <param name="errorManager">エラーマネージャー</param>
+''' <returns>回復戦略のコレクション</returns>
+''' <remarks>
+''' - 戦略は優先度順にソートされる
+''' - 各戦略はエラーマネージャーのコンテキストを共有
+''' - チェーンの実行状態はErrorManagerで管理
+''' - 戦略間の依存関係を考慮
+''' </remarks>
+Public Function CreateRecoveryChain(ByVal strategies As Collection, ByVal errorManager As clsErrorManager) As Collection
 End Function
 
 ''' <summary>
@@ -169,21 +174,21 @@ Public Function GetProgress(Optional ByVal includeMetrics As Boolean = False) As
 End Function
 
 ''' <summary>
-''' エラー種別ごとの回復方法を設定します
+''' エラー種別ごとの回復戦略を設定します
 ''' </summary>
 ''' <param name="errorCode">エラーコード</param>
-''' <param name="recoveryAction">回復アクション</param>
-''' <param name="options">アクションオプション（オプション）</param>
-Public Sub SetRecoveryAction(ByVal errorCode As ErrorCode, ByVal recoveryAction As IRecoveryAction, Optional ByVal options As ActionOptions)
+''' <param name="handler">エラーハンドラー</param>
+''' <param name="options">戦略オプション（オプション）</param>
+''' <remarks>
+''' - ハンドラーと戦略を紐付け
+''' - 既存の戦略は上書きされる
+''' - 優先度は自動的に計算
+''' - エラーマネージャーのコンテキストを利用
+''' </remarks>
+Public Sub ConfigureRecoveryStrategy(ByVal errorCode As ErrorCode, _
+                                   ByVal handler As IErrorHandler, _
+                                   Optional ByVal options As StrategyOptions)
 End Sub
-
-''' <summary>
-''' エラー種別ごとの回復方法を取得します
-''' </summary>
-''' <param name="errorCode">エラーコード</param>
-''' <param name="includeMetrics">メトリクスを含めるかどうか</param>
-Public Function GetRecoveryAction(ByVal errorCode As ErrorCode, Optional ByVal includeMetrics As Boolean = False) As IRecoveryAction
-End Function
 
 ''' <summary>
 ''' 回復履歴を取得します

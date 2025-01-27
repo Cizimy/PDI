@@ -387,10 +387,34 @@ Private Sub LogEmergencyError(ByVal errorInfo As ErrorInfo)
     formattedMessage = FormatErrorMessage(message, errorInfo)
     
     ' イベントログへの出力を試みる
-    WriteToEventLog formattedMessage
+    Dim eventLogSuccess As Boolean
+    eventLogSuccess = False
     
-    ' ファイルへの出力を試みる
-    WriteToEmergencyFile formattedMessage
+    On Error Resume Next
+    WriteToEventLog formattedMessage
+    If Err.Number = 0 Then
+        eventLogSuccess = True
+    End If
+    On Error GoTo ErrorHandler
+    
+    ' イベントログ書き込み失敗時はファイルへの出力を試みる
+    If Not eventLogSuccess Then
+        Dim fileSuccess As Boolean
+        fileSuccess = False
+        
+        On Error Resume Next
+        WriteToEmergencyFile formattedMessage
+        If Err.Number = 0 Then
+            fileSuccess = True
+        End If
+        On Error GoTo ErrorHandler
+        
+        ' 両方の出力が失敗した場合はエラーを発生させる
+        If Not fileSuccess Then
+            Err.Raise vbObjectError + 1, "LogEmergencyError", _
+                     "Failed to write to both event log and emergency file"
+        End If
+    End If
     
     ' イベントの発行
     RaiseEvent EmergencyLogWritten(message, errorInfo.Severity)
@@ -398,8 +422,9 @@ Private Sub LogEmergencyError(ByVal errorInfo As ErrorInfo)
     Exit Sub
 
 ErrorHandler:
-    Debug.Print "Error in LogEmergencyError: " & Err.Description
-    Resume Next
+    ' エラーを上位に伝播させる
+    Err.Raise Err.Number, "LogEmergencyError", _
+              "Emergency logging failed: " & Err.Description
 End Sub
 
 Private Function FormatErrorMessage(ByVal message As String, ByRef errorInfo As ErrorInfo) As String
@@ -539,7 +564,43 @@ End Function
 
 Private Function ShouldProcessQueue(ByVal errorInfo As ErrorInfo) As Boolean
     ' キュー処理の必要性を判断
-    ShouldProcessQueue = (errorInfo.RetryCount Mod 2 = 0) ' 例：2回に1回処理
+    
+    ' 以下の条件でキューを処理する：
+    ' 1. リトライ回数が一定回数（MAX_RETRY_ATTEMPTS/2）を超えた場合
+    ' 2. エラーの重大度が高い（Critical以上）場合
+    ' 3. 同じエラーが短時間に複数回発生している場合
+    
+    ' リトライ回数による判断
+    If errorInfo.RetryCount > MAX_RETRY_ATTEMPTS \ 2 Then
+        ShouldProcessQueue = True
+        Exit Function
+    End If
+    
+    ' エラーの重大度による判断
+    If errorInfo.Severity >= esCritical Then
+        ShouldProcessQueue = True
+        Exit Function
+    End If
+    
+    ' エラーの発生頻度による判断
+    Dim errorCount As Long
+    If mErrorStatistics.ErrorCountByCode.Exists(errorInfo.ErrorCode) Then
+        errorCount = mErrorStatistics.ErrorCountByCode(errorInfo.ErrorCode)
+        
+        ' 直近のエラー発生時刻との間隔を確認
+        If errorCount > 0 And Not errorInfo.LastRetryTimestamp = #12:00:00 AM# Then
+            Dim timeSinceLastError As Long
+            timeSinceLastError = DateDiff("s", errorInfo.LastRetryTimestamp, Now)
+            
+            ' 5分以内に3回以上発生している場合
+            If timeSinceLastError <= 300 And errorCount >= 3 Then
+                ShouldProcessQueue = True
+                Exit Function
+            End If
+        End If
+    End If
+    
+    ShouldProcessQueue = False
 End Function
 
 Private Sub ProcessErrorQueue(ByRef errorInfo As ErrorInfo)
@@ -613,14 +674,12 @@ Private Function CreateRecoveryChain(ByVal errorInfo As ErrorInfo) As RecoveryCh
     ' エラーコードに基づいて適切な回復戦略を選択
     For Each strategy In mRecoveryStrategies
         If strategy.SupportsErrorCode(errorInfo.ErrorCode) Then
-            ' 戦略の詳細情報を追加
+            ' 戦略の詳細情報を追加（必要最小限の情報のみ）
             Dim strategyInfo As New Dictionary
             strategyInfo.Add "Priority", strategy.Priority
             strategyInfo.Add "Description", strategy.GetDescription()
-            strategyInfo.Add "SupportsAsync", strategy.SupportsAsyncRecovery
-            strategyInfo.Add "SupportsTransactions", strategy.SupportsTransactions
             
-            ' 戦略をチェーンに追加
+            ' 戦略をチェーンに追加（プロパティは直接アクセス）
             chain.AddStrategy strategy, strategyInfo
         End If
         
@@ -667,17 +726,32 @@ Private Function ExecuteRecoveryChain(ByVal chain As RecoveryChain, ByRef errorI
     
     Dim strategy As IErrorStrategy
     Dim strategyInfo As Dictionary
-    Dim executionContext As New Dictionary
+    Dim executionContext As New ExecutionContext
     Dim progress As Long
     
     ' 実行コンテキストの初期化
-    executionContext.Add "StartTime", Now
-    executionContext.Add "ChainId", chain.ChainId
-    executionContext.Add "ErrorInfo", errorInfo
+    executionContext.Initialize chain.ChainId, errorInfo
     
     ' チェーンの実行前検証
-    If Not chain.Validate Then
-        Err.Raise vbObjectError + 1, "ExecuteRecoveryChain", "Invalid recovery chain state"
+    On Error Resume Next
+    Dim isValid As Boolean
+    isValid = chain.Validate
+    If Err.Number <> 0 Then
+        ' Validateメソッドでエラーが発生した場合
+        Dim validateError As Long
+        validateError = Err.Number
+        Dim validateDesc As String
+        validateDesc = Err.Description
+        On Error GoTo ErrorHandler
+        Err.Raise validateError, "ExecuteRecoveryChain", _
+                "Chain validation failed: " & validateDesc
+    End If
+    On Error GoTo ErrorHandler
+    
+    ' 検証結果の確認
+    If Not isValid Then
+        Err.Raise vbObjectError + 1, "ExecuteRecoveryChain", _
+                "Recovery chain validation failed: Chain is in invalid state"
     End If
     
     ' 各戦略を実行
@@ -690,32 +764,32 @@ Private Function ExecuteRecoveryChain(ByVal chain As RecoveryChain, ByRef errorI
         RaiseEvent RecoveryProgressChanged(errorInfo, progress)
         
         ' 実行コンテキストの更新
-        executionContext("CurrentStrategy") = strategyInfo("Description")
-        executionContext("CurrentPriority") = strategyInfo("Priority")
+        executionContext.CurrentStrategy = strategyInfo("Description")
+        executionContext.CurrentPriority = CLng(strategyInfo("Priority"))
         
         ' トランザクションのサポートを確認
         If strategyInfo("SupportsTransactions") Then
             ' トランザクション内で実行
             If ExecuteStrategyWithTransaction(strategy, errorInfo, executionContext) Then
-                chain.IncrementSuccessCount
+                chain.IncrementSuccess
                 ExecuteRecoveryChain = True
                 Exit For
             End If
         Else
             ' 通常実行
             If strategy.RecoverFromError(errorInfo) Then
-                chain.IncrementSuccessCount
+                chain.IncrementSuccess
                 ExecuteRecoveryChain = True
                 Exit For
             End If
         End If
         
         ' 失敗をカウント
-        chain.IncrementFailureCount
+        chain.IncrementFailure
         
         ' フォールバック戦略の確認と実行
         If strategy.FallbackStrategy IsNot Nothing Then
-            executionContext("UsingFallback") = True
+            executionContext.UsingFallback = True
             If ExecuteStrategyWithFallback(strategy.FallbackStrategy, errorInfo, executionContext) Then
                 chain.IncrementSuccessCount
                 ExecuteRecoveryChain = True
@@ -725,9 +799,8 @@ Private Function ExecuteRecoveryChain(ByVal chain As RecoveryChain, ByRef errorI
     Next strategy
     
     ' 実行結果の記録
-    executionContext.Add "EndTime", Now
-    executionContext.Add "Duration", DateDiff("s", executionContext("StartTime"), Now)
-    chain.RecordExecution executionContext
+    executionContext.UpdateDuration
+    chain.RecordExecution executionContext.ToDictionary
     
     ' チェーン実行結果の通知
     RaiseEvent RecoveryChainExecuted(chain.ChainId, chain.SuccessCount, chain.FailureCount)
@@ -760,15 +833,17 @@ ErrorHandler:
     If IsInTransaction Then
         RollbackTransaction
     End If
-    ExecuteStrategyWithTransaction = False
+    ' エラーを上位に伝播
+    Err.Raise Err.Number, "ExecuteStrategyWithTransaction", _
+              "Transaction execution failed: " & Err.Description
 End Function
 
-Private Function ExecuteStrategyWithFallback(ByVal fallbackStrategy As IErrorStrategy, ByRef errorInfo As ErrorInfo, ByVal context As Dictionary) As Boolean
+Private Function ExecuteStrategyWithFallback(ByVal fallbackStrategy As IErrorStrategy, ByRef errorInfo As ErrorInfo, ByVal context As ExecutionContext) As Boolean
     On Error GoTo ErrorHandler
     
     ' フォールバック実行前の状態を保存
-    Dim originalState As Dictionary
-    Set originalState = CopyDictionary(context)
+    Dim originalContext As ExecutionContext
+    Set originalContext = context.Clone
     
     If fallbackStrategy.RecoverFromError(errorInfo) Then
         ExecuteStrategyWithFallback = True
@@ -780,8 +855,9 @@ Private Function ExecuteStrategyWithFallback(ByVal fallbackStrategy As IErrorStr
     Exit Function
     
 ErrorHandler:
-    Debug.Print "Error in ExecuteStrategyWithFallback: " & Err.Description
-    ExecuteStrategyWithFallback = False
+    ' エラーを上位に伝播
+    Err.Raise Err.Number, "ExecuteStrategyWithFallback", _
+              "Fallback strategy execution failed: " & Err.Description
 End Function
 
 Private Function CopyDictionary(ByVal source As Dictionary) As Dictionary

@@ -11,39 +11,116 @@ Option Explicit
 
 Implements IError
 
+' 定数定義
+Private Const MAX_RECOVERY_CHAIN_LENGTH As Long = 5
+Private Const MAX_RETRY_ATTEMPTS As Long = 3
+Private Const RETRY_INTERVAL_MS As Long = 1000
+Private Const LOG_BUFFER_SIZE As Long = 1000
+Private Const ERROR_LOG_PATH As String = "error.log"
+
 ' プライベート変数
 Private mErrorManager As clsErrorManager
 Private mCriticalSection As clsCriticalSectionLock
 Private mMessageResource As ErrorMessageResource
+Private mLogger As Object ' FileSystemObject for logging
 
 Private Sub Class_Initialize()
     Set mErrorManager = New clsErrorManager
     Set mCriticalSection = New clsCriticalSectionLock
     Set mMessageResource = New ErrorMessageResource
+    Set mLogger = CreateObject("Scripting.FileSystemObject")
+    InitializeErrorLog
+End Sub
+
+Private Sub InitializeErrorLog()
+    On Error Resume Next
+    If Not mLogger.FileExists(ERROR_LOG_PATH) Then
+        Dim logFile As Object
+        Set logFile = mLogger.CreateTextFile(ERROR_LOG_PATH, True)
+        logFile.WriteLine "Timestamp,ErrorCode,Message,Source,Details"
+        logFile.Close
+    End If
 End Sub
 
 Private Sub Class_Terminate()
     Set mErrorManager = Nothing
     Set mCriticalSection = Nothing
     Set mMessageResource = Nothing
+    Set mLogger = Nothing
+    
+    ' 最終のログエントリを記録
+    On Error Resume Next
+    LogError "Class_Terminate", "SynchronizedErrorManager terminated", "Cleanup"
 End Sub
 
 Private Function IError_HandleError(ByRef errorInfo As ErrorInfo, Optional ByVal options As ErrorHandlingOptions = ehoNone) As Boolean
     mCriticalSection.Enter
     
     On Error GoTo ErrorHandler
+    
+    ' エラー情報の検証
+    If errorInfo Is Nothing Then
+        LogError "HandleError", "ErrorInfo is Nothing", "Validation"
+        mCriticalSection.Leave
+        Exit Function
+    End If
+    
     ' エラーメッセージの国際化対応
     errorInfo.Message = mMessageResource.GetMessage(errorInfo.ErrorCode)
+    
+    ' エラー情報のログ記録
+    LogError "HandleError", errorInfo.Message, "Processing", _
+            "Code=" & errorInfo.ErrorCode & _
+            ";Source=" & errorInfo.SourceModule & _
+            ";Severity=" & errorInfo.Severity
+    
+    ' エラー処理の実行
     IError_HandleError = mErrorManager.HandleError(errorInfo, options)
+    
+    ' 処理結果のログ記録
+    If IError_HandleError Then
+        LogError "HandleError", "Error handled successfully", "Success", _
+                "Code=" & errorInfo.ErrorCode
+    Else
+        LogError "HandleError", "Error handling failed", "Failure", _
+                "Code=" & errorInfo.ErrorCode
+    End If
     
 CleanUp:
     mCriticalSection.Leave
     Exit Function
     
 ErrorHandler:
-    Debug.Print "Error in SynchronizedErrorManager.HandleError: " & Err.Description
+    Dim errNumber As Long
+    Dim errDesc As String
+    errNumber = Err.Number
+    errDesc = Err.Description
+    
+    ' エラーのログ記録
+    LogError "HandleError", errDesc, "Error", "ErrNumber=" & errNumber
+    
+    ' エラーの上位伝播
+    Err.Raise errNumber, "SynchronizedErrorManager.HandleError", _
+              "Error handling failed: " & errDesc
     Resume CleanUp
 End Function
+
+Private Sub LogError(ByVal source As String, ByVal message As String, _
+                    ByVal category As String, Optional ByVal details As String = "")
+    On Error Resume Next
+    
+    Dim logEntry As String
+    logEntry = Now & "," & _
+              source & "," & _
+              Replace(message, ",", ";") & "," & _
+              category & "," & _
+              Replace(details, ",", ";")
+    
+    Dim logFile As Object
+    Set logFile = mLogger.OpenTextFile(ERROR_LOG_PATH, 8, True) ' 8 = ForAppending
+    logFile.WriteLine logEntry
+    logFile.Close
+End Sub
 
 Private Sub IError_RegisterHandler(ByVal errorCode As ErrorCode, ByVal handler As IErrorHandler, Optional ByVal options As HandlerOptions = hoNone)
     mCriticalSection.Enter

@@ -20,10 +20,21 @@ Private Const RECOVERY_TIMEOUT_MS As Long = 30000       ' 回復処理のタイ�
 Private Const MIN_BACKOFF_MS As Long = 100              ' 最小バックオフ時間（100ミリ秒）
 Private Const MAX_BACKOFF_MS As Long = 30000           ' 最大バックオフ時間（30秒）
 
+' フォールバック理由を定義する列挙型
+Public Enum FallbackReason
+    frRetryLimitExceeded = 1    ' リトライ回数超過
+    frTimeoutOccurred = 2       ' タイムアウト発生
+    frResourceUnavailable = 3   ' リソース利用不可
+    frStrategyFailed = 4        ' 戦略実行失敗
+    frSystemOverload = 5        ' システム過負荷
+    frDataInconsistency = 6     ' データ不整合
+    frUnexpectedError = 7       ' 予期せぬエラー
+End Enum
+
 ' イベント定義
 Public Event RecoveryChainStarted(ByVal chainId As String, ByVal strategies As Collection)
 Public Event RecoveryChainCompleted(ByVal chainId As String, ByVal successCount As Long, ByVal failureCount As Long)
-Public Event FallbackStrategyActivated(ByVal errorInfo As ErrorInfo, ByVal fallbackStrategy As IErrorStrategy, ByVal reason As String)
+Public Event FallbackStrategyActivated(ByVal errorInfo As ErrorInfo, ByVal fallbackStrategy As IErrorStrategy, ByVal reason As FallbackReason)
 Public Event StrategyExecutionStarted(ByVal strategyId As String, ByVal priority As Long)
 Public Event StrategyExecutionCompleted(ByVal strategyId As String, ByVal success As Boolean)
 
@@ -68,7 +79,7 @@ End Function
 ''' - チェーンの実行状態はErrorManagerで管理
 ''' - 戦略間の依存関係を考慮
 ''' </remarks>
-Public Function CreateRecoveryChain(ByVal strategies As Collection, ByVal errorManager As clsErrorManager) As Collection
+Public Function CreateRecoveryChain(ByVal strategies As Collection, ByVal errorManager As clsErrorManager) As RecoveryChain
 End Function
 
 ''' <summary>
@@ -174,20 +185,20 @@ Public Function GetProgress(Optional ByVal includeMetrics As Boolean = False) As
 End Function
 
 ''' <summary>
-''' エラー種別ごとの回復戦略を設定します
+''' エラー種別ごとの回復ハンドラーを設定します
 ''' </summary>
 ''' <param name="errorCode">エラーコード</param>
 ''' <param name="handler">エラーハンドラー</param>
-''' <param name="options">戦略オプション（オプション）</param>
+''' <param name="options">ハンドラーオプション（オプション）</param>
 ''' <remarks>
 ''' - ハンドラーと戦略を紐付け
-''' - 既存の戦略は上書きされる
+''' - 既存のハンドラーは上書きされる
 ''' - 優先度は自動的に計算
 ''' - エラーマネージャーのコンテキストを利用
 ''' </remarks>
-Public Sub ConfigureRecoveryStrategy(ByVal errorCode As ErrorCode, _
-                                   ByVal handler As IErrorHandler, _
-                                   Optional ByVal options As StrategyOptions)
+Public Sub SetRecoveryHandler(ByVal errorCode As ErrorCode, _
+                           ByVal handler As IErrorHandler, _
+                           Optional ByVal options As StrategyOptions)
 End Sub
 
 ''' <summary>

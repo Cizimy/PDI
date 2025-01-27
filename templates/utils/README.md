@@ -1,0 +1,292 @@
+- `clsCallStack` : モジュール名
+  - `[概要]` : 呼び出し履歴を管理するクラス。
+  - `[依存関係]` :
+    - IStackTrace
+    - clsLock
+    - StackTraceImpl
+    - modError
+  - `[メソッド一覧]` :
+    - `Push(ByVal ModuleName As String, ByVal ProcedureName As String)` : 呼び出し履歴にエントリを追加する。
+    - `Pop() As String` : 呼び出し履歴から最後のエントリを取得して削除する。
+    - `StackTrace() As String` : 現在のスタックトレースを文字列として取得する。
+    - `Count() As Long` : スタック内のエントリ数を取得する。
+    - `SetStackTrace(ByVal stackTrace As IStackTrace)` : スタックトレースオブジェクトを設定する。（デバッグ用）
+    - `GetStackTrace() As IStackTrace` : スタックトレースオブジェクトを取得する。（デバッグ用）
+  - `[その他特記事項]` :
+    - スタックトレースの最大深さを超えた場合、エラーを発生させずに無視する。
+    - `DEBUG`プリプロセッサ定数が定義されている場合、テスト用のメソッドが有効になる。
+
+- `modCommon` : モジュール名
+  - `[概要]` : アプリケーション全体で使用される共通の定数、型、関数を提供するモジュール。
+  - `[依存関係]` :
+    - clsPerformanceMonitor
+    - modStackTrace
+    - modConfig
+    - modError
+    - clsLock
+  - `[メソッド一覧]` :
+    - `IsInitialized() As Boolean` : モジュールが初期化されているかどうかを取得する。
+    - `InitializeModule()` : モジュールを初期化する。
+    - `TerminateModule()` : モジュールの終了処理を行う。
+    - `HandleError(ByRef errInfo As ErrorInfo)` : エラー情報を処理する。
+    - `ResetModule()` : モジュールの状態を初期化する。（テスト用）
+    - `GetPerformanceMonitor() As clsPerformanceMonitor` : パフォーマンスモニターの参照を取得する。（テスト用）
+  - `[その他特記事項]` :
+    - `APPLICATION_NAME`、`APPLICATION_VERSION`などのアプリケーション定数を提供する。
+    - `LogLevel`、`LogDestination`などのログ関連の列挙型を提供する。
+    - `ErrorInfo`、`FileInfo`などの型定義を提供する。
+    - `DEBUG`プリプロセッサ定数が定義されている場合、テスト用のメソッドが有効になる。
+
+- `modDateUtils` : モジュール名
+  - `[概要]` : 日付関連のユーティリティ関数を提供するモジュール。
+  - `[依存関係]` :
+    - clsPerformanceMonitor
+    - modStackTrace
+    - modError
+  - `[メソッド一覧]` :
+    - `InitializeModule()` : モジュールを初期化する。
+    - `TerminateModule()` : モジュールの終了処理を行う。
+    - `IsValidDate(ByVal testDate As Variant) As Boolean` : 日付の妥当性を確認する。
+    - `DateAdd(ByVal interval As String, ByVal number As Double, ByVal dateValue As Date) As Date` : 日付に指定された期間を加算する。
+    - `DateDiff(ByVal interval As String, ByVal date1 As Date, ByVal date2 As Date) As Long` : 2つの日付の差分を計算する。
+    - `FormatDate(ByVal dateValue As Date, Optional ByVal format As String = DEFAULT_DATE_FORMAT) As String` : 日付を指定された形式でフォーマットする。
+    - `GetCurrentDateTime() As Date` : 現在の日時を取得する。
+    - `IsBusinessDay(ByVal dateValue As Date) As Boolean` : 指定された日付が営業日かどうかを確認する。
+    - `ResetModule()` : モジュールの状態を初期化する。（テスト用）
+    - `GetPerformanceMonitor() As clsPerformanceMonitor` : パフォーマンスモニターの参照を取得する。（テスト用）
+  - `[その他特記事項]` :
+    - `DEFAULT_DATE_FORMAT`、`DEFAULT_TIME_FORMAT`、`DEFAULT_DATETIME_FORMAT`などの日付フォーマット定数を提供する。
+    - `DEBUG`プリプロセッサ定数が定義されている場合、テスト用のメソッドが有効になる。
+
+- `modMathUtils` : モジュール名
+  - `[概要]` : 数値演算関連のユーティリティ関数を提供するモジュール。
+  - `[依存関係]` :
+    - clsPerformanceMonitor
+    - modStackTrace
+    - modError
+  - `[メソッド一覧]` :
+    - `InitializeModule()` : モジュールを初期化する。
+    - `TerminateModule()` : モジュールの終了処理を行う。
+    - `SafeDivide(ByVal numerator As Double, ByVal denominator As Double, Optional ByVal defaultValue As Variant = 0) As Variant` : 安全な除算を行う。
+    - `IsInRange(ByVal value As Double, ByVal minValue As Double, ByVal maxValue As Double) As Boolean` : 数値が指定された範囲内かどうかを確認する。
+    - `Clamp(ByVal value As Double, ByVal minValue As Double, ByVal maxValue As Double) As Double` : 値を指定された範囲内に収める。
+    - `Round(ByVal value As Double, Optional ByVal decimals As Long = 0) As Double` : 指定された精度で四捨五入する。
+    - `ResetModule()` : モジュールの状態を初期化する。（テスト用）
+    - `GetPerformanceMonitor() As clsPerformanceMonitor` : パフォーマンスモニターの参照を取得する。（テスト用）
+  - `[その他特記事項]` :
+    - `EPSILON`定数で浮動小数点比較用の許容誤差を定義する。
+    - `DEBUG`プリプロセッサ定数が定義されている場合、テスト用のメソッドが有効になる。
+
+- `modStackTrace` : モジュール名
+  - `[概要]` : スタックトレースを管理するモジュール。
+  - `[依存関係]` :
+    - clsLock
+    - modError
+  - `[メソッド一覧]` :
+    - `IsInitialized() As Boolean` : モジュールが初期化されているかどうかを取得する。
+    - `InitializeModule()` : モジュールを初期化する。
+    - `TerminateModule()` : モジュールの終了処理を行う。
+    - `PushStackEntry(ByVal ModuleName As String, ByVal ProcedureName As String)` : スタックトレースにエントリを追加する。
+    - `PopStackEntry() As String` : スタックトレースからエントリを取得して削除する。
+    - `GetStackTrace() As String` : スタックトレース文字列を取得する。
+    - `StackDepth() As Long` : スタックの深さを取得する。
+    - `ClearStack()` : スタックの内容をクリアする。（テスト用）
+    - `ValidateStackState() As Boolean` : スタックの状態が有効かどうかを検証する。（テスト用）
+    - `ResetModule()` : モジュールの状態を初期化する。（テスト用）
+  - `[その他特記事項]` :
+    - `MAX_STACK_TRACE_DEPTH`定数でスタックトレースの最大深さを定義する。
+    - `DEBUG`プリプロセッサ定数が定義されている場合、テスト用のメソッドが有効になる。
+
+- `modStringUtils` : モジュール名
+  - `[概要]` : 文字列操作関連のユーティリティ関数を提供するモジュール。
+  - `[依存関係]` :
+    - clsPerformanceMonitor
+    - modStackTrace
+    - modError
+  - `[メソッド一覧]` :
+    - `InitializeModule()` : モジュールを初期化する。
+    - `TerminateModule()` : モジュールの終了処理を行う。
+    - `PadLeft(ByVal baseStr As String, ByVal totalWidth As Long, Optional ByVal padChar As String = " ") As String` : 文字列を左側からパディングする。
+    - `PadRight(ByVal baseStr As String, ByVal totalWidth As Long, Optional ByVal padChar As String = " ") As String` : 文字列を右側からパディングする。
+    - `TrimString(ByVal str As String) As String` : 文字列の前後の空白を削除する。
+    - `SplitString(ByVal str As String, ByVal delimiter As String) As Variant` : 文字列を指定された区切り文字で分割する。
+    - `JoinStrings(ByRef arr As Variant, Optional ByVal delimiter As String = "") As String` : 文字列配列を指定された区切り文字で結合する。
+    - `ResetModule()` : モジュールの状態を初期化する。（テスト用）
+    - `GetPerformanceMonitor() As clsPerformanceMonitor` : パフォーマンスモニターの参照を取得する。（テスト用）
+  - `[その他特記事項]` :
+    - `DEBUG`プリプロセッサ定数が定義されている場合、テスト用のメソッドが有効になる。
+
+- `modWindowsAPI` : モジュール名
+  - `[概要]` : Windows APIの呼び出しをインターフェース経由で実行するモジュール。
+  - `[依存関係]` :
+    - ModWindowsAPIConverter
+    - IMutex
+    - ICryptography
+    - IIniFile
+    - IPerformanceCounter
+    - ISleep
+  - `[メソッド一覧]` :
+    - `InitializeModule()` : モジュールを初期化する。
+    - `TerminateModule()` : モジュールの終了処理を行う。
+    - `CreateMutex(ByVal lpMutexAttributes As LongPtr, ByVal bInitialOwner As Long, ByVal lpName As String) As LongPtr` : ミューテックスを作成する。
+    - `ReleaseMutex(ByVal hMutex As LongPtr) As Long` : ミューテックスを解放する。
+    - `WaitForSingleObject(ByVal hHandle As LongPtr, ByVal dwMilliseconds As Long) As Long` : オブジェクトがシグナル状態になるのを待つ。
+    - `CryptAcquireContext(ByRef phProv As LongPtr, ByVal pszContainer As String, ByVal pszProvider As String, ByVal dwProvType As Long, ByVal dwFlags As Long) As Long` : 暗号化コンテキストを取得する。
+    - `GetPrivateProfileString(ByVal lpApplicationName As String, ByVal lpKeyName As Any, ByVal lpDefault As String, ByVal lpReturnedString As String, ByVal nSize As Long, ByVal lpFileName As String) As Long` : INIファイルから文字列を取得する。
+    - `QueryPerformanceCounter(ByRef lpPerformanceCount As Currency) As Long` : パフォーマンスカウンターの値を取得する。
+    - `QueryPerformanceFrequency(ByRef lpFrequency As Currency) As Long` : パフォーマンスカウンターの周波数を取得する。
+    - `Sleep(ByVal dwMilliseconds As Long)` : 指定された時間、処理を一時停止する。
+    - `MapWindowsErrorToAppError(ByVal windowsError As Long) As ErrorCode` : Windowsエラーコードをアプリケーションエラーコードにマッピングする。
+    - `TestAPIAvailability() As Boolean` : APIの利用可能性をテストする。（テスト用）
+    - `ResetModule()` : モジュールの状態を初期化する。（テスト用）
+  - `[その他特記事項]` :
+    - レガシーサポート用の従来のAPI宣言を含む。（`LegacySupport`プリプロセッサ定数が定義されている場合）
+    - `ModWindowsAPIConverter`クラスを使用して、インターフェースベースの実装に変換する。
+    - `DEBUG`プリプロセッサ定数が定義されている場合、テスト用のメソッドが有効になる。
+
+- `ModWindowsAPIConverter` : モジュール名
+  - `[概要]` : `modWindowsAPI`の関数呼び出しを新しいインターフェースベースの実装に変換するヘルパークラス。
+  - `[依存関係]` :
+    - IMutex
+    - ICryptography
+    - IIniFile
+    - IPerformanceCounter
+    - IEventLog
+    - ISleep
+    - MutexImpl
+    - CryptographyImpl
+    - IniFileImpl
+    - PerformanceCounterImpl
+    - EventLogImpl
+    - SleepImpl
+    - clsLock
+  - `[メソッド一覧]` :
+    - `LastError() As Long` : 最後に発生したWin32エラーコードを取得する。
+    - `Mutex() As IMutex` : ミューテックスインターフェースを取得する。
+    - `Crypto() As ICryptography` : 暗号化インターフェースを取得する。
+    - `IniFile() As IIniFile` : INIファイルインターフェースを取得する。
+    - `PerformanceCounter() As IPerformanceCounter` : パフォーマンスカウンターインターフェースを取得する。
+    - `EventLog() As IEventLog` : イベントログインターフェースを取得する。
+    - `Sleep() As ISleep` : スリープインターフェースを取得する。
+    - `ResetInterfaces()` : インターフェースをリセットする。（テスト用）
+    - `ValidateInterfaces() As Boolean` : インターフェースが有効かどうかを検証する。（テスト用）
+  - `[その他特記事項]` :
+    - 各インターフェースの実装クラスをインスタンス化して保持する。
+    - `DEBUG`プリプロセッサ定数が定義されている場合、テスト用のメソッドが有効になる。
+
+- `MsgBoxNotifier` : モジュール名
+  - `[概要]` : ユーザーへの通知をメッセージボックスで表示するクラス。
+  - `[依存関係]` :
+    - IUserNotifier
+    - ILock
+    - IPerformanceMonitor
+    - IAppConfig
+    - IMessageFormatter
+    - modError
+    - modStackTrace
+  - `[メソッド一覧]` :
+    - `Initialize(ByVal lock As ILock, ByVal performanceMonitor As IPerformanceMonitor, ByVal appConfig As IAppConfig, ByVal messageFormatter As IMessageFormatter)` : クラスを初期化する。
+    - `IUserNotifier_Notify(ByRef errorDetail As ErrorInfo, Optional ByVal buttons As VbMsgBoxStyle = vbOKOnly, Optional ByVal title As String = "エラー") As VbMsgBoxResult` : ユーザーに通知を行う。
+    - `IUserNotifier_NotificationStyle(ByVal style As VbMsgBoxStyle)` : メッセージボックスのスタイルを設定する。
+    - `IUserNotifier_NotificationStyle() As VbMsgBoxStyle` : メッセージボックスのスタイルを取得する。
+    - `IUserNotifier_DefaultTitle(ByVal title As String)` : メッセージボックスのデフォルトタイトルを設定する。
+    - `IUserNotifier_DefaultTitle() As String` : メッセージボックスのデフォルトタイトルを取得する。
+    - `TestNotification()` : 通知機能をテストする。（テスト用）
+    - `TestResourceManagement()` : リソース管理をテストする。（テスト用）
+    - `GetPerformanceReport() As String` : パフォーマンスレポートを取得する。（テスト用）
+  - `[その他特記事項]` :
+    - `IUserNotifier`インターフェースを実装する。
+    - `DEBUG`プリプロセッサ定数が定義されている場合、テスト用のメソッドが有効になる。
+
+- `QueueImpl` : モジュール名
+  - `[概要]` : キューの基本的な実装を提供するクラス。
+  - `[依存関係]` :
+    - IQueue
+  - `[メソッド一覧]` :
+    - `IQueue_Enqueue(ByVal item As Variant)` : キューにアイテムを追加する。
+    - `IQueue_Dequeue() As Variant` : キューからアイテムを取得して削除する。
+    - `IQueue_IsEmpty() As Boolean` : キューが空かどうかを確認する。
+    - `IQueue_Count() As Long` : キュー内のアイテム数を取得する。
+    - `IQueue_Peek() As Variant` : キューからアイテムを取得する（削除はしない）。
+    - `IQueue_Clear()` : キューをクリアする。
+  - `[その他特記事項]` :
+    - `Collection`オブジェクトを使用してキューを実装している。
+
+- `SleepImpl` : モジュール名
+  - `[概要]` : スリープ機能を提供するクラス。
+  - `[依存関係]` :
+    - ISleep
+    - IPerformanceCounter
+    - PerformanceCounterImpl
+    - modWindowsAPI
+    - modStackTrace
+    - modError
+  - `[メソッド一覧]` :
+    - `ISleep_Sleep(ByVal milliseconds As Long)` : 指定された時間、処理を一時停止する。
+    - `ValidateState() As Boolean` : オブジェクトの状態が有効かどうかを検証する。（テスト用）
+    - `IsHighPrecision() As Boolean` : 高精度スリープが利用可能かどうかを取得する。（テスト用）
+    - `TestSleepAccuracy(ByVal milliseconds As Long) As Double` : スリープの精度をテストする。（テスト用）
+  - `[その他特記事項]` :
+    - `ISleep`インターフェースを実装する。
+    - 高精度タイマーが利用可能な場合は、`PerformanceCounterImpl`を使用して高精度なスリープを実現する。
+    - 高精度タイマーが利用できない場合は、`modWindowsAPI.Sleep`を使用する。
+    - `DEBUG`プリプロセッサ定数が定義されている場合、テスト用のメソッドが有効になる。
+
+- `StackImpl` : モジュール名
+  - `[概要]` : スタックの基本的な実装を提供するクラス。
+  - `[依存関係]` :
+    - IStack
+    - clsLock
+  - `[メソッド一覧]` :
+    - `MaxSize(ByVal value As Long)` : スタックの最大サイズを設定する。
+    - `IStack_Push(ByVal Item As String) As Boolean` : スタックにアイテムを追加する。
+    - `IStack_Pop() As String` : スタックからアイテムを取得して削除する。
+    - `IStack_Peek() As String` : スタックからアイテムを取得する（削除はしない）。
+    - `IStack_IsEmpty() As Boolean` : スタックが空かどうかを確認する。
+    - `IStack_Count() As Long` : スタック内のアイテム数を取得する。
+    - `IStack_Clear()` : スタックをクリアする。
+    - `ValidateState() As Boolean` : オブジェクトの状態が有効かどうかを検証する。（テスト用）
+    - `Capacity() As Long` : スタックの最大サイズを取得する。（テスト用）
+  - `[その他特記事項]` :
+    - `IStack`インターフェースを実装する。
+    - `DEBUG`プリプロセッサ定数が定義されている場合、テスト用のメソッドが有効になる。
+
+- `StackTraceImpl` : モジュール名
+  - `[概要]` : スタックトレースの実装を提供するクラス。
+  - `[依存関係]` :
+    - IStackTrace
+    - IStack
+    - IAppConfig
+    - StackImpl
+    - modConfig
+    - clsLock
+  - `[メソッド一覧]` :
+    - `IStackTrace_PushStackEntry(ByVal ClassName As String, ByVal MethodName As String, Optional ByVal Parameters As Variant) As Boolean` : スタックトレースにエントリを追加する。
+    - `IStackTrace_PopStackEntry() As String` : スタックトレースからエントリを取得して削除する。
+    - `IStackTrace_GetStackTrace() As String` : スタックトレース文字列を取得する。
+    - `IStackTrace_StackDepth() As Long` : スタックの深さを取得する。
+    - `IStackTrace_ClearStack()` : スタックをクリアする。
+    - `IStackTrace_IsEmpty() As Boolean` : スタックが空かどうかを確認する。
+    - `IStackTrace_Peek() As String` : スタックの先頭エントリを取得する。
+    - `ValidateState() As Boolean` : オブジェクトの状態が有効かどうかを検証する。（テスト用）
+    - `MaxStackDepth() As Long` : スタックの最大深さを取得する。（テスト用）
+  - `[その他特記事項]` :
+    - `IStackTrace`インターフェースを実装する。
+    - `StackImpl`を使用してスタックを実装している。
+    - `modConfig`からスタックの最大深さを取得する。
+    - `DEBUG`プリプロセッサ定数が定義されている場合、テスト用のメソッドが有効になる。
+
+- `VBScriptRegexEngine` : モジュール名
+  - `[概要]` : VBScriptの正規表現エンジンを使用する正規表現エンジンの実装。
+  - `[依存関係]` :
+    - IRegexEngine
+    - modStackTrace
+    - modError
+  - `[メソッド一覧]` :
+    - `IRegexEngine_Test(ByVal pattern As String, ByVal text As String, Optional ByVal ignoreCase As Boolean = True) As Boolean` : 正規表現に一致するかどうかをテストする。
+    - `IRegexEngine_Replace(ByVal pattern As String, ByVal text As String, ByVal replacement As String, Optional ByVal ignoreCase As Boolean = True) As String` : 正規表現に一致する部分を置換する。
+    - `IRegexEngine_Match(ByVal pattern As String, ByVal text As String, Optional ByVal ignoreCase As Boolean = True) As Variant` : 正規表現に一致する部分を取得する。
+  - `[その他特記事項]` :
+    - `IRegexEngine` インターフェースを実装する。
+    - `VBScript.RegExp` オブジェクトを使用して正規表現を処理する。
+    - エラー発生時は `modError.HandleError` を呼び出してエラー処理を行う。

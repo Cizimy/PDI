@@ -1,0 +1,618 @@
+- `MockCryptography` : モジュール名
+  - `[概要]` : 暗号化と復号化のモッククラス。テスト用に暗号化/復号化の動作をシミュレートし、呼び出しの記録やエラーの発生を行う。
+  - `[依存関係]` :
+    - ICryptography
+  - `[メソッド一覧]` :
+    - `SetupEncryption(ByVal encryptedValue As String)` : 暗号化メソッドの戻り値を設定する。
+    - `SetupDecryption(ByVal decryptedValue As String)` : 復号化メソッドの戻り値を設定する。
+    - `SetupError(ByVal errorNumber As Long, ByVal errorMessage As String)` : エラーを発生させるように設定する。
+    - `EncryptWasCalled() As Boolean` : 暗号化メソッドが呼び出されたかどうかを取得する。
+    - `DecryptWasCalled() As Boolean` : 復号化メソッドが呼び出されたかどうかを取得する。
+    - `ResetFlags()` : 呼び出しフラグや設定された戻り値などをリセットする。
+    - `ICryptography_Encrypt(ByVal value As String, ByVal key As String) As String` : ICryptographyインターフェースの暗号化メソッドの実装。
+    - `ICryptography_Decrypt(ByVal value As String, ByVal key As String) As String` : ICryptographyインターフェースの復号化メソッドの実装。
+    - `ICryptography_CreateHash() As Long` : 未使用のインターフェースメソッド。
+    - `ICryptography_DestroyHash(ByVal hHash As Long)` : 未使用のインターフェースメソッド。
+    - `ICryptography_DeriveKey(ByVal password As String, Optional ByVal salt As String) As String` : 未使用のインターフェースメソッド。
+    - `ICryptography_GetCryptoContext() As Long` : 未使用のインターフェースメソッド。
+    - `ICryptography_ReleaseCryptoContext(ByVal hCryptProv As Long)` : 未使用のインターフェースメソッド。
+    - `ICryptography_HashData(ByVal hHash As Long, ByVal data() As Byte) As Boolean` : 未使用のインターフェースメソッド。
+    - `ICryptography_DestroyKey(ByVal hKey As Long)` : 未使用のインターフェースメソッド。
+  - `[その他特記事項]` :
+    - テスト専用のモッククラスであり、実際の暗号化/復号化の機能は提供しない。
+    - `SetupEncryption`, `SetupDecryption` メソッドで、暗号化/復号化メソッドの戻り値を設定できる。
+    - `SetupError` メソッドで、エラーを発生させるように設定できる。
+    - `EncryptWasCalled`, `DecryptWasCalled` プロパティで、メソッドの呼び出しを確認できる。
+    - `ResetFlags` メソッドで、モックの状態を初期状態に戻すことができる。
+
+- `MockDatabaseConfig` : モジュール名
+  - `[概要]` : データベース設定のモッククラス。テスト用にデータベース接続情報や接続プールの設定値をシミュレートする。
+  - `[依存関係]` :
+    - IDatabaseConfig
+  - `[メソッド一覧]` :
+    - `Class_Initialize()` : クラスの初期化処理。デフォルトの設定値とカウンターを初期化する。
+    - `IDatabaseConfig_GetConnectionString() As String` : 接続文字列を取得する。
+    - `IDatabaseConfig_GetMaxPoolSize() As Long` : 最大プールサイズを取得する。
+    - `IDatabaseConfig_GetRetryCount() As Long` : リトライ回数を取得する。
+    - `IDatabaseConfig_GetRetryInterval() As Long` : リトライ間隔を取得する。
+    - `IDatabaseConfig_GetConnectionTimeout() As Long` : 接続タイムアウトを取得する。
+    - `SetConnectionString(ByVal value As String)` : 接続文字列を設定する。
+    - `SetMaxPoolSize(ByVal value As Long)` : 最大プールサイズを設定する。
+    - `SetRetryCount(ByVal value As Long)` : リトライ回数を設定する。
+    - `SetRetryInterval(ByVal value As Long)` : リトライ間隔を設定する。
+    - `SetConnectionTimeout(ByVal value As Long)` : 接続タイムアウトを設定する。
+    - `GetConnectionStringCallCount() As Long` : GetConnectionStringの呼び出し回数を取得する。
+    - `GetMaxPoolSizeCallCount() As Long` : GetMaxPoolSizeの呼び出し回数を取得する。
+    - `GetRetryCountCallCount() As Long` : GetRetryCountの呼び出し回数を取得する。
+    - `GetRetryIntervalCallCount() As Long` : GetRetryIntervalの呼び出し回数を取得する。
+    - `GetConnectionTimeoutCallCount() As Long` : GetConnectionTimeoutの呼び出し回数を取得する。
+    - `ResetCallCounts()` : 呼び出し回数カウンターをリセットする。
+  - `[その他特記事項]` :
+    - テスト専用のモッククラスであり、実際のデータベース設定は行わない。
+    - セッターメソッドで設定値を変更できる。
+    - ゲッターメソッドで設定値を取得できる。
+    - 呼び出し回数カウンターで、各メソッドの呼び出し回数を確認できる。
+
+- `MockError` : モジュール名
+  - `[概要]` : エラー処理のモッククラス。エラー情報の収集と検証を行う。
+  - `[依存関係]` :
+    - IError
+    - ErrorInfo
+  - `[メソッド一覧]` :
+    - `Class_Initialize()` : クラスの初期化処理。エラーコレクションを初期化する。
+    - `Class_Terminate()` : クラスの終了処理。エラーコレクションを破棄する。
+    - `Errors() As Collection` : 収集されたエラー情報のコレクションを取得する。
+    - `LastError() As ErrorInfo` : 最後に追加されたエラー情報を取得する。
+    - `IError_HandleError(ByVal errorInfo As ErrorInfo)` : エラー情報を収集する。
+    - `ClearErrors()` : 収集されたエラー情報をクリアする。
+    - `GetErrorCount() As Long` : 収集されたエラー情報の数を取得する。
+    - `GetErrorAt(ByVal index As Long) As ErrorInfo` : 指定されたインデックスのエラー情報を取得する。
+    - `ContainsError(ByVal errorCode As Long) As Boolean` : 指定されたエラーコードを含むエラー情報が存在するかどうかを判定する。
+    - `ContainsErrorMessage(ByVal message As String) As Boolean` : 指定されたメッセージを含むエラー情報が存在するかどうかを判定する。
+  - `[その他特記事項]` :
+    - テスト専用のモッククラスであり、実際のエラー処理は行わない。
+    - `IError_HandleError` メソッドでエラー情報を収集する。
+    - `Errors` プロパティや `GetErrorAt` メソッドで収集されたエラー情報を検証できる。
+    - `ContainsError` や `ContainsErrorMessage` メソッドで特定のエラー情報が含まれているかどうかを検証できる。
+
+- `MockFileIO` : モジュール名
+  - `[概要]` : ファイル入出力のモッククラス。ファイルやフォルダの存在確認、作成、削除などの操作をシミュレートする。
+  - `[依存関係]` :
+    - IFileIO
+  - `[メソッド一覧]` :
+    - `Class_Initialize()` : クラスの初期化処理。内部コレクションを初期化する。
+    - `SetFileExists(ByVal filePath As String, ByVal exists As Boolean)` : ファイルの存在有無を設定する。
+    - `SetFolderExists(ByVal folderPath As String, ByVal exists As Boolean)` : フォルダの存在有無を設定する。
+    - `SetCreateFolderResult(ByVal folderPath As String, ByVal success As Boolean)` : フォルダ作成の成否を設定する。
+    - `SetOpenFileResult(ByVal filePath As String, ByVal result As Object)` : ファイルオープンの結果を設定する。
+    - `SetBinaryFileContent(ByVal filePath As String, ByRef content() As Byte)` : バイナリファイルの内容を設定する。
+    - `WasMethodCalled(ByVal methodName As String) As Boolean` : 指定されたメソッドが呼び出されたかどうかを判定する。
+    - `GetMethodCallCount(ByVal methodName As String) As Long` : 指定されたメソッドの呼び出し回数を取得する。
+    - `IFileIO_FileExists(ByVal filePath As String) As Boolean` : ファイルの存在有無を確認する。
+    - `IFileIO_FolderExists(ByVal folderPath As String) As Boolean` : フォルダの存在有無を確認する。
+    - `IFileIO_CreateFolder(ByVal folderPath As String) As Boolean` : フォルダを作成する。
+    - `IFileIO_DeleteFile(ByVal filePath As String) As Boolean` : ファイルを削除する。
+    - `IFileIO_CopyFile(ByVal sourceFilePath As String, ByVal destinationFilePath As String) As Boolean` : ファイルをコピーする。
+    - `IFileIO_MoveFile(ByVal sourceFilePath As String, ByVal destinationFilePath As String) As Boolean` : ファイルを移動する。
+    - `IFileIO_OpenFile(ByVal filePath As String, ByVal mode As String) As Object` : ファイルをオープンする。
+    - `IFileIO_CloseFile(ByVal file As Object) As Boolean` : ファイルをクローズする。
+    - `AddToCollection(ByVal col As Collection, ByRef entry As Variant, ByVal key As String)` : コレクションにエントリを追加する。
+  - `[その他特記事項]` :
+    - テスト専用のモッククラスであり、実際のファイル入出力は行わない。
+    - 各操作の結果は、事前に `Set...` メソッドで設定しておく必要がある。
+    - `WasMethodCalled` や `GetMethodCallCount` メソッドで、メソッドの呼び出しを検証できる。
+
+- `MockFileOperations` : モジュール名
+  - `[概要]` : ファイル操作のモッククラス。ファイルやフォルダの存在確認、コピー、削除などの操作をシミュレートする。
+  - `[依存関係]` :
+    - IFileOperations
+    - Dictionary
+  - `[メソッド一覧]` :
+    - `SetupFileExists(ByVal exists As Boolean)` : ファイルの存在有無を設定する。
+    - `SetupFileAccessError(ByVal hasError As Boolean)` : ファイルアクセスエラーを設定する。
+    - `SetupFileContent(ByVal path As String, ByVal content As String)` : ファイルの内容を設定する。
+    - `CopyFileWasCalled() As Boolean` : CopyFileメソッドが呼び出されたかどうかを取得する。
+    - `ReadFileWasCalled() As Boolean` : ReadTextFileメソッドが呼び出されたかどうかを取得する。
+    - `WriteFileWasCalled() As Boolean` : WriteTextFileメソッドが呼び出されたかどうかを取得する。
+    - `LastSourcePath() As String` : 最後にコピーされたソースパスを取得する。
+    - `LastDestPath() As String` : 最後にコピーされた宛先パスを取得する。
+    - `ResetFlags()` : フラグをリセットする。
+    - `IFileOperations_FileExists(ByVal path As String) As Boolean` : ファイルの存在有無を確認する。
+    - `IFileOperations_FolderExists(ByVal path As String) As Boolean` : フォルダの存在有無を確認する。
+    - `IFileOperations_CreateFolder(ByVal path As String)` : フォルダを作成する。
+    - `IFileOperations_CopyFile(ByVal sourcePath As String, ByVal destPath As String) As Boolean` : ファイルをコピーする。
+    - `IFileOperations_DeleteFile(ByVal path As String) As Boolean` : ファイルを削除する。
+    - `IFileOperations_MoveFile(ByVal sourcePath As String, ByVal destPath As String) As Boolean` : ファイルを移動する。
+    - `IFileOperations_ReadTextFile(ByVal path As String) As String` : テキストファイルを読み込む。
+    - `IFileOperations_WriteTextFile(ByVal path As String, ByVal content As String)` : テキストファイルに書き込む。
+    - `IFileOperations_ReadBinaryFile(ByVal path As String) As Byte()` : バイナリファイルを読み込む。
+    - `IFileOperations_WriteBinaryFile(ByVal path As String, ByVal content() As Byte)` : バイナリファイルに書き込む。
+    - `IFileOperations_GetAbsolutePath(ByVal path As String) As String` : 絶対パスを取得する。
+  - `[その他特記事項]` :
+    - テスト専用のモッククラスであり、実際のファイル操作は行わない。
+    - `Setup...` メソッドで、ファイル操作の結果を事前に設定できる。
+    - `...WasCalled` プロパティで、メソッドの呼び出しを確認できる。
+    - `Last...Path` プロパティで、最後に操作されたパスを確認できる。
+    - `ResetFlags` メソッドで、モックの状態を初期状態に戻すことができる。
+
+- `MockIniFile` : モジュール名
+  - `[概要]` : INIファイル操作のモッククラス。INIファイルからの値の取得や書き込みをシミュレートする。
+  - `[依存関係]` :
+    - IIniFile
+    - Dictionary
+  - `[メソッド一覧]` :
+    - `SetReturnValue(ByVal section As String, ByVal key As String, ByVal value As String)` : テスト用の戻り値を設定する。
+    - `GetCallCount() As Long` : GetPrivateProfileStringの呼び出し回数を取得する。
+    - `WriteCallCount() As Long` : WritePrivateProfileStringの呼び出し回数を取得する。
+    - `GetWrittenValue(ByVal section As String, ByVal key As String) As String` : 書き込まれた値を取得する。
+    - `IIniFile_GetPrivateProfileString(ByVal section As String, ByVal key As String, ByVal defaultValue As String, ByVal filePath As String) As String` : INIファイルから値を取得する。
+    - `IIniFile_WritePrivateProfileString(ByVal section As String, ByVal key As String, ByVal value As String, ByVal filePath As String) As Boolean` : INIファイルに値を書き込む。
+    - `ResetCounters()` : すべてのカウンターをリセットする。
+  - `[その他特記事項]` :
+    - テスト専用のモッククラスであり、実際のINIファイル操作は行わない。
+    - `SetReturnValue` メソッドで、INIファイルから取得される値を設定できる。
+    - `GetCallCount`, `WriteCallCount` プロパティで、メソッドの呼び出し回数を確認できる。
+    - `GetWrittenValue` メソッドで、書き込まれた値を確認できる。
+    - `ResetCounters` メソッドで、モックの状態を初期状態に戻すことができる。
+
+- `MockLock` : モジュール名
+  - `[概要]` : 排他制御のモッククラス。ロックの取得と解放の動作をシミュレートする。
+  - `[依存関係]` :
+    - ILock
+  - `[メソッド一覧]` :
+    - `Class_Initialize()` : クラスの初期化処理。初期状態を設定する。
+    - `ILock_AcquireLock()` : ロックを取得する。
+    - `ILock_ReleaseLock()` : ロックを解放する。
+    - `IsLocked() As Boolean` : ロック状態を取得する。
+    - `AcquireLockCallCount() As Long` : AcquireLockの呼び出し回数を取得する。
+    - `ReleaseLockCallCount() As Long` : ReleaseLockの呼び出し回数を取得する。
+    - `SetShouldFailAcquire(ByVal value As Boolean)` : AcquireLockでエラーを発生させるかどうかを設定する。
+    - `SetShouldFailRelease(ByVal value As Boolean)` : ReleaseLockでエラーを発生させるかどうかを設定する。
+    - `ResetCallCounts()` : 呼び出し回数カウンターをリセットする。
+    - `Reset()` : モックの状態を初期状態にリセットする。
+    - `IsLockBalanced() As Boolean` : ロックの取得と解放が一致しているかどうかを確認する。
+    - `GetUnbalancedLockCount() As Long` : ロックの取得と解放の差分を取得する。
+  - `[その他特記事項]` :
+    - テスト専用のモッククラスであり、実際の排他制御は行わない。
+    - `AcquireLock` と `ReleaseLock` メソッドでロックの取得と解放をシミュレートする。
+    - `SetShouldFailAcquire` と `SetShouldFailRelease` メソッドで、エラーを発生させることができる。
+    - `IsLockBalanced` と `GetUnbalancedLockCount` メソッドで、ロックの状態を検証できる。
+
+- `MockLogger` : モジュール名
+  - `[概要]` : ロガーのモッククラス。ログメッセージの記録と検証を行う。
+  - `[依存関係]` :
+    - ILogger
+  - `[メソッド一覧]` :
+    - `Class_Initialize()` : クラスの初期化処理。ログエントリの配列とカウンターを初期化する。
+    - `ILogger_LogDebug(ByVal Module As String, ByVal Procedure As String, ByVal Message As String)` : デバッグログを記録する。
+    - `ILogger_LogInfo(ByVal Module As String, ByVal Procedure As String, ByVal Message As String)` : 情報ログを記録する。
+    - `ILogger_LogWarning(ByVal Module As String, ByVal Procedure As String, ByVal Message As String)` : 警告ログを記録する。
+    - `ILogger_LogError(ByVal Module As String, ByVal Procedure As String, ByVal Message As String)` : エラーログを記録する。
+    - `AddLogEntry(ByVal Level As String, ByVal Module As String, ByVal Procedure As String, ByVal Message As String)` : ログエントリを追加する。
+    - `LogCount() As Long` : 記録されたログエントリの数を取得する。
+    - `DebugLogCount() As Long` : 記録されたデバッグログの数を取得する。
+    - `InfoLogCount() As Long` : 記録された情報ログの数を取得する。
+    - `WarnLogCount() As Long` : 記録された警告ログの数を取得する。
+    - `ErrorLogCount() As Long` : 記録されたエラーログの数を取得する。
+    - `GetLogEntry(ByVal index As Long) As String` : 指定されたインデックスのログエントリを取得する。
+    - `ContainsMessage(ByVal searchText As String) As Boolean` : 指定された文字列を含むログメッセージが存在するかどうかを判定する。
+    - `ClearLogs()` : 記録されたログエントリをクリアする。
+    - `ResetCounters()` : ログレベルごとのカウンターをリセットする。
+    - `GetLastLogEntry() As String` : 最後に記録されたログエントリを取得する。
+    - `GetLogEntriesByLevel(ByVal Level As String) As Long` : 指定されたログレベルのログエントリの数を取得する。
+  - `[その他特記事項]` :
+    - テスト専用のモッククラスであり、実際のログ出力は行わない。
+    - `ILogger_Log...` メソッドでログメッセージを記録する。
+    - `GetLogEntry` や `ContainsMessage` メソッドで記録されたログメッセージを検証できる。
+    - `ClearLogs` メソッドでログエントリをクリアできる。
+
+- `MockMessageFormatter` : モジュール名
+  - `[概要]` : メッセージフォーマッタのモッククラス。メッセージのフォーマットをシミュレートし、呼び出しの記録を行う。
+  - `[依存関係]` :
+    - IMessageFormatter
+    - ErrorInfo
+  - `[メソッド一覧]` :
+    - `WasCalled() As Boolean` : フォーマットメソッドが呼び出されたかどうかを取得する。
+    - `LastMessage() As String` : 最後にフォーマットされたメッセージを取得する。
+    - `LastErrorInfo() As ErrorInfo` : 最後にフォーマットされたエラー情報を取得する。
+    - `SetReturnValue(ByVal value As String)` : フォーマットメソッドの戻り値を設定する。
+    - `Reset()` : モックの状態をリセットする。
+    - `IMessageFormatter_FormatMessage(ByVal message As String, ByRef errorInfo As ErrorInfo) As String` : メッセージをフォーマットする。
+  - `[その他特記事項]` :
+    - テスト専用のモッククラスであり、実際のメッセージフォーマットは行わない。
+    - `SetReturnValue` メソッドで、フォーマットメソッドの戻り値を設定できる。
+    - `WasCalled` プロパティで、メソッドの呼び出しを確認できる。
+    - `LastMessage` と `LastErrorInfo` プロパティで、フォーマットされたメッセージとエラー情報を確認できる。
+    - `Reset` メソッドで、モックの状態を初期状態に戻すことができる。
+
+- `MockPerformanceMonitor` : モジュール名
+  - `[概要]` : パフォーマンスモニターのモッククラス。パフォーマンス測定の開始と終了をシミュレートし、メトリクスの記録を行う。
+  - `[依存関係]` :
+    - IPerformanceMonitor
+    - Dictionary
+  - `[メソッド一覧]` :
+    - `Enabled(ByVal value As Boolean)` : パフォーマンス監視の有効/無効を設定する。
+    - `Enabled() As Boolean` : パフォーマンス監視の有効/無効を取得する。
+    - `StartCallCount() As Long` : StartMeasurementの呼び出し回数を取得する。
+    - `EndCallCount() As Long` : EndMeasurementの呼び出し回数を取得する。
+    - `Metrics() As Collection` : 記録されたメトリクスを取得する。
+    - `ResetCounters()` : カウンターをリセットする。
+    - `AddMetric(ByVal operationName As String, ByVal executionTime As Double)` : メトリクスを追加する。
+    - `IPerformanceMonitor_StartMeasurement(ByVal operationName As String)` : パフォーマンス測定を開始する。
+    - `IPerformanceMonitor_EndMeasurement()` : パフォーマンス測定を終了する。
+    - `IPerformanceMonitor_GetMetrics() As Collection` : 記録されたメトリクスを取得する。
+    - `IPerformanceMonitor_ClearMetrics()` : 記録されたメトリクスをクリアする。
+    - `IPerformanceMonitor_Enabled() As Boolean` : パフォーマンス監視の有効/無効を取得する。
+    - `IPerformanceMonitor_Enabled(ByVal value As Boolean)` : パフォーマンス監視の有効/無効を設定する。
+  - `[その他特記事項]` :
+    - テスト専用のモッククラスであり、実際のパフォーマンス測定は行わない。
+    - `Enabled` プロパティで、パフォーマンス監視の有効/無効を切り替えられる。
+    - `StartCallCount` と `EndCallCount` プロパティで、メソッドの呼び出し回数を確認できる。
+    - `Metrics` プロパティで、記録されたメトリクスを確認できる。
+    - `ResetCounters` メソッドで、モックの状態を初期状態に戻すことができる。
+
+- `modTestRunner` : モジュール名
+  - `[概要]` : テストの実行を管理するモジュール。各テストクラスのインスタンス化、テストメソッドの実行、結果の集計と出力を行う。
+  - `[依存関係]` :
+    - TestConfigImpl
+    - TestLogger
+    - TestFileOperations
+    - TestValidator
+    - TestDatabase
+    - TestSecurity
+  - `[メソッド一覧]` :
+    - `RunAllTests()` : すべてのテストを実行する。
+    - `RunConfigTests()` : 設定関連のテストを実行する。
+    - `RunLoggerTests()` : ロガー関連のテストを実行する。
+    - `RunFileOperationsTests()` : ファイル操作関連のテストを実行する。
+    - `RunValidatorTests()` : バリデーション関連のテストを実行する。
+    - `RunDatabaseTests()` : データベース関連のテストを実行する。
+    - `RunSecurityTests()` : セキュリティ関連のテストを実行する。
+    - `RunTestMethod(ByVal testClass As Object, ByVal methodName As String)` : 指定されたテストメソッドを実行する。
+    - `OutputTestResults()` : テスト結果を出力する。
+  - `[その他特記事項]` :
+    - `RunAllTests` メソッドを起点として、各テストクラスのテストメソッドが実行される。
+    - テスト結果は `TestResult` 構造体に格納され、`mTestResults` コレクションに集計される。
+    - `OutputTestResults` メソッドで、テスト結果がコンソールに出力される。
+
+- `modTestUtility` : モジュール名
+  - `[概要]` : テスト実行を補助するユーティリティモジュール。テストの開始・終了、アサーション、レポート生成などの機能を提供する。
+  - `[依存関係]` :
+    - clsPerformanceMonitor
+    - modStackTrace
+    - modError
+    - ErrorInfo
+    - clsLogger
+    - DefaultLoggerSettings
+  - `[メソッド一覧]` :
+    - `InitializeTestModule()` : テストモジュールの初期化を行う。
+    - `StartTest(ByVal testName As String, ByVal description As String, Optional ByVal category As String = "General", Optional ByVal priority As Integer = 1)` : テストの開始を宣言し、パフォーマンス測定を開始する。
+    - `EndTest(ByVal result As TestResult, Optional ByVal errorMessage As String = "")` : テストの終了を宣言し、パフォーマンス測定を終了、結果を記録する。
+    - `AssertEqual(ByVal expected As Variant, ByVal actual As Variant, Optional ByVal message As String = "")` : 期待値と実際値が等しいことを検証する。
+    - `AssertTrue(ByVal condition As Boolean, Optional ByVal message As String = "")` : 条件が真であることを検証する。
+    - `AssertFalse(ByVal condition As Boolean, Optional ByVal message As String = "")` : 条件が偽であることを検証する。
+    - `GenerateTestReport() As String` : テスト結果のレポートを生成する。
+    - `GetResultText(ByVal result As TestResult) As String` : テスト結果に対応するテキストを取得する。
+    - `GetTestExecutionTime(ByVal testName As String) As Double` : 指定されたテストの実行時間を取得する。
+    - `LogTestEvent(ByVal message As String)` : テストイベントをログに記録する。
+    - `CleanupTestModule()` : テストモジュールのクリーンアップを行う。
+  - `[その他特記事項]` :
+    - `StartTest` と `EndTest` でテストの開始と終了を宣言し、`Assert...` メソッドで検証を行う。
+    - テストレポートは `GenerateTestReport` メソッドで生成され、`TEST_RESULTS_FILE` 定数で指定されたファイルにログが出力される。
+    - `InitializeTestModule` と `CleanupTestModule` でモジュールの初期化とクリーンアップを行う。
+
+- `TestClsCrypto` : モジュール名
+  - `[概要]` : `clsCrypto` クラスのテストクラス。暗号化と復号化、パフォーマンスモニタリング、排他制御、エラー処理のテストを行う。
+  - `[依存関係]` :
+    - clsCrypto
+    - MockPerformanceMonitor
+    - MockLock
+    - ICryptography
+    - IKeyDerivationStrategy
+    - CryptographyImpl
+    - PBKDF2KeyDerivationStrategy
+  - `[メソッド一覧]` :
+    - `TestEncryptionAndDecryption()` : 暗号化と復号化のテストを行う。
+    - `TestPerformanceMonitoring()` : パフォーマンスモニタリングのテストを行う。
+    - `TestLocking()` : 排他制御のテストを行う。
+    - `TestErrorHandling()` : エラー処理のテストを行う。
+    - `RunAllTests()` : すべてのテストを実行する。
+  - `[その他特記事項]` :
+    - 各テストメソッドは、`On Error GoTo TestFail` でエラーハンドリングを行い、`Debug.Print` で結果を出力する。
+    - `Debug.Assert` を使用して、テストの期待結果を検証する。
+
+- `TestConfigImpl` : モジュール名
+  - `[概要]` : `ConfigImpl` クラスのテストクラス。設定の取得・設定、ロード、暗号化、環境管理、バリデーション、パフォーマンス、バックアップ/復元、履歴管理、エラー処理のテストを行う。
+  - `[依存関係]` :
+    - Rubberduck.AssertClass
+    - Rubberduck.FakesProvider
+    - ConfigImpl
+    - MockIniFile
+    - MockCryptography
+    - MockFileOperations
+    - MockPerformanceMonitor
+  - `[メソッド一覧]` :
+    - `TestGetSetSetting()` : 設定の取得と設定のテストを行う。
+    - `TestLoadSettings()` : 設定のロードのテストを行う。
+    - `TestEncryptedSetting()` : 暗号化された設定のテストを行う。
+    - `TestEnvironmentSpecificSettings()` : 環境固有の設定のテストを行う。
+    - `TestSettingsValidation()` : 設定のバリデーションのテストを行う。
+    - `TestPerformanceMetrics()` : パフォーマンスメトリクスのテストを行う。
+    - `TestBackupAndRestore()` : バックアップと復元のテストを行う。
+    - `TestSettingHistory()` : 設定履歴のテストを行う。
+    - `TestInvalidEncryptionKey()` : 無効な暗号化キーのテストを行う。
+    - `TestFileAccessError()` : ファイルアクセスエラーのテストを行う。
+  - `[その他特記事項]` :
+    - Rubberduck の `AssertClass` と `FakesProvider` を使用して、テストとモックの作成を行う。
+    - 各テストメソッドは、`On Error GoTo TestFail` でエラーハンドリングを行い、`Assert.Fail` で失敗を報告する。
+
+- `TestConnectionPool` : モジュール名
+  - `[概要]` : `ConnectionPool` クラスのテストクラス。接続プールの初期化、接続の取得と解放、不正な接続文字列、リトライ処理、プールサイズ制限、接続の再利用のテストを行う。
+  - `[依存関係]` :
+    - ConnectionPool
+    - MockDatabaseConfig
+    - MockPerformanceMonitor
+    - MockLock
+    - MockLogger
+  - `[メソッド一覧]` :
+    - `TestInitialize()` : 依存オブジェクトが正しく設定されることをテストする。
+    - `TestInvalidConnectionString()` : 不正な接続文字列の場合、エラーログが出力されることをテストする。
+    - `TestConnectionRetry()` : 接続失敗時にリトライ処理が行われることをテストする。
+    - `TestPoolSizeLimit()` : プールサイズが設定値を超えないことをテストする。
+    - `TestConnectionReuse()` : 解放された接続が再利用可能になることをテストする。
+    - `RunAllTests()` : すべてのテストを実行する。
+  - `[その他特記事項]` :
+    - 各テストメソッドは、`On Error GoTo TestFail` でエラーハンドリングを行い、`Debug.Print` で結果を出力する。
+    - `Debug.Assert` を使用して、テストの期待結果を検証する。
+
+- `TestConsoleLogger` : モジュール名
+  - `[概要]` : `ConsoleLogger` クラスのテストクラス。コンソールへのログ出力機能をテストする。
+  - `[依存関係]` :
+    - ConsoleLogger
+    - IPerformanceMonitor
+    - clsPerformanceMonitor
+  - `[メソッド一覧]` :
+    - `TestInitialization()` : 初期化処理をテストする。
+    - `TestLogWriting()` : ログ書き込み処理をテストする。
+    - `TestDifferentLogLevels()` : 異なるログレベルでの書き込み処理をテストする。
+    - `TestPerformanceMonitoring()` : パフォーマンス計測付きのログ出力処理をテストする。
+    - `RunAllTests()` : すべてのテストを実行する。
+  - `[その他特記事項]` :
+    - 各テストメソッドは、`On Error GoTo TestFail` でエラーハンドリングを行い、`Debug.Print` で結果を出力する。
+    - `Debug.Assert` を使用して、テストの期待結果を検証する。
+    - 実際のコンソール出力を確認する必要があるテストを含む。
+
+- `TestCriticalSectionLock` : モジュール名
+  - `[概要]` : `clsCriticalSectionLock` クラスのテストクラス。クリティカルセクションを使用した排他制御機能をテストする。
+  - `[依存関係]` :
+    - clsCriticalSectionLock
+  - `[メソッド一覧]` :
+    - `TestAcquireSuccess()` : ロックの取得が成功することをテストする。
+    - `TestAcquireWithTimeout()` : タイムアウト付きでロックの取得が成功することをテストする。
+    - `TestReleaseSuccess()` : ロックの解放が成功することをテストする。
+    - `TestMultipleAcquire()` : 複数回のロック取得が失敗することをテストする。
+    - `TestInitialization()` : 初期化処理が成功することをテストする。
+  - `[その他特記事項]` :
+    - 各テストメソッドは `@TestMethod` 属性でマークされている。
+    - `TestInitialize` と `TestCleanup` メソッドで、各テストの準備と後処理を行う。
+    - `Debug.Assert` を使用して、テストの期待結果を検証する。
+    - `ForceRelease` メソッドを使用して、テスト後のクリーンアップを確実に行う。
+
+- `TestDatabaseLogger` : モジュール名
+  - `[概要]` : `DatabaseLogger` クラスのテストクラス。データベースへのログ出力機能をテストする。
+  - `[依存関係]` :
+    - DatabaseLogger
+    - IConnectionPool
+    - ILock
+    - IPerformanceMonitor
+    - IDatabaseConfig
+    - ConnectionPool
+    - clsLock
+    - clsPerformanceMonitor
+    - ConfigImpl
+  - `[メソッド一覧]` :
+    - `TestInitialization()` : 初期化処理をテストする。
+    - `TestLogWriting()` : ログ書き込み処理をテストする。
+    - `TestConcurrentWriting()` : 同時実行時のログ書き込み処理をテストする。
+    - `TestErrorHandling()` : エラー処理をテストする。
+    - `CreateTestTable()` : テスト用のテーブルを作成する。
+    - `DropTestTable()` : テスト用のテーブルを削除する。
+    - `RunAllTests()` : すべてのテストを実行する。
+  - `[その他特記事項]` :
+    - 各テストメソッドは、`On Error GoTo TestFail` でエラーハンドリングを行い、`Debug.Print` で結果を出力する。
+    - `Debug.Assert` を使用して、テストの期待結果を検証する。
+    - テスト用のテーブルを作成・削除するヘルパーメソッドを含む。
+
+- `TestDateValidator` : モジュール名
+  - `[概要]` : `DateValidator` クラスのテストクラス。日付の妥当性検証機能をテストする。
+  - `[依存関係]` :
+    - DateValidator
+    - MockError
+    - MinDateRule
+    - MaxDateRule
+    - AllowFutureDateRule
+    - AllowPastDateRule
+  - `[メソッド一覧]` :
+    - `TestMinDateValidation()` : 最小日付ルールをテストする。
+    - `TestMaxDateValidation()` : 最大日付ルールをテストする。
+    - `TestAllowFutureDateValidation()` : 未来の日付を許可するルールをテストする。
+    - `TestAllowPastDateValidation()` : 過去の日付を許可するルールをテストする。
+    - `TestBirthDateValidation()` : 生年月日の妥当性検証をテストする。
+    - `TestExpiryDateValidation()` : 有効期限の妥当性検証をテストする。
+    - `TestMultipleRules()` : 複数のルールを組み合わせた妥当性検証をテストする。
+  - `[その他特記事項]` :
+    - 各テストメソッドは、`Debug.Assert` を使用して、テストの期待結果を検証する。
+    - `CreateBirthDateValidator` と `CreateExpiryDateValidator` は、テストで使用する `DateValidator` のインスタンスを生成するヘルパーメソッド。
+
+- `TestDefaultMessageFormatter` : モジュール名
+  - `[概要]` : `DefaultMessageFormatter` クラスのテストクラス。メッセージフォーマット機能をテストする。
+  - `[依存関係]` :
+    - DefaultMessageFormatter
+    - ErrorInfo
+  - `[メソッド一覧]` :
+    - `TestBasicFormatting()` : 基本的なメッセージフォーマットをテストする。
+    - `TestWithStackTrace()` : スタックトレース付きメッセージのフォーマットをテストする。
+    - `TestEmptyMessage()` : 空のメッセージのフォーマットをテストする。
+    - `TestErrorHandling()` : エラー処理をテストする。
+    - `RunAllTests()` : すべてのテストを実行する。
+  - `[その他特記事項]` :
+    - 各テストメソッドは、`On Error GoTo TestFail` でエラーハンドリングを行い、`Debug.Print` で結果を出力する。
+    - `TestFormatMessage` メソッドは、`DefaultMessageFormatter` の `FormatMessage` メソッドを呼び出すためのヘルパーメソッド。
+
+- `TestEventLogLogger` : モジュール名
+  - `[概要]` : `EventLogLogger` クラスのテストクラス。イベントログへのログ出力機能をテストする。
+  - `[依存関係]` :
+    - EventLogLogger
+    - IEventLog
+    - ILock
+    - IPerformanceMonitor
+    - EventLogImpl
+    - clsLock
+    - clsPerformanceMonitor
+  - `[メソッド一覧]` :
+    - `TestInitialization()` : 初期化処理をテストする。
+    - `TestLogWriting()` : ログ書き込み処理をテストする。
+    - `TestDifferentLogLevels()` : 異なるログレベルでの書き込み処理をテストする。
+    - `TestErrorHandling()` : エラー処理をテストする。
+    - `CreateEventSource()` : テスト用のイベントソースを作成する。
+    - `RemoveEventSource()` : テスト用のイベントソースを削除する。
+    - `RunAllTests()` : すべてのテストを実行する。
+  - `[その他特記事項]` :
+    - 各テストメソッドは、`On Error GoTo TestFail` でエラーハンドリングを行い、`Debug.Print` で結果を出力する。
+    - テスト用のイベントソースを作成・削除するヘルパーメソッドを含む。
+    - イベントログへの書き込みは、イベントビューアーで確認する必要がある。
+
+- `TestFileLogger` : モジュール名
+  - `[概要]` : `FileLogger` クラスのテストクラス。ファイルへのログ出力機能をテストする。
+  - `[依存関係]` :
+    - FileLogger
+    - IFileOperations
+    - ILock
+    - IPerformanceMonitor
+    - FileSystemOperations
+    - clsLock
+    - clsPerformanceMonitor
+  - `[メソッド一覧]` :
+    - `TestInitialization()` : 初期化処理をテストする。
+    - `TestLogWriting()` : ログ書き込み処理をテストする。
+    - `TestConcurrentWriting()` : 同時実行時のログ書き込み処理をテストする。
+    - `TestErrorHandling()` : エラー処理をテストする。
+    - `RunAllTests()` : すべてのテストを実行する。
+  - `[その他特記事項]` :
+    - 各テストメソッドは、`On Error GoTo TestFail` でエラーハンドリングを行い、`Debug.Print` で結果を出力する。
+    - `Debug.Assert` を使用して、テストの期待結果を検証する。
+
+- `TestFileSystemOperations` : モジュール名
+  - `[概要]` : `FileSystemOperations` クラスのテストクラス。ファイルシステム操作のテストを行う。
+  - `[依存関係]` :
+    - MockLock
+    - MockPerformanceMonitor
+    - MockFileIO
+    - FileSystemOperations
+  - `[メソッド一覧]` :
+    - `TestInitialization()` : 初期化のテスト。
+    - `TestFileOperations()` : ファイル操作のテスト。
+    - `TestErrorHandling()` : エラー処理のテスト。
+    - `TestBinaryOperations()` : バイナリファイル操作のテスト。
+    - `TestPathOperations()` : パス操作のテスト。
+  - `[その他特記事項]` :
+    - Mockオブジェクトを使用して依存関係を分離し、テストの焦点を `FileSystemOperations` クラスに絞り込む。
+    - `Debug.Assert` を使用してテスト結果を検証する。
+
+- `TestLogger` : モジュール名
+  - `[概要]` : `clsLogger` クラスのテストクラス。ログ記録機能をテストする。
+  - `[依存関係]` :
+    - clsLogger
+    - ILoggerSettings
+    - IQueue
+    - ILock
+    - IPerformanceMonitor
+    - DefaultLoggerSettings
+    - QueueImpl
+    - clsLock
+    - clsPerformanceMonitor
+    - FileLogger
+    - DatabaseLogger
+    - EventLogLogger
+    - ConsoleLogger
+  - `[メソッド一覧]` :
+    - `TestInitialization()` : 初期化処理をテストする。
+    - `TestLoggerAddition()` : ロガーの追加処理をテストする。
+    - `TestLogMessageQueuing()` : ログメッセージのキューイング処理をテストする。
+    - `TestAsyncProcessing()` : 非同期処理をテストする。
+    - `RunAllTests()` : すべてのテストを実行する。
+  - `[その他特記事項]` :
+    - 各テストメソッドは、`On Error GoTo TestFail` でエラーハンドリングを行い、`Debug.Print` で結果を出力する。
+    - `Debug.Assert` を使用して、テストの期待結果を検証する。
+
+- `TestMsgBoxNotifier` : モジュール名
+  - `[概要]` : `MsgBoxNotifier` クラスのテストクラス。メッセージボックスによる通知機能をテストする。
+  - `[依存関係]` :
+    - MsgBoxNotifier
+    - MockLock
+    - MockPerformanceMonitor
+    - MockAppConfig
+    - MockMessageFormatter
+    - ErrorInfo
+  - `[メソッド一覧]` :
+    - `TestInitialize()` : 正常な初期化をテストする。
+    - `TestInitializeWithNothing()` : 異常な初期化（引数にNothingを渡す）をテストする。
+    - `TestNotificationStyle()` : 通知スタイルの設定と取得をテストする。
+    - `TestMessageFormatting()` : メッセージフォーマット処理をテストする。
+    - `TestLocking()` : ロック処理をテストする。
+    - `RunAllTests()` : すべてのテストを実行する。
+  - `[その他特記事項]` :
+    - 各テストメソッドは `Debug.Print` を使用して結果を出力する。
+    - エラーハンドリングは `On Error GoTo` または `On Error Resume Next` で行われる。
+    - モックオブジェクトを使用して依存関係を制御し、テスト対象を分離する。
+
+- `TestMutexLock` : モジュール名
+  - `[概要]` : `clsMutexLock` クラスのテストクラス。ミューテックスを使用した排他制御機能をテストする。
+  - `[依存関係]` :
+    - clsMutexLock
+  - `[メソッド一覧]` :
+    - `TestAcquireSuccess()` : ロックの取得が成功することをテストする。
+    - `TestAcquireWithTimeout()` : タイムアウト付きでロックの取得が成功することをテストする。
+    - `TestReleaseSuccess()` : ロックの解放が成功することをテストする。
+    - `TestConfigure()` : ミューテックス名の設定をテストする。
+    - `TestMultipleAcquire()` : 複数回のロック取得が失敗することをテストする。
+  - `[その他特記事項]` :
+    - 各テストメソッドは `@TestMethod` 属性でマークされている。
+    - `TestInitialize` と `TestCleanup` メソッドで、各テストの準備と後処理を行う。
+    - `Debug.Assert` を使用して、テストの期待結果を検証する。
+    - `ForceRelease` メソッドを使用して、テスト後のクリーンアップを確実に行う。
+
+- `TestSemaphoreLock` : モジュール名
+  - `[概要]` : `clsSemaphoreLock` クラスのテストクラス。セマフォを使用した排他制御機能をテストする。
+  - `[依存関係]` :
+    - clsSemaphoreLock
+  - `[メソッド一覧]` :
+    - `TestAcquireSuccess()` : ロックの取得が成功することをテストする。
+    - `TestAcquireWithTimeout()` : タイムアウト付きでロックの取得が成功することをテストする。
+    - `TestReleaseSuccess()` : ロックの解放が成功することをテストする。
+    - `TestConfigure()` : セマフォ名の設定をテストする。
+    - `TestMultipleAcquire()` : 複数回のロック取得が失敗することをテストする。
+  - `[その他特記事項]` :
+    - 各テストメソッドは `@TestMethod` 属性でマークされている。
+    - `TestInitialize` と `TestCleanup` メソッドで、各テストの準備と後処理を行う。
+    - `Debug.Assert` を使用して、テストの期待結果を検証する。
+    - `ForceRelease` メソッドを使用して、テスト後のクリーンアップを確実に行う。
+
+- `TestStringValidator` : モジュール名
+  - `[概要]` : `StringValidator` クラスのテストクラス。文字列の妥当性検証機能をテストする。
+  - `[依存関係]` :
+    - StringValidator
+    - MockError
+    - MinLengthRule
+    - MaxLengthRule
+    - PatternRule
+  - `[メソッド一覧]` :
+    - `TestMinLengthValidation()` : 最小長ルールをテストする。
+    - `TestMaxLengthValidation()` : 最大長ルールをテストする。
+    - `TestPatternValidation()` : パターンルールをテストする。
+    - `TestEmailValidation()` : メールアドレスの妥当性検証をテストする。
+    - `TestPhoneValidation()` : 電話番号の妥当性検証をテストする。
+    - `TestMultipleRules()` : 複数のルールを組み合わせた妥当性検証をテストする。
+  - `[その他特記事項]` :
+    - 各テストメソッドは、`Debug.Assert` を使用して、テストの期待結果を検証する。
+    - `CreateEmailValidator` と `CreatePhoneValidator` は、テストで使用する `StringValidator` のインスタンスを生成するヘルパーメソッド。

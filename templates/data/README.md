@@ -1,0 +1,233 @@
+- `ConnectionPool` : モジュール名
+  - `[概要]` : データベース接続を管理するプール機能を提供するクラス
+  - `[依存関係]` :
+    - IConnectionPool
+    - clsLock
+    - clsPerformanceMonitor
+    - ILogger
+    - IDatabaseConfig
+  - `[メソッド一覧]` :
+    - `Initialize(config As IDatabaseConfig, performanceMonitor As IPerformanceMonitor, lock As ILock, logger As ILogger)` : コネクションプールを初期化する
+    - `IConnectionPool_AcquireConnection() As Object` : データベース接続を取得する（IConnectionPool実装）
+    - `IConnectionPool_ReleaseConnection(connection As Object)` : データベース接続を解放する（IConnectionPool実装）
+    - `IConnectionPool_ActiveConnections() As Long` : 現在のアクティブな接続数を取得する（IConnectionPool実装）
+    - `IConnectionPool_MaxConnections() As Long` : プールの最大接続数を取得または設定する（IConnectionPool実装）
+    - `IConnectionPool_ConnectionTimeout() As Long` : 接続タイムアウト時間を取得または設定する（IConnectionPool実装）
+    - `CreateNewConnection() As Object` : 新しいデータベース接続を作成する
+    - `ValidateConnection(connection As Object) As Boolean` : コネクションが有効かどうかを確認する
+    - `ValidateConnectionString(connectionString As String) As Boolean` : 接続文字列を検証する
+  - `[その他特記事項]` :
+    - テスト用の内部メソッド（`PoolSize`, `ActiveConnections`, `ClearPool`）は本番環境では使用しないこと。
+    - `IDatabaseConfig` で接続文字列、最大プールサイズ、リトライ回数、リトライ間隔などの設定を管理する。
+
+- `DatabaseConnectionErrorHandler` : モジュール名
+  - `[概要]` : データベース接続エラーを処理するクラス。リトライ、フォールバック、診断、メトリクス収集などの機能を提供する。
+  - `[依存関係]` :
+    - IErrorHandler
+    - ILock
+    - ILogger
+    - IEmergencyLogger
+    - IDatabaseConfig
+    - IUserNotifier
+    - IPerformanceMonitor
+    - Collection
+    - LinearRetryStrategy
+    - ExponentialRetryStrategy
+    - FibonacciRetryStrategy
+    - DiagnosticResult
+  - `[メソッド一覧]` :
+    - `Create(lock As ILock, logger As ILogger, emergencyLogger As IEmergencyLogger, config As IDatabaseConfig, userNotifier As IUserNotifier, performanceMonitor As IPerformanceMonitor) As DatabaseConnectionErrorHandler` : コンストラクタ。依存オブジェクトを受け取り、インスタンスを初期化する。
+    - `IErrorHandler_HandleError(ByRef errorDetail As ErrorInfo) As Boolean` : エラーを処理する。リトライ、フォールバック、診断、メトリクス収集を行い、結果を返す。
+    - `InitializeRetryStrategies()` : リトライ戦略を初期化する。
+    - `CompleteErrorInfo(ByRef errorDetail As ErrorInfo)` : エラー情報に詳細情報を追加する。
+    - `AttemptRetry(ByRef errorDetail As ErrorInfo) As Boolean` : リトライ処理を実行する。
+    - `AttemptFallback(ByRef errorDetail As ErrorInfo) As Boolean` : フォールバック処理を実行する。
+    - `ExecuteDiagnostics(ByRef errorDetail As ErrorInfo)` : 診断を実行する。
+    - `ManageConnectionPool()` : 接続プールを管理する。
+    - `CollectMetrics()` : メトリクスを収集する。
+    - `SelectRetryStrategy(ByRef errorDetail As ErrorInfo) As IRetryStrategy` : エラーの種類に応じて最適なリトライ戦略を選択する。
+    - `DiagnoseNetwork() As DiagnosticResult` : ネットワーク診断を実行する。
+    - `DiagnoseServer() As DiagnosticResult` : サーバー診断を実行する。
+    - `DiagnoseAuthentication() As DiagnosticResult` : 認証診断を実行する。
+    - `CleanupConnectionPool()` : 接続プールをクリーンアップする。
+    - `GetConnectionPoolMetrics() As Collection` : 接続プールのメトリクスを取得する。
+    - `GetRetryMetrics() As Collection` : リトライのメトリクスを取得する。
+    - `GetDiagnosticMetrics() As Collection` : 診断のメトリクスを取得する。
+    - `GetLastDiagnosticResult() As String` : 最後の診断結果を取得する。
+    - `ValidateDependency(ByVal dependency As Object, ByVal name As String)` : 依存オブジェクトの存在を確認する。
+  - `[その他特記事項]` :
+    - `RetryAttempted`, `FallbackActivated`, `PoolStateChanged`, `DiagnosticsCompleted`, `PerformanceAlert`, `ConnectionRecovered`, `MetricsCollected` などのイベントを発行する。
+    - `DEFAULT_RETRY_INTERVAL`, `MAX_RETRY_COUNT`, `MAX_POOL_SIZE`, `MIN_POOL_SIZE`, `POOL_CLEANUP_INTERVAL`, `DIAGNOSTIC_TIMEOUT`, `MAX_FALLBACK_ATTEMPTS`, `METRICS_INTERVAL` などの定数で動作を制御する。
+
+- `FileIOImpl` : モジュール名
+  - `[概要]` : ファイルI/O操作を実装するクラス
+  - `[依存関係]` :
+    - IFileIO
+    - Scripting.FileSystemObject
+  - `[メソッド一覧]` :
+    - `IFileIO_FileExists(filePath As String) As Boolean` : ファイルの存在確認
+    - `IFileIO_FolderExists(folderPath As String) As Boolean` : フォルダの存在確認
+    - `IFileIO_CreateFolder(folderPath As String) As Boolean` : フォルダの作成
+    - `IFileIO_DeleteFile(filePath As String) As Boolean` : ファイルの削除
+    - `IFileIO_CopyFile(sourceFilePath As String, destinationFilePath As String) As Boolean` : ファイルのコピー
+    - `IFileIO_MoveFile(sourceFilePath As String, destinationFilePath As String) As Boolean` : ファイルの移動
+    - `IFileIO_OpenFile(filePath As String, mode As String) As Object` : ファイルを開く
+    - `IFileIO_CloseFile(file As Object) As Boolean` : ファイルを閉じる
+    - `CreateInstance() As IFileIO` : インスタンスの作成
+  - `[その他特記事項]` :
+    - `Scripting.FileSystemObject` を使用してファイル操作を実行する。
+    - テスト用の内部メソッド（`ResetModule`, `IsInitialized`）は本番環境では使用しないこと。
+
+- `FileNotFoundErrorHandler` : モジュール名
+  - `[概要]` : ファイルが見つからないエラーを処理するクラス
+  - `[依存関係]` :
+    - IErrorHandler
+    - ILock
+    - ILogger
+    - IEmergencyLogger
+    - IUserNotifier
+    - IFileOperations
+  - `[メソッド一覧]` :
+    - `Create(lock As ILock, logger As ILogger, emergencyLogger As IEmergencyLogger, userNotifier As IUserNotifier, fileOperations As IFileOperations) As FileNotFoundErrorHandler` : コンストラクタ。依存オブジェクトを受け取り、インスタンスを初期化する。
+    - `IErrorHandler_HandleError(ByRef errorDetail As ErrorInfo) As Boolean` : ファイルが見つからないエラーを処理する。代替ファイルやバックアップファイルを探し、エラー情報をログに記録し、ユーザーに通知する。
+    - `FindAlternativeFile(originalPath As String) As String` : 代替ファイルパスを探す。
+    - `CheckBackupFile(originalPath As String) As String` : バックアップファイルを探す。
+    - `LogError(ByRef errorDetail As ErrorInfo)` : エラー情報をログに記録する。
+    - `NotifyUser(ByRef errorDetail As ErrorInfo, ByVal style As VbMsgBoxStyle)` : ユーザーにエラーを通知する。
+  - `[その他特記事項]` :
+    - エラー処理の過程で `mLock` を使用してスレッドセーフを確保する。
+    - `mLogger` と `mEmergencyLogger` を使用してエラー情報をログに記録する。
+    - `mUserNotifier` を使用してユーザーにエラーを通知する。
+    - `mFileOperations` を使用してファイルシステム操作を行う。
+
+- `FileSystemOperations` : モジュール名
+  - `[概要]` : ファイルシステム操作を提供するクラス
+  - `[依存関係]` :
+    - IFileOperations
+    - ILock
+    - IPerformanceMonitor
+    - IFileIO
+  - `[メソッド一覧]` :
+    - `Initialize(lock As ILock, performanceMonitor As IPerformanceMonitor, fileIO As IFileIO)` : 依存性を注入して初期化する
+    - `IFileOperations_ReadTextFile(filePath As String, Optional encoding As String) As String` : テキストファイルを読み込む
+    - `IFileOperations_WriteTextFile(filePath As String, content As String, Optional append As Boolean = False, Optional encoding As String) As Boolean` : テキストファイルに書き込む
+    - `IFileOperations_ReadBinaryFile(filePath As String) As Byte()` : バイナリファイルを読み込む
+    - `IFileOperations_WriteBinaryFile(filePath As String, ByRef data() As Byte) As Boolean` : バイナリファイルに書き込む
+    - `IFileOperations_FileExists(filePath As String) As Boolean` : ファイルの存在を確認する
+    - `IFileOperations_FolderExists(folderPath As String) As Boolean` : フォルダの存在を確認する
+    - `IFileOperations_CreateFolder(folderPath As String) As Boolean` : フォルダを作成する
+    - `IFileOperations_DeleteFile(filePath As String) As Boolean` : ファイルを削除する
+    - `IFileOperations_DeleteFolder(folderPath As String) As Boolean` : フォルダを削除する
+    - `IFileOperations_GetAbsolutePath(relativePath As String, Optional basePath As String) As String` : 相対パスから絶対パスを取得する
+    - `CreateInstance(lock As ILock, performanceMonitor As IPerformanceMonitor, fileIO As IFileIO) As IFileOperations` : インスタンスを作成する
+    - `ReadTextFileUsingFileIO(filePath As String, Optional encoding As String) As String` : `IFileIO` を使用してテキストファイルを読み込む
+    - `WriteTextFileUsingFileIO(filePath As String, content As String, append As Boolean, Optional encoding As String) As Boolean` : `IFileIO` を使用してテキストファイルに書き込む
+    - `ReadBinaryFileUsingFileIO(filePath As String) As Byte()` : `IFileIO` を使用してバイナリファイルを読み込む
+    - `WriteBinaryFileUsingFileIO(filePath As String, ByRef data() As Byte) As Boolean` : `IFileIO` を使用してバイナリファイルに書き込む
+  - `[その他特記事項]` :
+    - `Initialize` メソッドで依存性を注入する必要がある。
+    - `IFileIO` インターフェースを実装したクラス（`FileIOImpl` など）を `fileIO` 引数として渡す必要がある。
+    - `Scripting.FileSystemObject` を `GetAbsolutePath` メソッドで使用している。
+    - テスト用の内部メソッド（`ResetModule`, `IsInitialized`）は本番環境では使用しないこと。
+
+- `IniFileImpl` : モジュール名
+  - `[概要]` : INIファイルの読み書きをサポートするクラス
+  - `[依存関係]` :
+    - IIniFile
+    - clsPerformanceMonitor
+    - clsLock
+    - modWindowsAPI
+  - `[メソッド一覧]` :
+    - `IIniFile_GetPrivateProfileString(section As String, key As String, defaultValue As String, filePath As String) As String` : INIファイルから文字列を読み込む
+    - `IIniFile_WritePrivateProfileString(section As String, key As String, value As String, filePath As String) As Boolean` : INIファイルに文字列を書き込む
+    - `LogError(message As String)` : エラーをログに記録する
+  - `[その他特記事項]` :
+    - `modWindowsAPI` の `GetPrivateProfileString` と `WritePrivateProfileString` APIを使用
+    - `MAX_BUFFER_SIZE`, `DEFAULT_BUFFER_SIZE` 定数でバッファサイズを制御
+    - テスト用の内部メソッド（`ValidateState`, `GetPerformanceMonitor`, `TestBufferHandling`）は本番環境では使用しないこと
+
+- `modDatabaseUtils` : モジュール名
+  - `[概要]` : データベース接続と操作に関するユーティリティ関数を提供するモジュール
+  - `[依存関係]` :
+    - clsPerformanceMonitor
+    - clsLock
+    - IDatabaseConfig
+    - ConnectionPool
+    - modStackTrace
+    - modError
+  - `[メソッド一覧]` :
+    - `InitializeModule(config As IDatabaseConfig)` : モジュールを初期化する
+    - `TerminateModule()` : モジュールを終了処理する
+    - `GetConnectionString() As String` : データベース接続文字列を取得する
+    - `GetConnection() As Object` : データベース接続を取得する
+    - `CloseConnection()` : データベース接続を閉じる
+    - `TestConnection() As Boolean` : データベース接続をテストする
+    - `ExecuteQuery(sql As String, Optional params As Variant) As Object` : SQLクエリを実行し、結果を取得する
+    - `GetParameterType(Value As Variant) As Integer` : パラメータの型を取得する
+    - `ValidateParameters(ByRef params As Variant)` : パラメータをバリデーションする
+    - `LogWarning(message As String, procedureName As String)` : 警告をログに記録する
+  - `[その他特記事項]` :
+    - `ERR_MODULE_NOT_INITIALIZED`, `DEFAULT_CONNECTION_STRING` 定数を定義
+    - `mPerformanceMonitor`, `mIsInitialized`, `mLock`, `mDefaultConnection`, `mConfig`, `mConnectionPool` などのプライベート変数を使用
+    - `IDatabaseConfig` インターフェースを介してデータベース設定を取得
+    - `ConnectionPool` クラスを使用してデータベース接続をプール
+    - テスト用の内部メソッド（`ResetModule`, `GetPerformanceMonitor`, `GetConnectionPool`）は本番環境では使用しないこと
+
+- `modFileIO` : モジュール名
+  - `[概要]` : ファイル入出力に関するユーティリティ関数を提供するモジュール
+  - `[依存関係]` :
+    - clsPerformanceMonitor
+    - modErrorCodes
+    - modStackTrace
+    - modError
+  - `[メソッド一覧]` :
+    - `InitializeModule()` : モジュールを初期化する
+    - `TerminateModule()` : モジュールを終了する
+    - `ReadTextFile(filePath As String, Optional encoding As String = DEFAULT_ENCODING) As String` : テキストファイルを読み込む
+    - `WriteTextFile(filePath As String, content As String, Optional append As Boolean = False, Optional encoding As String = DEFAULT_ENCODING) As Boolean` : テキストファイルに書き込む
+    - `ReadBinaryFile(filePath As String) As Byte()` : バイナリファイルを読み込む
+    - `WriteBinaryFile(filePath As String, ByRef data() As Byte) As Boolean` : バイナリファイルに書き込む
+    - `FileExists(filePath As String) As Boolean` : ファイルの存在を確認する
+    - `FolderExists(folderPath As String) As Boolean` : フォルダの存在を確認する
+    - `CreateFolder(folderPath As String) As Boolean` : フォルダを作成する
+    - `DeleteFile(filePath As String) As Boolean` : ファイルを削除する
+    - `DeleteFolder(folderPath As String) As Boolean` : フォルダを削除する
+    - `GetAbsolutePath(relativePath As String, Optional basePath As String) As String` : 相対パスから絶対パスを取得する
+    - `GetFileErrorCode(errNumber As Long) As ErrorCode` : エラー番号からファイルエラーコードを取得する
+    - `RaiseFileError(errorCode As ErrorCode, description As String)` : ファイルエラーを発生させる
+  - `[その他特記事項]` :
+    - `MAX_BUFFER_SIZE`, `DEFAULT_ENCODING` 定数を定義
+    - `performanceMonitor`, `isInitialized` プライベート変数を使用
+    - `Scripting.FileSystemObject` を `GetAbsolutePath` 関数で使用
+    - テスト用の内部メソッド（`ResetModule`）は本番環境では使用しないこと
+
+- `ODBCConnectionStringBuilder` : モジュール名
+  - `[概要]` : ODBC接続文字列を構築するクラス
+  - `[依存関係]` :
+    - IConnectionStringBuilder
+  - `[メソッド一覧]` :
+    - `IConnectionStringBuilder_BuildConnectionString() As String` : 接続文字列を構築する
+    - `IConnectionStringBuilder_Server() As String` : サーバー名を取得または設定する
+    - `IConnectionStringBuilder_Database() As String` : データベース名を取得または設定する
+    - `IConnectionStringBuilder_UserName() As String` : ユーザー名を取得または設定する
+    - `IConnectionStringBuilder_Password() As String` : パスワードを取得または設定する
+    - `IConnectionStringBuilder_AdditionalParameters() As String` : 追加パラメータを取得または設定する
+  - `[その他特記事項]` :
+    - `Driver={SQL Server};` をベースに接続文字列を構築する。
+    - `mServer`, `mDatabase`, `mUserName`, `mPassword`, `mAdditionalParameters` メンバ変数を使用。
+
+- `OLEDBConnectionStringBuilder` : モジュール名
+  - `[概要]` : OLE DB接続文字列を構築するクラス
+  - `[依存関係]` :
+    - IConnectionStringBuilder
+  - `[メソッド一覧]` :
+    - `IConnectionStringBuilder_BuildConnectionString() As String` : 接続文字列を構築する
+    - `IConnectionStringBuilder_Server() As String` : サーバー名を取得または設定する
+    - `IConnectionStringBuilder_Database() As String` : データベース名を取得または設定する
+    - `IConnectionStringBuilder_UserName() As String` : ユーザー名を取得または設定する
+    - `IConnectionStringBuilder_Password() As String` : パスワードを取得または設定する
+    - `IConnectionStringBuilder_AdditionalParameters() As String` : 追加パラメータを取得または設定する
+  - `[その他特記事項]` :
+    - `Provider=SQLOLEDB;` をベースに接続文字列を構築する。
+    - ユーザー名が設定されていない場合は `Integrated Security=SSPI;` を使用して統合認証を行う。
+    - `mServer`, `mDatabase`, `mUserName`, `mPassword`, `mAdditionalParameters` メンバ変数を使用。

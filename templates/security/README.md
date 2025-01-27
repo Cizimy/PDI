@@ -1,0 +1,231 @@
+- `clsCriticalSectionLock` : モジュール名
+  - `[概要]` : クリティカルセクションを使用した排他制御を提供するクラス。
+  - `[依存関係]` :
+    - ILock
+    - ErrorInfo
+    - modError
+    - modStackTrace
+  - `[メソッド一覧]` :
+    - `Class_Initialize()` : クラスの初期化処理。クリティカルセクションを初期化する。
+    - `Class_Terminate()` : クラスの終了処理。クリティカルセクションを削除する。
+    - `ILock_Acquire(Optional ByVal timeout As Long = -1)` : クリティカルセクションを取得する。タイムアウト指定も可能。
+    - `ILock_Release()` : クリティカルセクションを解放する。
+    - `ValidateLockState()` : ロックの状態を検証する。(デバッグ用)
+    - `ForceRelease()` : 強制的にロックを解放する。(デバッグ用)
+    - `IsInitialized()` : クリティカルセクションが初期化されているか確認する。(デバッグ用)
+  - `[その他特記事項]` :
+    - Win32 API の `InitializeCriticalSection`, `DeleteCriticalSection`, `EnterCriticalSection`, `TryEnterCriticalSection`, `LeaveCriticalSection`, `GetTickCount` を使用。
+    - `ILock_Acquire` メソッドでは、タイムアウトが指定されていない場合は `EnterCriticalSection` を、指定されている場合は `TryEnterCriticalSection` を使用してクリティカルセクションの取得を試みる。
+    - テストサポート機能として、`ValidateLockState`, `ForceRelease`, `IsInitialized` メソッドが提供されている（`DEBUG` 時のみ）。
+
+- `clsCrypto` : モジュール名
+  - `[概要]` : 暗号化とハッシュ生成機能を提供するクラス。AES暗号化、SHA-256ハッシュ、Base64エンコード/デコードをサポート。
+  - `[依存関係]` :
+    - IPerformanceMonitor
+    - ILock
+    - ICryptography
+    - IKeyDerivationStrategy
+    - ErrorInfo
+    - modError
+    - modStackTrace
+    - modWindowsAPI
+  - `[メソッド一覧]` :
+    - `Initialize(ByVal performanceMonitor As IPerformanceMonitor, ByVal lock As ILock, ByVal cryptography As ICryptography, ByVal keyDerivation As IKeyDerivationStrategy)` : クラスを初期化し、依存関係を設定する。
+    - `Class_Initialize()` : 依存性は Initialize メソッドで注入。
+    - `Class_Terminate()` : 暗号化キーとプロバイダを破棄し、依存関係を解放。
+    - `InitializeCrypto()` : 暗号化プロバイダを初期化。
+    - `DeriveAESKey(ByVal key As String)` : 指定されたキーからAESキーを生成。
+    - `EncryptString(ByVal plainText As String, ByVal key As String)` : 文字列をAESで暗号化。
+    - `DecryptString(ByVal cipherText As String, ByVal key As String)` : AESで暗号化された文字列を復号。
+    - `GenerateHash(ByVal inputString As String)` : 文字列のSHA-256ハッシュを生成。
+    - `Base64Encode(ByVal text As String)` : 文字列をBase64エンコード。
+    - `Base64Decode(ByVal base64 As String)` : Base64文字列をデコード。
+    - `StringToBytes(ByVal text As String)` : 文字列をバイト配列に変換。
+    - `BytesToString(ByRef bytes() As Byte)` : バイト配列を文字列に変換。
+    - `ValidateProvider()` : 暗号化プロバイダーの状態を検証（テスト用）。
+    - `ResetProvider()` : 暗号化プロバイダーをリセット（テスト用）。
+  - `[その他特記事項]` :
+    - `MS_ENHANCED_PROV`、`PROV_RSA_FULL`、`CRYPT_VERIFYCONTEXT`、`CALG_SHA_256`、`HP_HASHVAL`、`HP_HASHSIZE` などの定数を使用。
+    - `mCryptoProvider`、`mInitialized`、`mAesKey`、`mPerformanceMonitor`、`mLock`、`mCryptography`、`mKeyDerivation` などのメンバ変数を使用。
+    - パフォーマンス測定のために `mPerformanceMonitor` を使用。
+    - スレッドセーフのために `mLock` を使用。
+    - キー導出には `mKeyDerivation` で指定された戦略を使用。
+    - `DEBUG` 時のみ利用可能なテストサポート機能あり。
+
+- `clsLock` : モジュール名
+  - `[概要]` : Mutexを使用した排他制御を提供するクラス。
+  - `[依存関係]` :
+    - modWindowsAPI
+    - ErrorInfo
+    - modError
+    - modStackTrace
+  - `[メソッド一覧]` :
+    - `Class_Initialize()` : クラスの初期化処理。Mutexを作成する。
+    - `Class_Terminate()` : クラスの終了処理。Mutexを解放する。
+    - `AcquireLock()` : ロックを取得する。
+    - `ReleaseLock()` : ロックを解放する。
+    - `IsLocked()` : ロックが取得されているか確認する。
+    - `ValidateLockState()` : ロックの状態を検証する。(デバッグ用)
+    - `ForceRelease()` : 強制的にロックを解放する。(デバッグ用)
+  - `[その他特記事項]` :
+    - Win32 API の `CreateMutex`, `WaitForSingleObject`, `ReleaseMutex`, `CloseHandle` を使用。
+    - `MUTEX_NAME` 定数でMutex名を定義。
+    - テストサポート機能として、`ValidateLockState`, `ForceRelease` メソッドが提供されている（`DEBUG` 時のみ）。
+
+- `clsMutexLock` : モジュール名
+  - `[概要]` : ミューテックスを使用したロック機能を提供するクラス。`ILock` インターフェースを実装。
+  - `[依存関係]` :
+    - ILock
+    - IMutex
+    - MutexImpl
+    - IAppConfig
+    - modConfig
+    - ErrorInfo
+    - modError
+    - modStackTrace
+  - `[メソッド一覧]` :
+    - `Class_Initialize()` : クラスの初期化処理。ミューテックスオブジェクトと設定オブジェクトを初期化する。
+    - `Class_Terminate()` : クラスの終了処理。ロックを解放し、ミューテックスオブジェクトと設定オブジェクトを破棄する。
+    - `ILock_Acquire(Optional ByVal timeout As Long = -1)` : ロックを取得する。タイムアウト指定も可能。
+    - `ILock_Release()` : ロックを解放する。
+    - `Configure(ByVal newMutexName As String)` : ミューテックス名を変更する。
+    - `LogError(ByVal message As String)` : エラーログを出力する。
+    - `ValidateLockState()` : ロックの状態を検証する。(デバッグ用)
+    - `MutexName()` : 現在のミューテックス名を取得する。(デバッグ用)
+    - `ForceRelease()` : 強制的にロックを解放する。(デバッグ用)
+  - `[その他特記事項]` :
+    - `MutexImpl` クラスを使用してミューテックスを操作する。
+    - `modConfig` モジュールの `GetAppConfig` 関数を使用して設定オブジェクトを取得する。
+    - ミューテックス名は設定ファイルから取得されるが、デフォルト値として `Global\MyApp_ModCommon_Mutex` が使用される。
+    - テストサポート機能として、`ValidateLockState`, `MutexName`, `ForceRelease` メソッドが提供されている（`DEBUG` 時のみ）。
+
+- `clsSemaphoreLock` : モジュール名
+  - `[概要]` : セマフォを使用したロック機能を提供するクラス。`ILock` インターフェースを実装。
+  - `[依存関係]` :
+    - ILock
+    - IAppConfig
+    - modConfig
+    - ErrorInfo
+    - modError
+    - modStackTrace
+  - `[メソッド一覧]` :
+    - `Class_Initialize()` : クラスの初期化処理。セマフォオブジェクトを初期化する。
+    - `Class_Terminate()` : クラスの終了処理。ロックを解放し、セマフォオブジェクトを破棄する。
+    - `ILock_Acquire(Optional ByVal timeout As Long = -1)` : ロックを取得する。タイムアウト指定も可能。
+    - `ILock_Release()` : ロックを解放する。
+    - `Configure(ByVal newSemaphoreName As String)` : セマフォ名を変更する。
+    - `InitializeSemaphore()` : セマフォを初期化する。
+    - `LogError(ByVal message As String)` : エラーログを出力する。
+    - `ValidateLockState()` : ロックの状態を検証する。(デバッグ用)
+    - `SemaphoreName()` : 現在のセマフォ名を取得する。(デバッグ用)
+    - `ForceRelease()` : 強制的にロックを解放する。(デバッグ用)
+  - `[その他特記事項]` :
+    - Win32 API の `CreateSemaphore`, `ReleaseSemaphore`, `WaitForSingleObject`, `CloseHandle` を使用してセマフォを操作する。
+    - `modConfig` モジュールの `GetAppConfig` 関数を使用して設定オブジェクトを取得する。
+    - セマフォ名は設定ファイルから取得されるが、デフォルト値として `Global\MyApp_ModCommon_Semaphore` が使用される。
+    - テストサポート機能として、`ValidateLockState`, `SemaphoreName`, `ForceRelease` メソッドが提供されている（`DEBUG` 時のみ）。
+
+- `CryptographyImpl` : モジュール名
+  - `[概要]` : `ICryptography` インターフェースを実装し、暗号化関連の機能を提供するクラス。
+  - `[依存関係]` :
+    - ICryptography
+    - clsPerformanceMonitor
+    - clsLock
+    - ErrorInfo
+    - modError
+    - modStackTrace
+    - modWindowsAPI
+  - `[メソッド一覧]` :
+    - `Class_Initialize()` : クラスの初期化処理。パフォーマンスモニターとロックオブジェクトを初期化する。
+    - `Class_Terminate()` : クラスの終了処理。リソースをクリーンアップし、パフォーマンスモニターとロックオブジェクトを破棄する。
+    - `ICryptography_CryptAcquireContext(ByVal container As String, ByVal provider As String, ByVal provType As Long, ByVal flags As Long)` : 暗号化プロバイダのコンテキストを取得する。
+    - `ICryptography_CryptCreateHash(ByVal algorithm As Long)` : ハッシュオブジェクトを作成する。
+    - `ICryptography_CryptHashData(ByRef data As Any, ByVal dataLen As Long)` : データをハッシュ化する。
+    - `ICryptography_CryptDeriveKey(ByVal algorithm As Long, ByVal flags As Long)` : キーを生成する。
+    - `ICryptography_CryptEncrypt(ByRef data As Any, ByRef dataLen As Long, ByVal bufLen As Long)` : データを暗号化する。
+    - `ICryptography_CryptDecrypt(ByRef data As Any, ByRef dataLen As Long)` : データを復号化する。
+    - `ICryptography_CryptDestroyKey()` : キーを破棄する。
+    - `ICryptography_CryptDestroyHash()` : ハッシュオブジェクトを破棄する。
+    - `ICryptography_CryptReleaseContext()` : 暗号化プロバイダのコンテキストを解放する。
+    - `CleanupResources()` : リソースをクリーンアップする。
+    - `LogError(ByVal message As String)` : エラーログを出力する。
+    - `ValidateState()` : オブジェクトの状態を検証する。(デバッグ用)
+    - `ForceCleanup()` : 強制的にリソースをクリーンアップする。(デバッグ用)
+    - `GetPerformanceMonitor()` : パフォーマンスモニターオブジェクトを取得する。(デバッグ用)
+  - `[その他特記事項]` :
+    - `clsPerformanceMonitor` クラスを使用してパフォーマンスを測定する。
+    - `clsLock` クラスを使用して排他制御を行う。
+    - `modWindowsAPI` モジュールの Windows API 関数を使用して暗号化操作を行う。
+    - テストサポート機能として、`ValidateState`, `ForceCleanup`, `GetPerformanceMonitor` メソッドが提供されている（`DEBUG` 時のみ）。
+
+- `MutexImpl` : モジュール名
+  - `[概要]` : `IMutex` インターフェースを実装し、ミューテックスの機能を提供するクラス。
+  - `[依存関係]` :
+    - IMutex
+    - clsPerformanceMonitor
+    - ErrorInfo
+    - modError
+    - modStackTrace
+    - modWindowsAPI
+  - `[メソッド一覧]` :
+    - `Class_Initialize()` : クラスの初期化処理。パフォーマンスモニターを初期化。
+    - `Class_Terminate()` : クラスの終了処理。ミューテックスハンドルを閉じ、パフォーマンスモニターを破棄。
+    - `IMutex_CreateMutex(ByVal initialOwner As Boolean, ByVal name As String)` : ミューテックスを作成。
+    - `IMutex_ReleaseMutex()` : ミューテックスを解放。
+    - `IMutex_WaitForSingleObject(ByVal timeoutMilliseconds As Long)` : ミューテックスの所有権を待機。
+    - `LogError(ByVal message As String)` : エラーログを出力。
+    - `GetMutexHandle()` : ミューテックスハンドルを取得（テスト用）。
+    - `IsValid()` : ミューテックスが有効か確認（テスト用）。
+    - `ForceRelease()` : ミューテックスを強制解放（テスト用）。
+    - `GetPerformanceMonitor()` : パフォーマンスモニターを取得（テスト用）。
+  - `[その他特記事項]` :
+    - `clsPerformanceMonitor` クラスを使用してパフォーマンスを測定。
+    - `modWindowsAPI` モジュールの Windows API 関数を使用してミューテックス操作を行う。
+    - テストサポート機能として、`GetMutexHandle`, `IsValid`, `ForceRelease`, `GetPerformanceMonitor` メソッドが提供されている（`DEBUG` 時のみ）。
+
+- `MutexLock` : モジュール名
+  - `[概要]` : ミューテックスを使用したロック機能を提供するクラス。`ILock` インターフェースを実装。
+  - `[依存関係]` :
+    - ILock
+    - IMutex
+    - MutexImpl
+    - IAppConfig
+    - modConfig
+    - ErrorInfo
+    - modError
+    - modStackTrace
+  - `[メソッド一覧]` :
+    - `Class_Initialize()` : クラスの初期化処理。ミューテックスオブジェクトと設定オブジェクトを初期化する。
+    - `Class_Terminate()` : クラスの終了処理。ロックを解放し、ミューテックスオブジェクトと設定オブジェクトを破棄する。
+    - `ILock_Acquire(Optional ByVal timeout As Long = -1)` : ロックを取得する。タイムアウト指定も可能。
+    - `ILock_Release()` : ロックを解放する。
+  - `Configure(ByVal mutexName As String)` : ミューテックス名を変更する。
+    - `LogError(ByVal message As String)` : エラーログを出力する。
+    - `ValidateLockState()` : ロックの状態を検証する。(デバッグ用)
+    - `MutexName()` : 現在のミューテックス名を取得する。(デバッグ用)
+    - `ForceRelease()` : 強制的にロックを解放する。(デバッグ用)
+  - `[その他特記事項]` :
+    - `MutexImpl` クラスを使用してミューテックスを操作する。
+    - `modConfig` モジュールの `GetAppConfig` 関数を使用して設定オブジェクトを取得する。
+    - ミューテックス名は設定ファイルから取得されるが、デフォルト値として `Global\MyApp_ModCommon_Mutex` が使用される。
+    - テストサポート機能として、`ValidateLockState`, `MutexName`, `ForceRelease` メソッドが提供されている（`DEBUG` 時のみ）。
+
+- `PBKDF2KeyDerivationStrategy` : モジュール名
+  - `[概要]` : PBKDF2アルゴリズムを用いた鍵導出戦略を提供するクラス。`IKeyDerivationStrategy` インターフェースを実装。
+  - `[依存関係]` :
+    - IKeyDerivationStrategy
+    - ErrorInfo
+    - modError
+    - modStackTrace
+    - modWindowsAPI
+  - `[メソッド一覧]` :
+    - `Class_Initialize()` : クラスの初期化処理。暗号化プロバイダーを初期化する。
+    - `Class_Terminate()` : クラスの終了処理。暗号化プロバイダーを解放する。
+    - `InitializeCrypto()` : 暗号化プロバイダーを初期化する。
+    - `IKeyDerivationStrategy_DeriveKey(ByVal password As String, ByRef salt As Variant, ByVal iterations As Long)` : パスワード、ソルト、イテレーション回数からキーを導出する。
+    - `RaiseError(ByVal errorCode As Long, ByVal description As String)` : エラーを発生させる。
+  - `[その他特記事項]` :
+    - `MS_ENHANCED_PROV`, `PROV_RSA_FULL`, `CRYPT_VERIFYCONTEXT`, `CALG_SHA_256`, `CALG_AES_256` などの定数を使用。
+    - `mCryptoProvider`, `mInitialized` などのメンバ変数を使用。
+    - `modWindowsAPI` モジュールの Windows API 関数を使用して暗号化操作を行う。
+    - `RaiseError` メソッドでエラー処理を共通化。

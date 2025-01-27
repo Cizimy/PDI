@@ -1,5 +1,3 @@
-# templatesディレクトリ構造
-
 core/clsLogger.cls
 core/clsPerformanceMonitor.cls
 core/ConfigImpl.cls
@@ -23,6 +21,7 @@ core/PerformanceCounterImpl.cls
 core/PerformanceMonitorImpl.cls
 core/README.md
 core/repomix-output.txt
+core/ValidationResult.cls
 data/ConnectionPool.cls
 data/DatabaseConnectionErrorHandler.cls
 data/FileIOImpl.cls
@@ -81,9 +80,12 @@ security/MutexImpl.cls
 security/MutexLock.cls
 security/PBKDF2KeyDerivationStrategy.cls
 security/repomix-output.txt
+tests/MockCryptography.cls
 tests/MockDatabaseConfig.cls
 tests/MockError.cls
 tests/MockFileIO.cls
+tests/MockFileOperations.cls
+tests/MockIniFile.cls
 tests/MockLock.cls
 tests/MockLogger.cls
 tests/MockMessageFormatter.cls
@@ -92,6 +94,7 @@ tests/modTestRunner.bas
 tests/modTestUtility.bas
 tests/repomix-output.txt
 tests/TestClsCrypto.cls
+tests/TestConfigImpl.cls
 tests/TestConnectionPool.cls
 tests/TestConsoleLogger.cls
 tests/TestCriticalSectionLock.cls

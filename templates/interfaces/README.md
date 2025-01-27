@@ -1,0 +1,929 @@
+- `CommonEnums` : モジュール名
+  - `[概要]` : システム全体で使用される共通の列挙型を定義するクラス
+  - `[依存関係]` : なし
+  - `[メソッド一覧]` : なし
+    - `LogLevel` : 列挙型：ログレベルを定義する。llTrace, llDebug, llInfo, llWarning, llError, llFatal の値を持つ。
+    - `ErrorNotificationLevel` : 列挙型：エラー通知レベルを定義する。enlNone, enlSilent, enlInfo, enlWarning, enlError, enlCritical の値を持つ。
+    - `ValidationPriority` : 列挙型：バリデーション優先度を定義する。vpLowest, vpLow, vpNormal, vpHigh, vpHighest の値を持つ。
+    - `SettingOptions` : 列挙型：設定オプションを定義する。soNone, soEncrypt, soValidate, soLogHistory, soCache, soEnvironmentSpecific の値を持つ。
+    - `LoadOptions` : 列挙型：読み込みオプションを定義する。loNone, loDecrypt, loValidate, loApplyEnvironment, loMerge の値を持つ。
+    - `SaveOptions` : 列挙型：保存オプションを定義する。soNone, soEncrypt, soBackup, soFormat, soAtomic の値を持つ。
+    - `EncryptionOptions` : 列挙型：暗号化オプションを定義する。eoNone, eoRotateKey, eoReEncrypt, eoSetKeyVersion の値を持つ。
+    - `EnvironmentOptions` : 列挙型：環境オプションを定義する。enoNone, enoReload, enoValidate, enoNotify の値を持つ。
+    - `ValidationOptions` : 列挙型：検証オプションを定義する。voNone, voFull, voChangedOnly, voEnvironment, voDataType, voRange, voDependency の値を持つ。
+    - `HistoryOptions` : 列挙型：履歴オプションを定義する。hoNone, hoLimit, hoSort, hoFilter の値を持つ。
+    - `RestoreOptions` : 列挙型：復元オプションを定義する。roNone, roValidate, roMerge, roNotify の値を持つ。
+    - `ValidationState` : 列挙型：バリデーション状態を定義する。vsNotStarted, vsPending, vsRunning, vsPaused, vsCompleted, vsFailed, vsCancelled の値を持つ。
+    - `MetricType` : 列挙型：パフォーマンスメトリクスの種類を定義する。mtResponseTime, mtThroughput, mtErrorRate, mtResourceUsage, mtQueueLength, mtLatency の値を持つ。
+  - `[その他特記事項]` : 各列挙型はシステム全体の設定、エラー処理、バリデーション、パフォーマンス監視などで使用される。
+
+- `IAppConfig` : モジュール名
+  - `[概要]` : アプリケーション設定を管理するインターフェース。設定の読み書き、暗号化、バリデーション、バックアップ/復元などの機能を提供。
+  - `[依存関係]` :
+    - CommonEnums
+    - ValidationResult
+  - `[メソッド一覧]` :
+    - `GetSetting(settingName As String, Optional options As SettingOptions = soNone) As Variant` : 設定値を取得する。
+    - `SetSetting(settingName As String, settingValue As Variant, Optional options As SettingOptions = soNone)` : 設定値を設定する。
+    - `LoadSettings(filePath As String, Optional options As LoadOptions = loNone)` : 設定ファイルから設定を読み込む。
+    - `SaveSettings(filePath As String, Optional options As SaveOptions = soNone)` : 設定をファイルに保存する。
+    - `SetEncryptionKey(encryptionKey As String, Optional options As EncryptionOptions = eoNone)` : 設定の暗号化キーを設定する。
+    - `SetEnvironment(environment As String, Optional options As EnvironmentOptions = enoNone)` : 現在の環境を設定する。
+    - `ValidateSettings(Optional options As ValidationOptions = voNone) As ValidationResult` : 設定値を検証する。
+    - `GetSettingHistory(Optional settingName As String, Optional options As HistoryOptions = hoNone) As Collection` : 設定の変更履歴を取得する。
+    - `CreateBackup(backupPath As String) As Boolean` : 設定のバックアップを作成する。
+    - `RestoreFromBackup(backupPath As String, Optional options As RestoreOptions = roNone) As Boolean` : バックアップから設定を復元する。
+    - `GetPerformanceMetrics() As Collection` : パフォーマンスメトリクスを取得する。
+    - `LogFilePath` : Property：ログファイルパス
+    - `LogLevel` : Property：ログレベル
+    - `MaxRetryCount` : Property：最大リトライ回数
+    - `MaxStackDepth` : Property：最大スタック深度
+    - `TimerInterval` : Property：タイマー間隔（ミリ秒）
+    - `LogEventSource` : Property：ログイベントソース
+    - `PerformanceMonitoringEnabled` : Property：パフォーマンス監視の有効/無効
+    - `DiagnosticsEnabled` : Property：診断機能の有効/無効
+    - `AutoSave` : Property：自動保存の有効/無効
+    - `CurrentEnvironment` : Property：現在の環境名
+    - `EncryptionKeyVersion` : Property：暗号化キーのバージョン
+  - `[その他特記事項]` : 各メソッドは、様々なオプション（SettingOptions, LoadOptions, SaveOptions, EncryptionOptions, EnvironmentOptions, ValidationOptions, HistoryOptions, RestoreOptions）を受け取り、動作をカスタマイズ可能。
+
+- `IAsyncValidation` : モジュール名
+  - `[概要]` : 非同期バリデーションの実行と管理を担当するインターフェース
+  - `[依存関係]` :
+    - IValidationContext
+    - ValidationExecutionPlan
+    - ErrorInfo
+    - IErrorStrategy
+    - IValidationCacheStrategy
+    - IValidationSchedulingStrategy
+    - CommonEnums
+  - `[メソッド一覧]` :
+    - `StartAsyncValidation(value As Variant, context As IValidationContext, Optional priority As ValidationPriority = vpNormal, Optional options As AsyncValidationOptions) As String` : 非同期バリデーションを開始する。
+    - `StartBatchValidation(items As Collection, context As IValidationContext, Optional options As BatchValidationOptions) As String` : バッチバリデーションを開始する。
+    - `CancelValidation(validationId As String, Optional gracefulShutdown As Boolean = True, Optional options As CancellationOptions)` : 非同期バリデーションをキャンセルする。
+    - `GetValidationStatus(validationId As String, Optional includeDetails As Boolean = False) As ValidationStatus` : バリデーションの状態を取得する。
+    - `TimeoutMilliseconds` : Property：タイムアウト時間を設定・取得する。
+    - `MaxConcurrentValidations` : Property：最大同時実行数を設定・取得する。
+    - `ProgressNotificationInterval` : Property：進捗通知の間隔を設定・取得する。
+    - `WaitForAll(Optional timeoutMilliseconds As Long = -1, Optional options As WaitOptions) As Boolean` : すべての非同期バリデーションを待機する。
+    - `GetRunningValidations(Optional filter As ValidationFilter) As Collection` : 実行中のバリデーションの一覧を取得する。
+    - `TryGetResults(validationId As String, Optional options As ResultOptions) As Variant` : バリデーション結果を非同期で取得する。
+    - `GetQueueStatus(Optional includeMetrics As Boolean = False) As ValidationQueueStatus` : バリデーションキューの状態を取得する。
+    - `ChangePriority(validationId As String, newPriority As ValidationPriority, Optional options As PriorityOptions)` : バリデーションの優先度を変更する。
+    - `RetryStrategy` : Property：エラー発生時のリトライ戦略を設定・取得する。
+    - `PersistResults` : Property：バリデーション結果の永続化を設定・取得する。
+    - `SetResourceLimit(resourceType As String, limit As Long, Optional options As ResourceLimitOptions)` : リソース使用量の制限を設定する。
+    - `GetResourceLimit(resourceType As String) As Long` : リソース使用量の制限を取得する。
+    - `GetPerformanceMetrics() As Collection` : パフォーマンス指標を取得する。
+    - `CacheStrategy` : Property：キャッシュ戦略を設定する。
+    - `SchedulingStrategy` : Property：スケジューリング戦略を設定する。
+  - `[その他特記事項]` :
+    - 各メソッドは、様々なイベント（ValidationStarted, ValidationProgress, ValidationCompleted, ValidationError, ValidationCancelled, ResourceExhausted, ValidationQueued, BatchProcessingStarted, BatchProcessingCompleted, PerformanceAlert, CacheUpdated, StateChanged）を発生させる。
+    - 各イベントは、バリデーションの進行状況、エラー情報、パフォーマンス情報などを通知する。
+    - 非同期バリデーションは、タイムアウト、リトライ、キャンセル、優先度変更などの制御が可能。
+    - メソッドの多くは、エラー処理要件が定義されており、パラメータ検証、リソース管理、例外処理などが必要。
+
+- `ICompositeValidationRule` : モジュール名
+  - `[概要]` : 複数のバリデーションルールを組み合わせて高度な検証ロジックを実現するインターフェース
+  - `[依存関係]` :
+    - IValidationRule
+    - IValidationContext
+    - ValidationExecutionPlan
+    - ErrorInfo
+    - IValidationGroup
+    - CommonEnums
+  - `[メソッド一覧]` :
+    - `AddRule(rule As IValidationRule, Optional priority As ValidationPriority = vpNormal, Optional options As ValidationRuleOptions)` : バリデーションルールを追加する。
+    - `RemoveRule(rule As IValidationRule, Optional cleanupOptions As ValidationCleanupOptions)` : バリデーションルールを削除する。
+    - `SetRulePriority(rule As IValidationRule, priority As ValidationPriority, Optional options As ValidationPriorityOptions)` : ルールの優先順位を設定する。
+    - `GetValidationDetails(Optional filter As ValidationResultFilter) As Collection` : バリデーション結果の詳細を取得する。
+    - `ClearRules(Optional options As ValidationClearOptions)` : すべてのルールをクリアする。
+    - `SetRuleDependency(dependentRule As IValidationRule, dependencyRule As IValidationRule, Optional dependencyType As DependencyType = dtRequired, Optional options As ValidationDependencyOptions)` : ルール間の依存関係を設定する。
+    - `GetRuleDependencies(rule As IValidationRule, Optional options As ValidationDependencyOptions) As Collection` : 指定したルールの依存関係を取得する。
+    - `GetExecutionOrder(Optional optimizationStrategy As ValidationOptimizationStrategy = vosDefault) As Collection` : ルールの実行順序を取得する。
+    - `ValidateComposite(value As Variant, context As IValidationContext, Optional options As ValidationExecutionOptions) As Boolean` : 複合ルールの検証を実行する。
+    - `SupportsAsyncValidation` : Property：非同期検証をサポートしているかどうかを取得する。
+    - `SupportsParallelValidation` : Property：並列検証をサポートしているかどうかを取得する。
+    - `CreateRuleGroup(groupName As String, Optional options As ValidationGroupOptions) As IValidationGroup` : ルールグループを作成する。
+    - `AddRuleToGroup(rule As IValidationRule, groupName As String, Optional options As ValidationGroupOptions)` : ルールをグループに追加する。
+    - `Progress` : Property：検証の進行状況を取得する。
+    - `IsCancellationRequested` : Property：キャンセル状態を設定・取得する。
+    - `GetPerformanceMetrics() As Collection` : パフォーマンス指標を取得する。
+    - `GetResourceUsage() As Collection` : リソース使用状況を取得する。
+    - `CacheStrategy` : Property：キャッシュ戦略を設定する。
+    - `OptimizationStrategy` : Property：最適化戦略を設定する。
+  - `[その他特記事項]` :
+    - 各メソッドは、様々なイベント（RuleAdded, RuleRemoved, ValidationStarted, ValidationCompleted, ValidationProgress, RuleDependencyChanged, ExecutionOrderChanged, RuleGroupCreated, ValidationError, ResourceExhausted, CacheUpdated, PerformanceAlert）を発生させる。
+    - 各イベントは、ルールの追加・削除、検証の開始・完了、進捗状況、エラー情報、パフォーマンス情報などを通知する。
+    - メソッドの多くは、エラー処理要件が定義されており、パラメータ検証、リソース管理、例外処理などが必要。
+    - 実装時の注意点として、ルールの優先順位、依存関係、パフォーマンスへの影響、イベント発行、キャッシュ戦略などが考慮されている。
+
+- `IConnectionPool` : モジュール名
+  - `[概要]` : データベース接続プールを管理し、接続の効率的な再利用と監視を提供するインターフェース
+  - `[依存関係]` :
+    - ErrorInfo
+  - `[メソッド一覧]` :
+    - `AcquireConnection(Optional options As ConnectionOptions) As Object` : データベース接続を取得する。
+    - `ReleaseConnection(connection As Object, Optional options As ReleaseOptions)` : データベース接続をプールに返却する。
+    - `Initialize(initialSize As Long, Optional options As InitializationOptions)` : 接続プールを初期化する。
+    - `Cleanup(Optional options As CleanupOptions)` : 接続プールをクリーンアップする。
+    - `ValidateConnection(connection As Object) As Boolean` : 接続の有効性を検証する。
+    - `GetPoolStatus() As ConnectionPoolStatus` : プールの状態を取得する。
+    - `GetPerformanceMetrics() As Collection` : パフォーマンス指標を取得する。
+    - `UpdatePoolSettings(settings As ConnectionPoolSettings)` : 接続プールの設定を更新する。
+    - `CleanupIdleConnections(Optional idleTimeout As Long = IDLE_TIMEOUT_MS)` : アイドル接続をクリーンアップする。
+    - `ActiveConnections` : Property：現在のアクティブな接続数を取得する。
+    - `MaxConnections` : Property：プールの最大接続数を取得または設定する。
+    - `ConnectionTimeout` : Property：接続タイムアウト時間を取得または設定する（ミリ秒）。
+    - `IdleConnections` : Property：アイドル接続数を取得する。
+    - `WaitingRequests` : Property：待機中のリクエスト数を取得する。
+    - `Validate() As Boolean` : プールの状態を検証する。
+    - `Dispose()` : リソースを解放する。
+  - `[その他特記事項]` :
+    - 各メソッドは、様々なイベント（ConnectionAcquired, ConnectionReleased, ConnectionCreated, ConnectionClosed, PoolExhausted, ConnectionValidated, PerformanceAlert, ConnectionError）を発生させる。
+    - 各イベントは、接続の取得・解放、プールの状態変化、パフォーマンス情報、エラー情報などを通知する。
+    - メソッドの多くは、エラー処理要件が定義されており、接続の有効性確認、リソース管理、例外処理などが必要。
+
+- `IConnectionStringBuilder` : モジュール名
+  - `[概要]` : データベース接続文字列の安全な生成と管理を提供するインターフェース
+  - `[依存関係]` :
+  - `[メソッド一覧]` :
+    - `BuildConnectionString(Optional options As ConnectionStringOptions) As String` : データベース接続文字列を生成する。
+    - `ParseConnectionString(connectionString As String, Optional options As ParseOptions)` : 接続文字列をパースする。
+    - `EncryptConnectionString(connectionString As String, Optional options As EncryptionOptions) As String` : 接続文字列を暗号化する。
+    - `DecryptConnectionString(encryptedString As String, Optional options As DecryptionOptions) As String` : 接続文字列を復号化する。
+    - `TestConnection(Optional options As TestOptions) As TestResult` : 接続をテストする。
+    - `ValidateConfiguration(Optional options As ValidationOptions) As ValidationResult` : 設定を検証する。
+    - `Server` : Property：サーバー名を取得または設定する。
+    - `Database` : Property：データベース名を取得または設定する。
+    - `UserName` : Property：ユーザー名を取得または設定する。
+    - `Password` : Property：パスワードを取得または設定する。
+    - `AdditionalParameters` : Property：追加のパラメータを取得または設定する。
+    - `Timeout` : Property：タイムアウト値（秒）を取得または設定する。
+    - `IsEncryptionEnabled` : Property：暗号化が有効かどうかを取得または設定する。
+    - `SaveConfiguration(filePath As String, Optional options As SaveOptions)` : 設定を保存する。
+    - `LoadConfiguration(filePath As String, Optional options As LoadOptions)` : 設定を読み込む。
+    - `Validate() As Boolean` : 接続文字列ビルダーの状態を検証する。
+    - `Cleanup()` : リソースを解放する。
+  - `[その他特記事項]` :
+    - 各メソッドは、様々なイベント（ConnectionStringBuilt, ParameterChanged, ValidationError, SecurityAlert, ConnectionTested, EncryptionKeyRotated, ConfigurationLoaded）を発生させる。
+    - 各イベントは、接続文字列の生成、パラメータ変更、検証エラー、セキュリティアラート、接続テスト結果、暗号化キーの更新、設定の読み込みなどを通知する。
+    - メソッドの多くは、エラー処理要件が定義されており、パラメータ検証、セキュリティチェック、文字列整形、暗号化処理などが必要。
+
+- `ICryptography` : モジュール名
+  - `[概要]` : 暗号化操作と鍵管理を提供し、セキュアな暗号化機能を実装するインターフェース
+  - `[依存関係]` :
+  - `[メソッド一覧]` :
+    - `Initialize(Optional options As CryptoOptions) As Boolean` : 暗号化コンテキストを初期化する。
+    - `Encrypt(ByRef data As Variant, Optional options As EncryptionOptions) As Variant` : データを暗号化する。
+    - `Decrypt(ByRef data As Variant, Optional options As DecryptionOptions) As Variant` : データを復号化する。
+    - `ComputeHash(ByRef data As Variant, Optional algorithm As String) As String` : ハッシュ値を計算する。
+    - `GenerateKey(keySize As Long, Optional options As KeyGenerationOptions) As String` : 鍵を生成する。
+    - `DeriveKey(password As String, salt As Variant, Optional options As KeyDerivationOptions) As Variant` : 鍵を導出する。
+    - `RotateKey(keyId As String, Optional options As KeyRotationOptions) As String` : 鍵をローテーションする。
+    - `ValidateKey(keyId As String) As Boolean` : 鍵を検証する。
+    - `PerformSecurityAudit(Optional options As AuditOptions) As SecurityAuditResult` : セキュリティ監査を実行する。
+    - `GetPerformanceMetrics() As Collection` : パフォーマンス指標を取得する。
+    - `SetAlgorithm(algorithm As String, Optional options As AlgorithmOptions)` : 暗号化アルゴリズムを設定する。
+    - `GetCurrentAlgorithm() As String` : 現在の暗号化アルゴリズムを取得する。
+    - `Cleanup()` : リソースを解放する。
+    - `Validate() As Boolean` : 暗号化操作の状態を検証する。
+  - `[その他特記事項]` :
+    - 各メソッドは、様々なイベント（KeyGenerated, KeyRotated, EncryptionCompleted, DecryptionCompleted, SecurityAlert, AlgorithmChanged, PerformanceAlert, AuditLog）を発生させる。
+    - 各イベントは、鍵の生成・ローテーション、暗号化・復号化の完了、セキュリティアラート、アルゴリズム変更、パフォーマンス情報、監査ログなどを通知する。
+    - メソッドの多くは、エラー処理要件が定義されており、データの検証、鍵の有効性確認、メモリ使用量の監視、パフォーマンスの最適化などが必要。
+
+- `IDatabaseConfig` : モジュール名
+  - `[概要]` : データベース設定の管理と監視を提供するインターフェース
+  - `[依存関係]` :
+  - `[メソッド一覧]` :
+    - `GetConnectionString(Optional options As ConnectionStringOptions) As String` : データベース接続文字列を取得する。
+    - `GetDatabaseSetting(settingName As String, Optional defaultValue As Variant, Optional options As SettingOptions) As Variant` : データベース固有の設定値を取得する。
+    - `SaveConfiguration(filePath As String, Optional options As SaveOptions)` : データベース設定を保存する。
+    - `LoadConfiguration(filePath As String, Optional options As LoadOptions)` : データベース設定を読み込む。
+    - `SetEnvironment(environment As String, Optional options As EnvironmentOptions)` : 環境を設定する。
+    - `ConfigureBackup(settings As DatabaseBackupSettings)` : バックアップ設定を構成する。
+    - `ConfigurePerformance(settings As DatabasePerformanceSettings)` : パフォーマンス設定を構成する。
+    - `ConfigureMonitoring(settings As DatabaseMonitoringSettings)` : 監視設定を構成する。
+    - `ConnectionString` : Property：データベース接続文字列を取得または設定する。
+    - `ConnectionTimeout` : Property：接続タイムアウト時間を取得または設定する。
+    - `CommandTimeout` : Property：コマンドタイムアウト時間を取得または設定する。
+    - `DatabaseType` : Property：データベースの種類を取得または設定する。
+    - `LogTableName` : Property：ログテーブル名を取得または設定する。
+    - `MinPoolSize` : Property：最小プールサイズを取得または設定する。
+    - `MaxPoolSize` : Property：最大プールサイズを取得または設定する。
+    - `IsEncryptionEnabled` : Property：暗号化が有効かどうかを取得または設定する。
+    - `CurrentEnvironment` : Property：現在の環境名を取得する。
+    - `ValidateConfiguration(Optional options As ValidationOptions) As ValidationResult` : 設定を検証する。
+    - `GetPerformanceMetrics() As Collection` : パフォーマンス指標を取得する。
+    - `Validate() As Boolean` : データベース設定の状態を検証する。
+    - `Cleanup()` : リソースを解放する。
+  - `[その他特記事項]` :
+    - 各メソッドは、様々なイベント（ConfigurationChanged, ConnectionStringUpdated, EnvironmentChanged, BackupCompleted, SecurityAlert, PerformanceAlert, ConfigurationValidated）を発生させる。
+    - 各イベントは、設定変更、接続文字列更新、環境変更、バックアップ完了、セキュリティアラート、パフォーマンス情報、設定検証結果などを通知する。
+    - メソッドの多くは、エラー処理要件が定義されており、設定の検証、暗号化処理、環境確認、セキュリティチェックなどが必要。
+
+- `IEmergencyLogger` : モジュール名
+  - `[概要]` : 緊急時のエラーログ出力とフォールバック機能を提供するインターフェース
+  - `[依存関係]` :
+    - ErrorInfo
+  - `[メソッド一覧]` :
+    - `LogEmergencyError(message As String, Optional ByRef errorInfo As ErrorInfo, Optional options As EmergencyLogOptions)` : 緊急時のエラーをログに記録する。
+    - `FlushBuffer(Optional options As FlushOptions)` : バッファをフラッシュする。
+    - `SetFallbackPath(path As String, Optional options As FallbackOptions)` : フォールバックパスを設定する。
+    - `SendEmergencyNotification(message As String, recipients As Collection, Optional options As NotificationOptions)` : 緊急通知を送信する。
+    - `SetPriorityLevel(level As EmergencyLevel, Optional options As PriorityOptions)` : ログの優先度を設定する。
+    - `BufferSize` : Property：バッファサイズを設定・取得する。
+    - `FlushInterval` : Property：フラッシュ間隔を設定・取得する（ミリ秒）。
+    - `GetLogHistory(Optional options As HistoryOptions) As Collection` : ログ履歴を取得する。
+    - `GetPerformanceMetrics() As Collection` : パフォーマンス指標を取得する。
+    - `Validate() As Boolean` : ログの状態を検証する。
+    - `Cleanup()` : リソースを解放する。
+  - `[その他特記事項]` :
+    - 各メソッドは、様々なイベント（EmergencyLogWritten, FallbackActivated, BufferThresholdReached, LogFlushed, NotificationSent, ResourceExhausted, PerformanceAlert）を発生させる。
+    - 各イベントは、緊急ログの書き込み、フォールバックのアクティブ化、バッファ閾値到達、ログのフラッシュ、通知の送信、リソース枯渇、パフォーマンスアラートなどを通知する。
+    - メソッドの多くは、エラー処理要件が定義されており、メッセージの検証、バッファ管理、フォールバック適用、リソース監視、優先度確認などが必要。
+
+- `IError` : モジュール名
+  - `[概要]` : エラー処理と分析の基本機能を提供するインターフェース
+  - `[依存関係]` :
+    - ErrorInfo
+    - IErrorHandler
+    - ErrorAnalysisResult
+  - `[メソッド一覧]` :
+    - `HandleError(ByRef errorInfo As ErrorInfo, Optional options As ErrorHandlingOptions) As Boolean` : エラーを処理する。
+    - `RegisterHandler(errorCode As ErrorCode, handler As IErrorHandler, Optional options As HandlerOptions)` : エラーコードに対応するエラーハンドラーを登録する。
+    - `UnregisterHandler(errorCode As ErrorCode, Optional options As UnregisterOptions)` : エラーコードに対応するエラーハンドラーの登録を解除する。
+    - `IncrementErrorCount(errorCode As ErrorCode, Optional options As CountOptions)` : エラーコードごとの発生回数をカウントアップする。
+    - `CheckErrorThreshold(errorCode As ErrorCode, threshold As Long, Optional options As ThresholdOptions) As Boolean` : エラーコードの発生回数が閾値を超えているかチェックする。
+    - `GetErrorHistory(Optional options As HistoryOptions) As Collection` : エラー履歴を取得する。
+    - `AnalyzeErrors(Optional options As AnalysisOptions) As ErrorAnalysisResult` : エラーを分析する。
+    - `CategorizeError(ByRef errorInfo As ErrorInfo, Optional options As CategoryOptions) As ErrorCategory` : エラーを分類する。
+    - `GetErrorStatistics(Optional options As StatisticsOptions) As ErrorStatistics` : エラー処理の統計情報を取得する。
+    - `GetPerformanceMetrics() As Collection` : パフォーマンス指標を取得する。
+    - `Validate() As Boolean` : エラー処理の状態を検証する。
+    - `Cleanup()` : リソースを解放する。
+  - `[その他特記事項]` :
+    - 各メソッドは、様々なイベント（ErrorOccurred, ErrorHandled, ThresholdExceeded, HandlerRegistered, HandlerUnregistered, ErrorAnalysisCompleted, PerformanceAlert）を発生させる。
+    - 各イベントは、エラー発生、エラー処理、閾値超過、ハンドラー登録・解除、エラー分析完了、パフォーマンスアラートなどを通知する。
+    - メソッドの多くは、エラー処理要件が定義されており、エラー情報の検証、ハンドラー選択、リトライ処理、ログ記録、メトリクス収集などが必要。
+
+- `IErrorHandler` : モジュール名
+  - `[概要]` : エラー処理とリカバリを提供するインターフェース
+  - `[依存関係]` :
+    - ErrorInfo
+    - IRetryableOperation
+    - IErrorStrategy
+  - `[メソッド一覧]` :
+    - `HandleError(ByRef errorInfo As ErrorInfo, Optional options As HandlingOptions) As Boolean` : エラーを処理する。
+    - `AttemptRecovery(ByRef errorInfo As ErrorInfo, Optional options As RecoveryOptions) As Boolean` : エラーからの回復を試みる。
+    - `RetryOperation(operation As IRetryableOperation, Optional options As RetryOptions) As OperationResult` : リトライ処理を実行する。
+    - `SetErrorPriority(errorType As String, priority As ErrorPriority)` : エラーの優先度を設定する。
+    - `SetHandlingStrategy(errorType As String, strategy As IErrorStrategy)` : エラー処理戦略を設定する。
+    - `ReleaseResource(resource As Object, Optional options As ReleaseOptions) As Boolean` : リソースを解放する。
+    - `QueueError(ByRef errorInfo As ErrorInfo, Optional options As QueueOptions)` : エラーをキューに追加する。
+    - `ProcessErrorQueue(Optional options As ProcessOptions)` : キューのエラーを処理する。
+    - `GetHandlingStatistics() As HandlingStatistics` : エラー処理の統計を取得する。
+    - `GetPerformanceMetrics() As Collection` : パフォーマンス指標を取得する。
+    - `Validate() As Boolean` : エラーハンドラーの状態を検証する。
+    - `Cleanup()` : リソースを解放する。
+  - `[その他特記事項]` :
+    - 各メソッドは、様々なイベント（ErrorHandlingStarted, ErrorHandlingCompleted, RecoveryAttempted, RetryAttempted, ResourceReleased, ErrorQueued, PerformanceAlert）を発生させる。
+    - 各イベントは、エラー処理開始・完了、回復試行、リトライ試行、リソース解放、エラーキュー追加、パフォーマンスアラートなどを通知する。
+    - メソッドの多くは、エラー処理要件が定義されており、エラー情報の検証、優先度判定、リカバリ処理、リソース解放、ログ記録、メトリクス収集などが必要。
+
+- `IErrorNotification` : モジュール名
+  - `[概要]` : エラー通知の配信と管理を担当し、複数の通知チャネルとポリシーをサポートするインターフェース
+  - `[依存関係]` :
+    - ErrorInfo
+    - INotificationTarget
+    - INotificationGroupingRule
+    - INotificationDeduplicationRule
+    - INotificationDeliveryPolicy
+    - INotificationThrottlingStrategy
+    - INotificationSchedulingStrategy
+    - CommonEnums
+  - `[メソッド一覧]` :
+    - `NotificationLevel` : Property：エラー通知レベルを設定・取得する。
+    - `NotifyError(ByRef errorInfo As ErrorInfo, Optional options As NotificationOptions)` : エラーを通知する。
+    - `NotifyBatch(errors As Collection, Optional options As BatchNotificationOptions) As String` : バッチ通知を実行する。
+    - `AddNotificationTarget(target As INotificationTarget, Optional priority As ValidationPriority = vpNormal, Optional options As TargetOptions)` : 通知先を追加する。
+    - `RemoveNotificationTarget(target As INotificationTarget, Optional options As TargetRemovalOptions)` : 通知先を削除する。
+    - `ClearNotificationTargets(Optional options As ClearOptions)` : すべての通知先をクリアする。
+    - `SetNotificationFilter(filterExpression As String, Optional options As FilterOptions)` : 通知のフィルタリング条件を設定する。
+    - `GetNotificationHistory(Optional options As NotificationHistoryOptions) As Collection` : 通知履歴を取得する。
+    - `SetNotificationTemplate(templateName As String, template As String, Optional options As TemplateOptions)` : 通知テンプレートを設定する。
+    - `GetNotificationTemplate(templateName As String, Optional version As Long = -1) As String` : 通知テンプレートを取得する。
+    - `SetGroupingRule(groupingRule As INotificationGroupingRule, Optional options As GroupingOptions)` : 通知のグループ化ルールを設定する。
+    - `SetDeduplicationRule(deduplicationRule As INotificationDeduplicationRule, Optional options As DeduplicationOptions)` : 通知の重複排除ルールを設定する。
+    - `SetDeliveryPolicy(policy As INotificationDeliveryPolicy, Optional options As PolicyOptions)` : 通知の配信ポリシーを設定する。
+    - `BatchProcessingEnabled` : Property：通知のバッチ処理を有効/無効にする。
+    - `Progress` : Property：通知の進捗状況を取得する。
+    - `IsCancellationRequested` : Property：キャンセル状態を設定/取得する。
+    - `GetPerformanceMetrics() As Collection` : パフォーマンス指標を取得する。
+    - `AnalyzeDeliveryPatterns(timeWindow As Long) As Collection` : 通知の配信状態を分析する。
+    - `ThrottlingStrategy` : Property：スロットリング戦略を設定する。
+    - `SchedulingStrategy` : Property：スケジューリング戦略を設定する。
+  - `[その他特記事項]` :
+    - 各メソッドは、様々なイベント（NotificationSent, NotificationDelivered, NotificationFailed, NotificationAcknowledged, NotificationBatchProcessed, NotificationThrottled, TemplateUpdated, DeliveryPolicyViolation, PerformanceAlert, ResourceExhausted）を発生させる。
+    - 各イベントは、通知送信、通知配信、通知失敗、通知確認、通知バッチ処理、通知抑制、テンプレート更新、配信ポリシー違反、パフォーマンスアラート、リソース枯渇などを通知する。
+    - メソッドの多くは、エラー処理要件が定義されており、通知レベルに応じた処理、通知失敗時の代替処理、リソースの適切な解放、通知の重複防止、イベントの適切な発行、メトリクスの収集、パフォーマンスの監視などが必要。
+
+- `IErrorStrategy` : モジュール名
+  - `[概要]` : エラーからの回復戦略を定義し、段階的な回復処理とフォールバックメカニズムを提供するインターフェース
+  - `[依存関係]` :
+    - ErrorInfo
+    - IErrorStrategy
+    - IRecoveryAction
+    - IBackoffStrategy
+  - `[メソッド一覧]` :
+    - `RecoverFromError(ByRef errorInfo As ErrorInfo, Optional context As RecoveryContext, Optional options As RecoveryOptions) As Boolean` : エラーからの回復を試みる。
+    - `CreateRecoveryChain(strategies As Collection) As String` : 回復チェーンを作成する。
+    - `MaxRetryCount` : Property：最大リトライ回数を設定・取得する。
+    - `Priority` : Property：回復戦略の優先度を設定・取得する。
+    - `RetryInterval` : Property：リトライ間隔（ミリ秒）を設定・取得する。
+    - `GetDescription(Optional locale As String) As String` : 回復戦略の説明を取得する。
+    - `SetFallbackStrategy(strategy As IErrorStrategy, Optional options As FallbackOptions)` : フォールバック戦略を設定する。
+    - `FallbackStrategy` : Property：フォールバック戦略を取得する。
+    - `GetProgress(Optional includeMetrics As Boolean = False) As RecoveryProgress` : 回復処理の進捗状況を取得する。
+    - `SetRecoveryAction(errorCode As ErrorCode, recoveryAction As IRecoveryAction, Optional options As ActionOptions)` : エラー種別ごとの回復方法を設定する。
+    - `GetRecoveryAction(errorCode As ErrorCode, Optional includeMetrics As Boolean = False) As IRecoveryAction` : エラー種別ごとの回復方法を取得する。
+    - `GetRecoveryHistory(Optional filter As RecoveryHistoryFilter) As Collection` : 回復履歴を取得する。
+    - `Validate(Optional validationLevel As ValidationLevel = vlNormal) As Boolean` : 回復戦略の状態を検証する。
+    - `Cleanup(Optional options As CleanupOptions)` : リソースを解放する。
+    - `CancelRecovery(Optional options As CancellationOptions)` : 回復処理をキャンセルする。
+    - `IsCancellationRequested` : Property：キャンセル状態を取得する。
+    - `SupportsAsyncRecovery` : Property：非同期回復をサポートしているかどうかを取得する。
+    - `SupportsTransactions` : Property：トランザクションをサポートしているかどうかを取得する。
+    - `GetPerformanceMetrics() As Collection` : パフォーマンス指標を取得する。
+    - `AnalyzeErrorPatterns(timeWindow As Long) As Collection` : エラーパターンを分析する。
+    - `BackoffStrategy` : Property：バックオフ戦略を設定する。
+  - `[その他特記事項]` :
+    - 各メソッドは、様々なイベント（RecoveryAttemptStarted, RecoveryAttemptCompleted, RecoveryProgressChanged, FallbackStrategyActivated, RecoveryChainExecuted, ResourceExhausted, PerformanceAlert, ErrorPatternDetected）を発生させる。
+    - 各イベントは、回復試行開始・完了、回復進捗変更、フォールバック戦略アクティブ化、回復チェーン実行、リソース枯渇、パフォーマンスアラート、エラーパターン検出などを通知する。
+    - メソッドの多くは、エラー処理要件が定義されており、リトライ回数の管理、タイムアウト処理、リソースの適切な解放、回復不可能な状態の検出、イベントの適切な発行、メトリクスの収集、パターンの分析などが必要。
+
+- `IEventLog` : モジュール名
+  - `[概要]` : Windowsイベントログの操作と管理を提供するインターフェース
+  - `[依存関係]` :
+  - `[メソッド一覧]` :
+    - `WriteToEventLog(source As String, message As String, eventType As EventLogType, Optional options As WriteOptions) As Boolean` : イベントログにメッセージを書き込む。
+    - `WriteBatch(entries As Collection, Optional options As BatchOptions) As BatchResult` : バッチでイベントログに書き込む。
+    - `EventSourceExists(source As String, Optional options As SourceOptions) As Boolean` : イベントソースの存在を確認する。
+    - `RegisterEventSource(source As String, Optional options As RegisterOptions) As Boolean` : イベントソースを登録する。
+    - `ClearEventLog(source As String, Optional options As ClearOptions) As Boolean` : イベントログをクリアする。
+    - `BackupEventLog(backupPath As String, Optional options As BackupOptions) As Boolean` : イベントログをバックアップする。
+    - `FilterEvents(criteria As String, Optional options As FilterOptions) As Collection` : イベントログをフィルタリングする。
+    - `GetEventStatistics(source As String, Optional options As StatisticsOptions) As EventStatistics` : イベントログの統計を取得する。
+    - `GetPerformanceMetrics() As Collection` : パフォーマンス指標を取得する。
+    - `Validate() As Boolean` : イベントログの状態を検証する。
+    - `Cleanup()` : リソースを解放する。
+  - `[その他特記事項]` :
+    - 各メソッドは、様々なイベント（EventLogged, SourceRegistered, LogCleared, BatchProcessed, LogFull, BackupCreated, PerformanceAlert）を発生させる。
+    - 各イベントは、イベントログ書き込み、ソース登録、ログクリア、バッチ処理、ログフル状態、バックアップ作成、パフォーマンスアラートなどを通知する。
+    - メソッドの多くは、エラー処理要件が定義されており、メッセージ長制限、ソース名制限、バッチサイズ制限、キャッシュ期間、リトライ回数、クリーンアップ間隔などが必要。
+
+- `IFileIO` : モジュール名
+  - `[概要]` : ファイル入出力操作とストリーム処理を提供するインターフェース
+  - `[依存関係]` :
+    - IFileStream
+  - `[メソッド一覧]` :
+    - `FileExists(filePath As String, Optional options As FileCheckOptions) As Boolean` : ファイルの存在を確認する。
+    - `FolderExists(folderPath As String, Optional options As FolderCheckOptions) As Boolean` : フォルダの存在を確認する。
+    - `CreateFolder(folderPath As String, Optional options As FolderCreateOptions) As Boolean` : フォルダを作成する。
+    - `DeleteFile(filePath As String, Optional options As FileDeleteOptions) As Boolean` : ファイルを削除する。
+    - `CopyFile(sourceFilePath As String, destinationFilePath As String, Optional options As FileCopyOptions) As Boolean` : ファイルをコピーする。
+    - `MoveFile(sourceFilePath As String, destinationFilePath As String, Optional options As FileMoveOptions) As Boolean` : ファイルを移動する。
+    - `OpenFile(filePath As String, mode As FileMode, Optional options As FileOpenOptions) As IFileStream` : ファイルを開く。
+    - `CloseFile(fileStream As IFileStream, Optional options As FileCloseOptions) As Boolean` : ファイルを閉じる。
+    - `ReadFile(filePath As String, Optional options As FileReadOptions) As String` : ファイルを読み込む。
+    - `WriteFile(filePath As String, content As String, Optional options As FileWriteOptions) As Boolean` : ファイルに書き込む。
+    - `GetFileInfo(filePath As String) As FileInfo` : ファイル情報を取得する。
+    - `LockFile(filePath As String, Optional options As FileLockOptions) As String` : ファイルをロックする。
+    - `UnlockFile(lockToken As String) As Boolean` : ファイルのロックを解除する。
+    - `GetPerformanceMetrics() As Collection` : パフォーマンス指標を取得する。
+    - `Validate() As Boolean` : ファイルI/Oの状態を検証する。
+    - `Cleanup()` : リソースを解放する。
+  - `[その他特記事項]` :
+    - 各メソッドは、様々なイベント（FileOpened, FileClosed, FileCreated, FileDeleted, FileMoved, FileCopied, SecurityAlert, PerformanceAlert）を発生させる。
+    - 各イベントは、ファイルオープン・クローズ、ファイル作成・削除・移動・コピー、セキュリティアラート、パフォーマンスアラートなどを通知する。
+    - メソッドの多くは、エラー処理要件が定義されており、パスの検証、アクセス権確認、セキュリティチェック、タイムアウト処理などが必要。
+
+- `IFileOperations` : モジュール名
+  - `[概要]` : 高レベルなファイル操作とメタデータ管理を提供するインターフェース
+  - `[依存関係]` :
+    - FileMetadata
+    - FilePermissions
+  - `[メソッド一覧]` :
+    - `ReadTextFile(filePath As String, Optional encoding As String, Optional options As TextReadOptions) As String` : テキストファイルを読み込む。
+    - `WriteTextFile(filePath As String, content As String, Optional options As TextWriteOptions) As Boolean` : テキストファイルに書き込む。
+    - `ReadBinaryFile(filePath As String, Optional options As BinaryReadOptions) As Byte()` : バイナリファイルを読み込む。
+    - `WriteBinaryFile(filePath As String, ByRef data() As Byte, Optional options As BinaryWriteOptions) As Boolean` : バイナリファイルに書き込む。
+    - `FileExists(filePath As String, Optional options As FileCheckOptions) As Boolean` : ファイルの存在を確認する。
+    - `FolderExists(folderPath As String, Optional options As FolderCheckOptions) As Boolean` : フォルダの存在を確認する。
+    - `CreateFolder(folderPath As String, Optional options As FolderCreateOptions) As Boolean` : フォルダを作成する。
+    - `DeleteFile(filePath As String, Optional options As FileDeleteOptions) As Boolean` : ファイルを削除する。
+    - `DeleteFolder(folderPath As String, Optional options As FolderDeleteOptions) As Boolean` : フォルダを削除する。
+    - `GetMetadata(filePath As String) As FileMetadata` : ファイルのメタデータを取得する。
+    - `SetMetadata(filePath As String, metadata As FileMetadata) As Boolean` : ファイルのメタデータを設定する。
+    - `SetPermissions(filePath As String, permissions As FilePermissions) As Boolean` : ファイルのアクセス権を設定する。
+    - `EncryptFile(filePath As String, Optional options As EncryptionOptions) As Boolean` : ファイルを暗号化する。
+    - `GetPerformanceMetrics() As Collection` : パフォーマンス指標を取得する。
+    - `Validate() As Boolean` : ファイル操作の状態を検証する。
+    - `Cleanup()` : リソースを解放する。
+  - `[その他特記事項]` :
+    - 各メソッドは、様々なイベント（FileOperationStarted, FileOperationCompleted, SecurityViolation, ProgressUpdated, MetadataChanged, PerformanceAlert, ResourceExhausted）を発生させる。
+    - 各イベントは、ファイル操作開始・完了、セキュリティ違反、進捗更新、メタデータ変更、パフォーマンスアラート、リソース枯渇などを通知する。
+    - メソッドの多くは、エラー処理要件が定義されており、最大ファイルサイズ制限、最大パス長制限、バッファサイズ、最大リトライ回数、ロックタイムアウト、クリーンアップ間隔などが必要。
+
+- `IIniFile` : モジュール名
+  - `[概要]` : INIファイルの読み書きと高度な設定管理を提供するインターフェース
+  - `[依存関係]` :
+  - `[メソッド一覧]` :
+    - `GetValue(section As String, key As String, Optional defaultValue As Variant, Optional options As ReadOptions) As Variant` : INIファイルから値を読み取る。
+    - `SetValue(section As String, key As String, value As Variant, Optional options As WriteOptions) As Boolean` : INIファイルに値を書き込む。
+    - `GetSection(section As String, Optional options As SectionOptions) As Collection` : セクションを取得する。
+    - `GetSections(Optional options As SectionOptions) As Collection` : すべてのセクションを取得する。
+    - `RemoveSection(section As String, Optional options As RemoveOptions) As Boolean` : セクションを削除する。
+    - `RemoveKey(section As String, key As String, Optional options As RemoveOptions) As Boolean` : キーを削除する。
+    - `LoadFile(filePath As String, Optional options As LoadOptions) As Boolean` : INIファイルを読み込む。
+    - `SaveFile(filePath As String, Optional options As SaveOptions) As Boolean` : INIファイルを保存する。
+    - `CreateBackup(Optional options As BackupOptions) As String` : バックアップを作成する。
+    - `RestoreFromBackup(backupPath As String, Optional options As RestoreOptions) As Boolean` : バックアップから復元する。
+    - `ClearCache()` : キャッシュをクリアする。
+    - `GetPerformanceMetrics() As Collection` : パフォーマンス指標を取得する。
+    - `Validate() As Boolean` : INIファイルの状態を検証する。
+    - `Cleanup()` : リソースを解放する。
+  - `[その他特記事項]` :
+    - 各メソッドは、様々なイベント（ValueChanged, SectionAdded, SectionRemoved, FileLoaded, FileSaved, CacheUpdated, BackupCreated, PerformanceAlert）を発生させる。
+    - 各イベントは、値変更、セクション追加・削除、ファイル読み込み・保存、キャッシュ更新、バックアップ作成、パフォーマンスアラートなどを通知する。
+    - メソッドの多くは、エラー処理要件が定義されており、セクション名・キー名・値・行の最大長制限、キャッシュ期間、最大バックアップ数、バッファサイズなどが必要。
+
+- `IKeyDerivationStrategy` : モジュール名
+  - `[概要]` : パスワードからキーを安全に導出するための戦略を提供するインターフェース
+  - `[依存関係]` :
+  - `[メソッド一覧]` :
+    - `DeriveKey(password As String, ByRef salt As Variant, iterations As Long, Optional options As DerivationOptions) As Byte()` : パスワードからキーを導出する。
+    - `ValidateParameters(password As String, ByRef salt As Variant, iterations As Long, Optional options As ValidationOptions) As ValidationResult` : パラメータを検証する。
+    - `GenerateSalt(Optional length As Long = 16, Optional options As SaltOptions) As Byte()` : ソルトを生成する。
+    - `GetRecommendedParameters(Optional options As ParameterOptions) As DerivationParameters` : 推奨パラメータを取得する。
+    - `ConfigureCache(settings As CacheSettings)` : キャッシュ設定を構成する。
+    - `OptimizeMemoryUsage(Optional options As OptimizationOptions)` : メモリ使用量を最適化する。
+    - `GetPerformanceMetrics() As Collection` : パフォーマンス指標を取得する。
+    - `PerformSecurityAudit(Optional options As AuditOptions) As SecurityAuditResult` : セキュリティ監査を実行する。
+    - `Validate() As Boolean` : キー導出の状態を検証する。
+    - `Cleanup()` : リソースを解放する。
+  - `[その他特記事項]` :
+    - 各メソッドは、様々なイベント（KeyDerivationStarted, KeyDerivationCompleted, SecurityAlert, ParameterValidationFailed, CacheUpdated, PerformanceAlert, ResourceExhausted）を発生させる。
+    - 各イベントは、キー導出開始・完了、セキュリティアラート、パラメータ検証失敗、キャッシュ更新、パフォーマンスアラート、リソース枯渇などを通知する。
+    - メソッドの多くは、エラー処理要件が定義されており、パスワード・ソルト・反復回数の検証、メモリ使用量・パフォーマンスの監視、セキュリティ要件の確認などが必要。
+
+- `ILock` : モジュール名
+  - `[概要]` : リソースの排他制御とデッドロック検出を提供するインターフェース
+  - `[依存関係]` :
+  - `[メソッド一覧]` :
+    - `Acquire(Optional timeout As Long = -1, Optional options As LockOptions) As Boolean` : ロックを取得する。
+    - `Release(Optional options As ReleaseOptions)` : ロックを解放する。
+    - `GetLockStatus() As LockStatus` : ロックの状態を確認する。
+    - `GetWaitingThreads() As Collection` : 待機中のスレッドを取得する。
+    - `Priority` : Property：ロックの優先度を設定・取得する。
+    - `IsReentrant` : Property：再入可能性を設定・取得する。
+    - `DeadlockDetectionEnabled` : Property：デッドロック検出を有効/無効にする。
+    - `GetPerformanceMetrics() As Collection` : パフォーマンス指標を取得する。
+    - `DetectDeadlocks(Optional options As DeadlockOptions) As Collection` : デッドロックを検出する。
+    - `Validate() As Boolean` : ロックの状態を検証する。
+    - `Cleanup()` : リソースを解放する。
+  - `[その他特記事項]` :
+    - 各メソッドは、様々なイベント（LockAcquired, LockReleased, DeadlockDetected, TimeoutOccurred, PriorityInversion, ResourceContentionDetected, PerformanceAlert）を発生させる。
+    - 各イベントは、ロック取得・解放、デッドロック検出、タイムアウト発生、優先度逆転、リソース競合検出、パフォーマンスアラートなどを通知する。
+    - メソッドの多くは、エラー処理要件が定義されており、タイムアウトの検証、デッドロックの検出、優先度逆転の防止、リソース競合の監視、再入可能性の確認などが必要。
+
+- `ILogger` : モジュール名
+  - `[概要]` : ログの記録、管理、分析を提供し、複数の出力先とフォーマットをサポートするインターフェース
+  - `[依存関係]` :
+    - LogEntry
+    - LogDestination
+    - ErrorCode
+    - LogStatistics
+    - CommonEnums
+  - `[メソッド一覧]` :
+    - `Log(moduleName As String, message As String, Optional level As LogLevel = llInfo, Optional errorCode As ErrorCode, Optional options As LogOptions)` : ログを記録する。
+    - `LogBatch(entries As Collection, Optional options As BatchLogOptions)` : バッチログを記録する。
+    - `LogLevel` : Property：ログレベルを設定・取得する。
+    - `LogDestination` : Property：ログの出力先を設定・取得する。
+    - `SetLogFilter(filter As String, Optional options As FilterOptions)` : ログフィルターを設定する。
+    - `Flush(Optional options As FlushOptions)` : ログをフラッシュする。
+    - `RotateLog(Optional options As RotationOptions)` : ログをローテーションする。
+    - `CompressLog(filePath As String, Optional options As CompressionOptions)` : ログを圧縮する。
+    - `SearchLogs(searchCriteria As String, Optional options As SearchOptions) As Collection` : ログを検索する。
+    - `GetLogStatistics(Optional options As StatisticsOptions) As LogStatistics` : ログの統計情報を取得する。
+    - `GetPerformanceMetrics() As Collection` : パフォーマンス指標を取得する。
+    - `Validate() As Boolean` : ログの状態を検証する。
+    - `Cleanup()` : リソースを解放する。
+  - `[その他特記事項]` :
+    - 各メソッドは、様々なイベント（LogEntryWritten, LogLevelChanged, DestinationChanged, LogRotated, LogCompressed, QueueThresholdReached, PerformanceAlert, StorageAlert）を発生させる。
+    - 各イベントは、ログエントリ書き込み、ログレベル変更、出力先変更、ログローテーション、ログ圧縮、キュー閾値到達、パフォーマンスアラート、ストレージアラートなどを通知する。
+    - メソッドの多くは、エラー処理要件が定義されており、パラメータの検証、出力先の状態確認、エラー発生時の代替処理、リトライメカニズムの実装、キューの管理、パフォーマンスの監視などが必要。
+
+- `ILoggerSettings` : モジュール名
+  - `[概要]` : ロガーの設定管理と検証を提供するインターフェース
+  - `[依存関係]` :
+    - LogLevel
+    - ILogDestination
+    - ValidationResult
+  - `[メソッド一覧]` :
+    - `LogLevel` : Property：ログレベルを取得または設定する。
+    - `LogDestination` : Property：ログ出力先を取得または設定する。
+    - `LogFilePath` : Property：ログファイルパスを取得または設定する。
+    - `LogTableName` : Property：ログテーブル名を取得または設定する。
+    - `LogEventSource` : Property：ログイベントソースを取得または設定する。
+    - `TimerInterval` : Property：タイマー間隔を取得または設定する。
+    - `ConnectionString` : Property：データベース接続文字列を取得または設定する。
+    - `ValidateSettings(Optional options As ValidationOptions) As ValidationResult` : 設定を検証する。
+    - `LoadFromFile(filePath As String, Optional options As LoadOptions)` : 設定をファイルから読み込む。
+    - `SaveToFile(filePath As String, Optional options As SaveOptions)` : 設定をファイルに保存する。
+    - `SetEnvironment(environment As String, Optional options As EnvironmentOptions)` : 環境を設定する。
+    - `ResetToDefaults(Optional options As ResetOptions)` : 設定をリセットする。
+    - `CreateBackup(Optional backupPath As String) As String` : 設定のバックアップを作成する。
+    - `RestoreFromBackup(backupPath As String, Optional options As RestoreOptions)` : バックアップから復元する。
+    - `EncryptSettings(Optional options As EncryptionOptions)` : 設定を暗号化する。
+    - `GetPerformanceMetrics() As Collection` : パフォーマンス指標を取得する。
+    - `Validate() As Boolean` : 設定の状態を検証する。
+    - `Cleanup()` : リソースを解放する。
+  - `[その他特記事項]` :
+    - 各メソッドは、様々なイベント（SettingChanged, ValidationFailed, ConfigurationLoaded, ConfigurationSaved, EnvironmentChanged, SecurityAlert, PerformanceAlert）を発生させる。
+    - 各イベントは、設定変更、検証失敗、設定読み込み・保存、環境変更、セキュリティアラート、パフォーマンスアラートなどを通知する。
+    - メソッドの多くは、エラー処理要件が定義されており、最大ファイルサイズ、最小・最大タイマー間隔、最大バッチサイズ、キャッシュ期間、最大リトライ回数、クリーンアップ間隔などが必要。
+
+- `IMessageFormatter` : モジュール名
+  - `[概要]` : メッセージのフォーマットとテンプレート管理を提供するインターフェース
+  - `[依存関係]` :
+    - ErrorInfo
+    - IPlaceholderResolver
+  - `[メソッド一覧]` :
+    - `FormatMessage(message As String, ByRef errorInfo As ErrorInfo, Optional options As FormatOptions) As String` : メッセージをフォーマットする。
+    - `FormatWithTemplate(templateName As String, parameters As Collection, Optional options As TemplateOptions) As String` : テンプレートを使用してメッセージをフォーマットする。
+    - `SetTemplate(templateName As String, template As String, Optional options As TemplateOptions)` : メッセージテンプレートを設定する。
+    - `GetTemplate(templateName As String) As String` : メッセージテンプレートを取得する。
+    - `SetLocale(locale As String, Optional options As LocaleOptions)` : ロケールを設定する。
+    - `CurrentLocale` : Property：現在のロケールを取得する。
+    - `AddPlaceholder(placeholder As String, resolver As IPlaceholderResolver)` : カスタムプレースホルダーを追加する。
+    - `ExportSettings(filePath As String, Optional options As ExportOptions)` : フォーマット設定をエクスポートする。
+    - `ImportSettings(filePath As String, Optional options As ImportOptions)` : フォーマット設定をインポートする。
+    - `ValidateTemplate(template As String, Optional options As ValidationOptions) As ValidationResult` : テンプレートをバリデーションする。
+    - `GetPerformanceMetrics() As Collection` : パフォーマンス指標を取得する。
+    - `Validate() As Boolean` : フォーマッターの状態を検証する。
+    - `Cleanup()` : リソースを解放する。
+  - `[その他特記事項]` :
+    - 各メソッドは、様々なイベント（MessageFormatted, TemplateLoaded, LocaleChanged, PlaceholderResolved, FormatError, CacheUpdated, PerformanceAlert）を発生させる。
+    - 各イベントは、メッセージフォーマット、テンプレート読み込み、ロケール変更、プレースホルダー解決、フォーマットエラー、キャッシュ更新、パフォーマンスアラートなどを通知する。
+    - メソッドの多くは、エラー処理要件が定義されており、メッセージ・テンプレート・プレースホルダーの最大長制限、キャッシュ期間、最大リトライ回数、デフォルトロケール、クリーンアップ間隔などが必要。
+
+- `IMutex` : モジュール名
+  - `[概要]` : スレッド間の同期と排他制御を提供するインターフェース
+  - `[依存関係]` :
+  - `[メソッド一覧]` :
+    - `CreateMutex(initialOwner As Boolean, name As String, Optional options As MutexOptions) As Boolean` : ミューテックスを作成する。
+    - `ReleaseMutex(Optional options As ReleaseOptions) As Boolean` : ミューテックスを解放する。
+    - `WaitForSingleObject(timeoutMilliseconds As Long, Optional options As WaitOptions) As Boolean` : ミューテックスの所有権を取得する。
+    - `GetMutexStatus() As MutexStatus` : ミューテックスの状態を確認する。
+    - `GetWaitingThreads() As Collection` : 待機中のスレッドを取得する。
+    - `Priority` : Property：ミューテックスの優先度を設定・取得する。
+    - `IsReentrant` : Property：再入可能性を設定・取得する。
+    - `DeadlockDetectionEnabled` : Property：デッドロック検出を有効/無効にする。
+    - `GetPerformanceMetrics() As Collection` : パフォーマンス指標を取得する。
+    - `DetectDeadlocks(Optional options As DeadlockOptions) As Collection` : デッドロックを検出する。
+    - `Validate() As Boolean` : ミューテックスの状態を検証する。
+    - `Cleanup()` : リソースを解放する。
+  - `[その他特記事項]` :
+    - 各メソッドは、様々なイベント（MutexCreated, MutexAcquired, MutexReleased, DeadlockDetected, TimeoutOccurred, PriorityInversion, ResourceContentionDetected, PerformanceAlert）を発生させる。
+    - 各イベントは、ミューテックス作成・取得・解放、デッドロック検出、タイムアウト発生、優先度逆転、リソース競合検出、パフォーマンスアラートなどを通知する。
+    - メソッドの多くは、エラー処理要件が定義されており、名前の検証、重複チェック、セキュリティ確認、リソース確保、所有権の確認、待機スレッドの管理、リソースの解放確認、イベントの発行などが必要。
+
+- `IPerformanceCounter` : モジュール名
+  - `[概要]` : 高精度なパフォーマンス測定と監視機能を提供するインターフェース
+  - `[依存関係]` :
+  - `[メソッド一覧]` :
+    - `QueryPerformanceCounter(ByRef performanceCount As Currency, Optional options As CounterOptions) As Boolean` : パフォーマンスカウンターの現在値を取得する。
+    - `QueryPerformanceFrequency(ByRef frequency As Currency, Optional options As FrequencyOptions) As Boolean` : パフォーマンスカウンターの周波数を取得する。
+    - `StartMeasurement(counterName As String, Optional options As MeasurementOptions) As String` : パフォーマンス測定を開始する。
+    - `StopMeasurement(measurementId As String) As MeasurementResult` : パフォーマンス測定を停止する。
+    - `SetThreshold(counterName As String, threshold As Double, Optional options As ThresholdOptions)` : パフォーマンス閾値を設定する。
+    - `GetStatistics(counterName As String, Optional options As StatisticsOptions) As PerformanceStatistics` : パフォーマンス統計を取得する。
+    - `GetHistory(counterName As String, Optional options As HistoryOptions) As Collection` : パフォーマンス履歴を取得する。
+    - `DetectAnomalies(counterName As String, Optional options As AnomalyOptions) As Collection` : 異常値を検出する。
+    - `GenerateReport(Optional options As ReportOptions) As PerformanceReport` : パフォーマンスレポートを生成する。
+    - `Reset(Optional counterName As String)` : カウンターをリセットする。
+    - `Validate() As Boolean` : カウンターの状態を検証する。
+    - `Cleanup()` : リソースを解放する。
+  - `[その他特記事項]` :
+    - 各メソッドは、様々なイベント（CounterStarted, CounterStopped, ThresholdExceeded, SampleCollected, StatisticsUpdated, AnomalyDetected, CacheUpdated）を発生させる。
+    - 各イベントは、カウンター開始・停止、閾値超過、サンプル収集、統計更新、異常検出、キャッシュ更新などを通知する。
+    - メソッドの多くは、エラー処理要件が定義されており、カウンターの有効性確認、オーバーフロー検出、プロセッサ間の一貫性確認、キャッシュの活用、システムサポートの確認、値の安定性確認などが必要。
+
+- `IPerformanceMonitor` : モジュール名
+  - `[概要]` : システム全体のパフォーマンスを監視し、分析、レポート生成を提供するインターフェース
+  - `[依存関係]` :
+    - MeasurementResult
+    - PerformanceStatistics
+    - PerformanceReport
+  - `[メソッド一覧]` :
+    - `Start(measurementName As String, Optional category As String, Optional options As MeasurementOptions)` : 計測を開始する。
+    - `Stop(measurementName As String, Optional options As StopOptions) As MeasurementResult` : 計測を終了する。
+    - `GetMeasurement(measurementName As String, Optional options As GetOptions) As MeasurementResult` : 指定した計測の結果を取得する。
+    - `GetAllMeasurements(Optional filter As String, Optional options As GetAllOptions) As Collection` : すべての計測結果を取得する。
+    - `GetStatistics(metricName As String, Optional options As StatisticsOptions) As PerformanceStatistics` : パフォーマンス統計を取得する。
+    - `MonitorResource(resourceType As String, Optional options As MonitorOptions)` : リソース使用状況を監視する。
+    - `GenerateReport(reportType As String, Optional options As ReportOptions) As PerformanceReport` : パフォーマンスレポートを生成する。
+    - `SetAlertCondition(metricName As String, condition As String, Optional options As AlertOptions)` : アラート条件を設定する。
+    - `Clear(Optional options As ClearOptions)` : すべての計測結果をクリアする。
+    - `IsEnabled` : Property：パフォーマンス監視が有効かどうかを取得する。
+    - `Enable(Optional options As EnableOptions)` : パフォーマンス監視を有効にする。
+    - `Disable(Optional options As DisableOptions)` : パフォーマンス監視を無効にする。
+    - `ExportSettings(filePath As String, Optional options As ExportOptions)` : 監視設定をエクスポートする。
+    - `ImportSettings(filePath As String, Optional options As ImportOptions)` : 監視設定をインポートする。
+    - `Validate() As Boolean` : 監視の状態を検証する。
+    - `Cleanup()` : リソースを解放する。
+  - `[その他特記事項]` :
+    - 各メソッドは、様々なイベント（MeasurementStarted, MeasurementCompleted, ThresholdExceeded, ResourceAlert, PerformanceAnomaly, MonitoringStatusChanged, ReportGenerated）を発生させる。
+    - 各イベントは、計測開始・完了、閾値超過、リソースアラート、パフォーマンス異常、監視状態変更、レポート生成などを通知する。
+    - メソッドの多くは、エラー処理要件が定義されており、計測名の検証、重複計測の検出、リソース使用量の確認、タイムアウトの設定などが必要。
+
+    - `IQueue` : モジュール名
+    - `[概要]` : キューデータ構造を管理し、FIFOアクセスとイテレーション機能を提供するインターフェース
+    - `[依存関係]` :
+    - `[メソッド一覧]` :
+      - `Enqueue(item As Variant, Optional options As EnqueueOptions)` : キューにアイテムを追加する。
+      - `Dequeue(Optional options As DequeueOptions) As Variant` : キューからアイテムを取り出す。
+      - `EnqueueBatch(items As Collection, Optional options As BatchOptions)` : 複数のアイテムをバッチでキューに追加する。
+      - `DequeueBatch(count As Long, Optional options As BatchOptions) As Collection` : 指定した数のアイテムをバッチで取り出す。
+      - `IsEmpty() As Boolean` : キューが空かどうかを確認する。
+      - `IsFull() As Boolean` : キューが満杯かどうかを確認する。
+      - `Count` : Property：キュー内のアイテム数を取得する。
+      - `Capacity` : Property：キューの容量を取得または設定する。
+      - `Peek(Optional options As PeekOptions) As Variant` : キューの先頭アイテムを参照する（取り出さない）。
+      - `PeekAt(index As Long) As Variant` : キュー内の指定位置のアイテムを参照する。
+      - `Search(predicate As String) As Collection` : キュー内のアイテムを検索する。
+      - `Clear(Optional options As ClearOptions)` : キューをクリアする。
+      - `ToArray() As Variant()` : キューの内容を配列にコピーする。
+      - `Validate() As Boolean` : キューの状態を検証する。
+      - `GetPerformanceMetrics() As Collection` : パフォーマンス指標を取得する。
+      - `Cleanup()` : リソースを解放する。
+    - `[その他特記事項]` :
+      - 各メソッドは、様々なイベント（ItemEnqueued, ItemDequeued, QueueCleared, CapacityChanged, ThresholdReached, OperationFailed, PerformanceAlert）を発生させる。
+      - 各イベントは、アイテム追加・削除、キュークリア、容量変更、閾値到達、操作失敗、パフォーマンスアラートなどを通知する。
+      - メソッドの多くは、エラー処理要件が定義されており、アイテムの検証、容量の確認、メモリ使用量の監視、型の互換性確認、空キューの処理、タイムアウト処理などが必要。
+
+  - `IRegexEngine` : モジュール名
+    - `[概要]` : 正規表現エンジンの機能を提供し、パターンのキャッシュと最適化をサポートするインターフェース
+    - `[依存関係]` :
+      - BatchResult
+      - ParallelResult
+      - PatternAnalysis
+      - ValidationResult
+      - CacheStatistics
+    - `[メソッド一覧]` :
+      - `Test(pattern As String, text As String, Optional options As RegexOptions) As Boolean` : 正規表現パターンに基づいて文字列を検証する。
+      - `TestBatch(pattern As String, texts As Collection, Optional options As BatchOptions) As BatchResult` : バッチで複数の文字列を検証する。
+      - `TestParallel(pattern As String, texts As Collection, Optional options As ParallelOptions) As ParallelResult` : 並列処理で文字列を検証する。
+      - `Replace(pattern As String, text As String, replacement As String, Optional options As ReplaceOptions) As String` : 正規表現パターンに基づいて文字列を置換する。
+      - `Match(pattern As String, text As String, Optional options As MatchOptions) As Collection` : 正規表現パターンに基づいて文字列からマッチする部分を抽出する。
+      - `CompilePattern(pattern As String, Optional options As CompileOptions) As String` : 正規表現パターンをコンパイルする。
+      - `TestCompiled(patternId As String, text As String, Optional options As RegexOptions) As Boolean` : コンパイル済みパターンを使用して検証する。
+      - `AnalyzePattern(pattern As String) As PatternAnalysis` : パターンを分割して解析する。
+      - `SuggestOptimizations(pattern As String) As Collection` : パターンの最適化を提案する。
+      - `ValidatePattern(pattern As String, Optional options As ValidationOptions) As ValidationResult` : パターンを検証する。
+      - `GetPatternHistory(pattern As String, Optional options As HistoryOptions) As Collection` : パターンの使用履歴を取得する。
+      - `CreateBackup(Optional options As BackupOptions) As String` : バックアップを作成する。
+      - `RestoreFromBackup(backupPath As String, Optional options As RestoreOptions) As Boolean` : バックアップから復元する。
+      - `GetPerformanceMetrics() As Collection` : パフォーマンス指標を取得する。
+      - `GetCacheStatistics() As CacheStatistics` : キャッシュ統計を取得する。
+      - `TimeoutMilliseconds` : Property：タイムアウト時間を設定・取得する。
+      - `Validate() As Boolean` : エンジンの状態を検証する。
+      - `Cleanup()` : リソースを解放する。
+    - `[その他特記事項]` :
+      - 各メソッドは、様々なイベント（PatternCompiled, MatchFound, TimeoutOccurred, CacheUpdated, PerformanceAlert, SecurityAlert, ResourceExhausted, BatchProcessed, PatternValidated, BackupCreated）を発生させる。
+      - 各イベントは、パターンコンパイル、マッチ検出、タイムアウト発生、キャッシュ更新、パフォーマンスアラート、セキュリティアラート、リソース枯渇、バッチ処理、パターン検証、バックアップ作成などを通知する。
+      - メソッドの多くは、エラー処理要件が定義されており、パターン長・入力文字列長の制限、タイムアウト時間、キャッシュサイズ、再帰深度、バッチサイズ、並列スレッド数、履歴エントリ数、バックアップ間隔などが必要。
+
+  - `ISleep` : モジュール名
+    - `[概要]` : 高精度なスリープ機能とスケジューリングを提供するインターフェース
+    - `[依存関係]` :
+      - SleepPattern
+      - BatchResult
+      - EnergySettings
+      - EnergyUsage
+    - `[メソッド一覧]` :
+      - `Sleep(milliseconds As Long, Optional options As SleepOptions)` : 指定された時間だけ実行を停止する。
+      - `HighPrecisionSleep(milliseconds As Long, Optional options As PrecisionOptions)` : 高精度スリープを実行する。
+      - `SpinWait(milliseconds As Long, Optional options As SpinOptions)` : スピンウェイトを実行する。
+      - `ScheduleSleep(milliseconds As Long, scheduleTime As Date, Optional options As ScheduleOptions) As String` : スリープをスケジュールする。
+      - `ScheduleRecurringSleep(milliseconds As Long, interval As Long, Optional options As RecurringOptions) As String` : 定期的なスリープをスケジュールする。
+      - `RegisterPattern(pattern As SleepPattern, Optional options As PatternOptions) As String` : スリープパターンを登録する。
+      - `BatchSleep(durations As Collection, Optional options As BatchOptions) As BatchResult` : バッチスリープを実行する。
+      - `CreateGroup(name As String, Optional options As GroupOptions) As String` : スリープグループを作成する。
+      - `AddToGroup(groupId As String, milliseconds As Long, Optional options As AddOptions)` : スリープをグループに追加する。
+      - `CancelScheduledSleep(scheduleId As String)` : スケジュールされたスリープをキャンセルする。
+      - `Interrupt()` : 現在のスリープを中断する。
+      - `ConfigureEnergy(settings As EnergySettings)` : エネルギー設定を構成する。
+      - `TimerResolution` : Property：タイマーの分解能を設定・取得する。
+      - `State` : Property：スリープ状態を取得する。
+      - `GetPerformanceMetrics() As Collection` : パフォーマンス指標を取得する。
+      - `GetSchedules() As Collection` : スケジュール一覧を取得する。
+      - `GetGroups() As Collection` : グループ一覧を取得する。
+      - `GetEnergyUsage() As EnergyUsage` : エネルギー使用状況を取得する。
+      - `Validate() As Boolean` : スリープの状態を検証する。
+      - `Cleanup()` : リソースを解放する。
+    - `[その他特記事項]` :
+      - 各メソッドは、様々なイベント（SleepStarted, SleepCompleted, SleepInterrupted, TimerResolutionChanged, PerformanceAlert, ScheduleRegistered, ResourceStateChanged, BatchCompleted, GroupStateChanged, EnergyStateChanged）を発生させる。
+      - 各イベントは、スリープ開始・完了・中断、タイマー分解能変更、パフォーマンスアラート、スケジュール登録、リソース状態変更、バッチ完了、グループ状態変更、エネルギー状態変更などを通知する。
+      - メソッドの多くは、エラー処理要件が定義されており、最小・最大スリープ時間、タイマー分解能、最大リトライ回数、スピンウェイト閾値、デフォルトタイムアウト、最大バッチサイズ、最大グループサイズ、エネルギーチェック間隔、クリーンアップ間隔などが必要。
+
+  - `IStack` : モジュール名
+    - `[概要]` : スタックデータ構造を管理し、LIFOアクセスとイテレーション機能を提供するインターフェース
+    - `[依存関係]` :
+    - `[メソッド一覧]` :
+      - `Push(item As Variant, Optional options As PushOptions) As Boolean` : スタックに要素を追加する。
+      - `Pop(Optional options As PopOptions) As Variant` : スタックから最後の要素を削除して返す。
+      - `PushBatch(items As Collection, Optional options As BatchOptions) As Long` : 複数の要素をバッチでスタックに追加する。
+      - `PopBatch(count As Long, Optional options As BatchOptions) As Collection` : 指定した数の要素をバッチで取り出す。
+      - `Peek(Optional options As PeekOptions) As Variant` : スタックの最後の要素を削除せずに取得する。
+      - `PeekAt(index As Long) As Variant` : スタック内の指定位置の要素を参照する。
+      - `IsEmpty() As Boolean` : スタックが空かどうかを確認する。
+      - `IsFull() As Boolean` : スタックが満杯かどうかを確認する。
+      - `Count` : Property：スタック内の要素数を取得する。
+      - `Capacity` : Property：スタックの容量を取得または設定する。
+      - `Search(predicate As String) As Collection` : スタック内の要素を検索する。
+      - `Clear(Optional options As ClearOptions)` : スタックをクリアする。
+      - `ToArray() As Variant()` : スタックの内容を配列にコピーする。
+      - `GetPerformanceMetrics() As Collection` : パフォーマンス指標を取得する。
+      - `Validate() As Boolean` : スタックの状態を検証する。
+      - `Cleanup()` : リソースを解放する。
+    - `[その他特記事項]` :
+      - 各メソッドは、様々なイベント（ItemPushed, ItemPopped, StackCleared, CapacityChanged, ThresholdReached, OperationFailed, PerformanceAlert）を発生させる。
+      - 各イベントは、アイテム追加・削除、スタッククリア、容量変更、閾値到達、操作失敗、パフォーマンスアラートなどを通知する。
+      - メソッドの多くは、エラー処理要件が定義されており、アイテムの検証、容量の確認、メモリ使用量の監視、型の互換性確認、空スタックの処理、メモリ解放の確認などが必要。
+
+  - `IStackTrace` : モジュール名
+    - `[概要]` : スタックトレースの収集、管理、フォーマットを担当するインターフェース
+    - `[依存関係]` :
+      - IStackTraceFormatter
+    - `[メソッド一覧]` :
+      - `PushStackEntry(ClassName As String, MethodName As String, Optional Parameters As Variant, Optional options As StackEntryOptions) As Boolean` : スタックにエントリを追加する。
+      - `PopStackEntry(Optional options As StackEntryOptions) As String` : スタックから最後のエントリを削除して返す。
+      - `GetStackTrace(Optional format As String, Optional options As StackTraceOptions) As String` : 現在のスタックトレースを文字列として取得する。
+      - `GetStackDepth() As Long` : 現在のスタックの深さを取得する。
+      - `ClearStack(Optional options As ClearOptions)` : スタックを空にする。
+      - `IsEmpty() As Boolean` : スタックが空かどうかを確認する。
+      - `Peek(Optional options As PeekOptions) As String` : スタックの最後のエントリを削除せずに取得する。
+      - `GetEntryAt(index As Long) As String` : スタックの特定位置のエントリを取得する。
+      - `SearchStack(searchPattern As String, Optional options As SearchOptions) As Collection` : スタックの内容を検索する。
+      - `FilterStackTrace(filterExpression As String, Optional options As FilterOptions) As String` : スタックの内容をフィルタリングする。
+      - `SaveToFile(filePath As String, Optional options As SaveOptions)` : スタックトレースをファイルに保存する。
+      - `GetPerformanceMetrics() As Collection` : パフォーマンス指標を取得する。
+      - `StackTraceFormatter` : Property：スタックトレースのフォーマッタを設定する。
+      - `OptimizeMemoryUsage()` : メモリ使用量を最適化する。
+      - `Validate() As Boolean` : スタックトレースの状態を検証する。
+    - `[その他特記事項]` :
+      - 各メソッドは、様々なイベント（StackEntryPushed, StackEntryPopped, StackCleared, MaxDepthReached, StackOverflowPrevented, PerformanceAlert）を発生させる。
+      - 各イベントは、スタックエントリ追加・削除、スタッククリア、最大深度到達、スタックオーバーフロー防止、パフォーマンスアラートなどを通知する。
+      - メソッドの多くは、エラー処理要件が定義されており、パラメータの検証、スタックオーバーフローの防止、メモリ使用量の監視、循環参照の検出、イベントの適切な発行、空スタックの処理、メモリ解放の確認、フォーマットの検証、メモリ使用量の最適化、長大なスタックの効率的な処理、特殊文字のエスケープなどが必要。
+
+  - `IUserNotifier` : モジュール名
+    - `[概要]` : ユーザーへの通知機能を提供し、複数の通知チャネルと表示方法をサポートするインターフェース
+    - `[依存関係]` :
+      - ErrorInfo
+      - NotificationBatchResult
+      - NotificationQueueStatus
+      - CommonEnums
+    - `[メソッド一覧]` :
+      - `Notify(ByRef errorDetail As ErrorInfo, Optional buttons As VbMsgBoxStyle = vbOKOnly, Optional title As String = "エラー", Optional options As NotificationOptions) As VbMsgBoxResult` : エラー情報をユーザーに通知する。
+      - `NotifyBatch(notifications As Collection, Optional options As BatchNotificationOptions) As NotificationBatchResult` : バッチ通知を実行する。
+      - `NotificationStyle` : Property：通知の表示方法を設定・取得する。
+      - `DefaultTitle` : Property：デフォルトのダイアログタイトルを設定する。
+      - `GetDefaultTitle(Optional locale As String) As String` : 現在のデフォルトダイアログタイトルを取得する。
+      - `SetNotificationTemplate(templateName As String, template As String, Optional locale As String)` : 通知テンプレートを設定する。
+      - `GetNotificationTemplate(templateName As String, Optional locale As String) As String` : 通知テンプレートを取得する。
+      - `SetNotificationPriority(notificationId As String, priority As ValidationPriority)` : 通知の優先順位を設定する。
+      - `GetNotificationHistory(Optional options As HistoryOptions) As Collection` : 通知履歴を取得する。
+      - `GetQueueStatus() As NotificationQueueStatus` : 通知キューの状態を取得する。
+      - `GetPerformanceMetrics() As Collection` : パフォーマンス指標を取得する。
+      - `CancelNotification(notificationId As String)` : 通知をキャンセルする。
+      - `ClearAllNotifications(Optional options As ClearOptions)` : すべての通知をクリアする。
+      - `Validate() As Boolean` : 通知の状態を検証する。
+      - `Cleanup()` : リソースを解放する。
+    - `[その他特記事項]` :
+      - 各メソッドは、様々なイベント（NotificationDisplayed, NotificationClosed, NotificationQueued, NotificationTimeout, StyleChanged, UserInteractionStarted, UserInteractionCompleted, NotificationError, ResourceExhausted）を発生させる。
+      - 各イベントは、通知表示・クローズ、通知キューイング、通知タイムアウト、スタイル変更、ユーザー操作開始・完了、通知エラー、リソース枯渇などを通知する。
+      - メソッドの多くは、エラー処理要件が定義されており、エラー詳細のNULLチェック、メッセージ長・タイトルの長さの制限、UI表示失敗時の代替通知手段、ユーザー応答のタイムアウト処理、多重表示の防止、システムリソースの監視、無効なスタイル値の検出、スタイル変更時の整合性確認、現在表示中の通知への影響考慮、イベントの適切な発行などが必要。
+
+  - `IValidationContext` : モジュール名
+    - `[概要]` : バリデーション実行時のコンテキスト情報を管理し、実行状態とリソースを制御するインターフェース
+    - `[依存関係]` :
+      - IValidationRule
+      - IValidationContext
+      - IValidationCacheStrategy
+      - CommonEnums
+    - `[メソッド一覧]` :
+      - `ContextData` : Property：コンテキストデータを設定・取得する。
+      - `SetCustomErrorMessage(rule As IValidationRule, message As String, Optional messageType As ErrorNotificationLevel = enlError, Optional options As ValidationMessageOptions)` : カスタムエラーメッセージを設定する。
+      - `GetCustomErrorMessage(rule As IValidationRule, Optional locale As String) As String` : カスタムエラーメッセージを取得する。
+      - `SetValidationPriority(rule As IValidationRule, priority As ValidationPriority)` : バリデーション優先度を設定する。
+      - `GetValidationPriority(rule As IValidationRule) As ValidationPriority` : バリデーション優先度を取得する。
+      - `Clear(Optional options As ValidationClearOptions)` : コンテキストをクリアする。
+      - `Validate(Optional validationLevel As ValidationLevel = vlNormal) As Boolean` : コンテキストの状態を検証する。
+      - `CreateSnapshot(Optional options As ValidationSnapshotOptions) As IValidationContext` : コンテキストのスナップショットを作成する。
+      - `SetRuleDependency(dependentRule As IValidationRule, requiredRule As IValidationRule, Optional dependencyType As ValidationDependencyType = vdtRequired)` : バリデーションの依存関係を設定する。
+      - `GetExecutionOrder(Optional optimizationStrategy As ValidationOptimizationStrategy = vosDefault) As Collection` : バリデーションの実行順序を取得する。
+      - `MergeResults(results As Collection, Optional options As ValidationMergeOptions)` : バリデーション結果をマージする。
+      - `Progress` : Property：バリデーションの進行状況を取得する。
+      - `IsCancellationRequested` : Property：バリデーションのキャンセル状態を設定・取得する。
+      - `State` : Property：コンテキストの状態を取得する。
+      - `GetPerformanceMetrics() As Collection` : パフォーマンス指標を取得する。
+      - `GetResourceUsage() As Collection` : リソース使用状況を取得する。
+      - `SupportsAsyncValidation` : Property：非同期バリデーションをサポートしているかどうかを取得する。
+      - `CacheStrategy` : Property：キャッシュ戦略を設定する。
+    - `[その他特記事項]` :
+      - 各メソッドは、様々なイベント（ContextChanged, ValidationStarted, ValidationCompleted, ValidationProgress, ContextStateChanged, ResourceExhausted, CacheUpdated, SnapshotCreated, ValidationError）を発生させる。
+      - 各イベントは、コンテキスト変更、バリデーション開始・完了・進捗、コンテキスト状態変更、リソース枯渇、キャッシュ更新、スナップショット作成、バリデーションエラーなどを通知する。
+      - メソッドの多くは、エラー処理要件が定義されており、キーの一意性確認、値の型チェック、メモリ使用量の監視、無効なキーの検出、キャッシュ制限の確認、永続化要件の確認、メッセージの妥当性確認、ルールの存在確認、メッセージの多言語対応、メッセージタイプの検証、メッセージ長の制限、プレースホルダーの検証、優先度の範囲チェック、ルールの存在確認、優先度の整合性確認、依存関係との整合性確認、実行中の検証への影響考慮などが必要。
+
+  - `IValidationGroup` : モジュール名
+    - `[概要]` : 複数のバリデーターをグループ化し、実行順序と依存関係を管理するインターフェース
+    - `[依存関係]` :
+      - IValidationContext
+      - IValidator
+      - IValidationGroup
+      - ErrorInfo
+    - `[メソッド一覧]` :
+      - `GroupName` : Property：グループ名を設定・取得する。
+      - `Priority` : Property：グループの優先順位を設定・取得する。
+      - `AddValidator(validator As IValidator)` : バリデーターを追加する。
+      - `RemoveValidator(validator As IValidator)` : バリデーターを削除する。
+      - `ValidateGroup(context As IValidationContext) As Boolean` : グループ全体の検証を実行する。
+      - `SetGroupDependency(dependentGroup As IValidationGroup)` : グループの依存関係を設定する。
+      - `SetExecutionOrder(order As Long)` : グループの検証順序を設定する。
+      - `GetGroupValidationResults() As Collection` : グループの検証結果を取得する。
+      - `SetMetadata(key As String, value As Variant)` : グループのメタデータを設定する。
+      - `GetMetadata(key As String) As Variant` : グループのメタデータを取得する。
+      - `State` : Property：グループの状態を取得する。
+      - `CancelValidation()` : グループの検証をキャンセルする。
+      - `PauseValidation()` : グループの検証を一時停止する。
+      - `ResumeValidation()` : グループの検証を再開する。
+      - `Progress` : Property：グループの進捗状況を取得する。
+      - `FilterValidators(criteria As String) As Collection` : グループのバリデーターをフィルタリングする。
+    - `[その他特記事項]` :
+      - 各メソッドは、様々なイベント（GroupValidationStarted, GroupValidationCompleted, ValidatorAdded, ValidatorRemoved, GroupDependencyChanged, ExecutionOrderChanged, ValidationError, GroupStateChanged）を発生させる。
+      - 各イベントは、グループ検証開始・完了、バリデーター追加・削除、グループ依存関係変更、実行順序変更、バリデーションエラー、グループ状態変更などを通知する。
+      - メソッドの多くは、エラー処理要件が定義されており、名前の一意性確認、無効な文字の検出、長さ制限の確認、既存の処理への影響考慮、優先順位の範囲チェック、グループ間の整合性確認、実行中の検証への影響考慮、バリデーターの有効性確認、重複チェック、メモリ使用量の監視、グループ内の整合性確認、最大バリデーター数の制限、バリデーター間の依存関係確認、イベントの適切な発行、存在確認、リソースの解放、依存関係の更新、実行中の検証への影響考慮、イベントの適切な発行、部分的な失敗の処理、エラー情報の集約、パフォーマンスの最適化、タイムアウト処理、非同期実行のサポート、キャンセル処理、イベントの適切な発行などが必要。
+
+  - `IValidationRule` : モジュール名
+    - `[概要]` : 個別のバリデーションルールを定義し、値の検証とエラー情報の管理を行うインターフェース
+    - `[依存関係]` :
+      - IValidationContext
+      - ErrorInfo
+      - IValidationCacheStrategy
+    - `[メソッド一覧]` :
+      - `Validate(value As Variant, Optional context As IValidationContext, Optional options As ValidationOptions) As Boolean` : 値の妥当性を検証する。
+      - `GetErrorMessage(Optional locale As String) As String` : 検証エラーメッセージを取得する。
+      - `SetMetadata(key As String, value As Variant)` : 検証ルールのメタデータを設定する。
+      - `GetMetadata(key As String) As Variant` : 検証ルールのメタデータを取得する。
+      - `GetDescription(Optional locale As String) As String` : 検証ルールの説明を取得する。
+      - `GetPerformanceMetrics() As Collection` : パフォーマンス指標を取得する。
+      - `CacheStrategy` : Property：キャッシュ戦略を設定する。
+      - `TimeoutMilliseconds` : Property：タイムアウト時間を設定・取得する。
+      - `Validate() As Boolean` : 検証ルールの状態を検証する。
+      - `Cleanup()` : リソースを解放する。
+    - `[その他特記事項]` :
+      - 各メソッドは、様々なイベント（ValidationStarted, ValidationCompleted, ValidationError, CacheUpdated, PerformanceAlert）を発生させる。
+      - 各イベントは、検証開始・完了、検証エラー、キャッシュ更新、パフォーマンスアラートなどを通知する。
+      - メソッドの多くは、エラー処理要件が定義されており、入力値のNULLチェック、データ型の互換性確認、メモリ制限の考慮、検証ルールの整合性確認、タイムアウト処理、キャッシュの活用、メッセージの初期化状態確認、文字列長の制限、特殊文字のエスケープ、多言語対応、テンプレートの適用などが必要。
+
+  - `IValidator` : モジュール名
+    - `[概要]` : バリデーションの実行と結果管理を担当するインターフェース
+    - `[依存関係]` :
+      - IValidationContext
+      - IValidationRule
+      - ValidationMetrics
+      - ErrorInfo
+      - ValidationDetails
+      - IValidationCacheStrategy
+    - `[メソッド一覧]` :
+      - `Validate(value As Variant, Optional context As IValidationContext, Optional options As ValidationOptions) As Boolean` : 値の妥当性を検証する。
+      - `ValidateBatch(values As Collection, Optional options As BatchValidationOptions) As ValidationBatchResult` : バッチ検証を実行する。
+      - `GetErrorMessage(Optional locale As String) As String` : 検証エラーメッセージを取得する。
+      - `AddRule(rule As IValidationRule, Optional priority As ValidationPriority = vpNormal, Optional options As RuleOptions)` : 検証ルールを追加する。
+      - `RemoveRule(rule As IValidationRule, Optional options As RuleRemovalOptions)` : 検証ルールを削除する。
+      - `ClearRules(Optional options As ClearOptions)` : 検証ルールをクリアする。
+      - `GetValidationDetails(Optional options As ValidationDetailsOptions) As ValidationDetails` : 検証の詳細結果を取得する。
+      - `GetPerformanceMetrics() As Collection` : パフォーマンス指標を取得する。
+      - `CacheStrategy` : Property：キャッシュ戦略を設定する。
+      - `TimeoutMilliseconds` : Property：タイムアウト時間を設定・取得する。
+      - `Validate() As Boolean` : バリデーターの状態を検証する。
+      - `Cleanup()` : リソースを解放する。
+      - `SetMetadata(key As String, value As Variant)` : メタデータを設定する。
+      - `GetMetadata(key As String) As Variant` : メタデータを取得する。
+    - `[その他特記事項]` :
+      - 各メソッドは、様々なイベント（ValidationStarted, ValidationCompleted, RuleExecutionStarted, RuleExecutionCompleted, ValidationError, ResourceExhausted, CacheUpdated, PerformanceAlert）を発生させる。
+      - 各イベントは、検証開始・完了、ルール実行開始・完了、検証エラー、リソース枯渇、キャッシュ更新、パフォーマンスアラートなどを通知する。
+      - メソッドの多くは、エラー処理要件が定義されており、入力値のNULLチェック、データ型の互換性確認、メモリ制限の考慮、再帰的な検証の制御、検証ルールの整合性確認、タイムアウト処理、キャッシュの活用、メッセージの初期化状態確認、文字列長の制限、特殊文字のエスケープ、多言語対応、テンプレートの適用、ルールの妥当性確認、重複ルールの検出、ルール間の依存関係確認、メモリ使用量の監視、最大ルール数の制限、優先度の検証などが必要。

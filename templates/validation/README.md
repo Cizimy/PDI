@@ -1,0 +1,357 @@
+- `AllowFutureDateRule` : モジュール名
+  - `[概要]` : 日付型の値が未来日であるかどうかを検証するルールを定義するクラス。
+  - `[依存関係]` :
+    - IValidationRule
+    - ErrorInfo
+    - modError
+    - modStackTrace
+  - `[メソッド一覧]` :
+    - `IValidationRule_Validate(ByVal value As Variant) As Boolean` : 指定された値が未来日であるかどうかを検証する。
+    - `AllowFutureDate(ByVal value As Boolean)` : 未来日を許可するかどうかの設定。
+    - `AllowFutureDate() As Boolean` : 未来日を許可するかどうかの取得。
+    - `IValidationRule_ErrorMessage() As String` : エラーメッセージの取得。
+  - `[その他特記事項]` :
+    - `Class_Initialize` で `mAllowFutureDate` を `True` に初期化し、未来日をデフォルトで許可する。
+    - エラー発生時には `modError.HandleError` を使用してエラー処理を行う。
+
+- `AllowPastDateRule` : モジュール名
+  - `[概要]` : 日付型の値が過去日であるかどうかを検証するルールを定義するクラス。
+  - `[依存関係]` :
+    - IValidationRule
+    - ErrorInfo
+    - modError
+    - modStackTrace
+  - `[メソッド一覧]` :
+    - `IValidationRule_Validate(ByVal value As Variant) As Boolean` : 指定された値が過去日であるかどうかを検証する。
+    - `AllowPastDate(ByVal value As Boolean)` : 過去日を許可するかどうかの設定。
+    - `AllowPastDate() As Boolean` : 過去日を許可するかどうかの取得。
+    - `IValidationRule_ErrorMessage() As String` : エラーメッセージの取得。
+  - `[その他特記事項]` :
+    - `Class_Initialize` で `mAllowPastDate` を `True` に初期化し、過去日をデフォルトで許可する。
+    - エラー発生時には `modError.HandleError` を使用してエラー処理を行う。
+
+- `DateValidator` : モジュール名
+  - `[概要]` : 日付型の値に対する複数の検証ルールを適用するクラス。
+  - `[依存関係]` :
+    - IValidator
+    - IValidationRule
+    - IError
+    - ErrorInfo
+    - modError
+    - modStackTrace
+    - MinDateRule
+    - MaxDateRule
+    - AllowFutureDateRule
+    - AllowPastDateRule
+  - `[メソッド一覧]` :
+    - `IValidator_Validate(ByVal value As Variant) As Boolean` : 指定された値に対して、追加されたすべての検証ルールを適用する。
+    - `AddRule(ByVal rule As IValidationRule)` : 検証ルールを追加する。
+    - `ClearRules()` : 追加されたすべての検証ルールをクリアする。
+    - `Error(ByVal value As IError)` : エラーハンドラーの設定。
+    - `Error() As IError` : エラーハンドラーの取得。
+    - `IValidator_ErrorMessage() As String` : エラーメッセージの取得（このクラスでは使用されない）。
+    - `CreateBirthDateValidator(ByVal errorHandler As IError) As DateValidator` : 生年月日の検証に使用する `DateValidator` インスタンスを作成するファクトリメソッド。
+    - `CreateExpiryDateValidator(ByVal errorHandler As IError) As DateValidator` : 有効期限の検証に使用する `DateValidator` インスタンスを作成するファクトリメソッド。
+  - `[その他特記事項]` :
+    - `Class_Initialize` で検証ルールを格納する `Collection` オブジェクトを初期化する。
+    - `AddRule` メソッドで `Nothing` が渡された場合はエラーを発生させる。
+    - `IValidator_Validate` メソッドでエラーハンドラーが設定されていない場合はエラーを発生させる。
+    - `CreateBirthDateValidator` および `CreateExpiryDateValidator` ファクトリメソッドで、事前に設定されたルールを持つ `DateValidator` インスタンスを生成する。
+    - エラー発生時には `modError.HandleError` または指定された `IError` オブジェクトを使用してエラー処理を行う。
+
+- `MaxDateRule` : モジュール名
+  - `[概要]` : 日付型の値が指定された最大日付以下であるかどうかを検証するルールを定義するクラス。
+  - `[依存関係]` :
+    - IValidationRule
+    - ErrorInfo
+    - modError
+    - modStackTrace
+  - `[メソッド一覧]` :
+    - `IValidationRule_Validate(ByVal value As Variant) As Boolean` : 指定された値が最大日付以下であるかどうかを検証する。
+    - `MaxDate(ByVal value As Date)` : 最大日付の設定。
+    - `MaxDate() As Date` : 最大日付の取得。
+    - `IValidationRule_ErrorMessage() As String` : エラーメッセージの取得。
+  - `[その他特記事項]` :
+    - `Class_Initialize` で `mMaxDate` を `DateSerial(9999, 12, 31)` に初期化する。
+    - エラー発生時には `modError.HandleError` を使用してエラー処理を行う。
+
+- `MaxLengthRule` : モジュール名
+  - `[概要]` : 文字列型の値が指定された最大長以下であるかどうかを検証するルールを定義するクラス。
+  - `[依存関係]` :
+    - IValidationRule
+    - ErrorInfo
+    - modError
+    - modStackTrace
+  - `[メソッド一覧]` :
+    - `IValidationRule_Validate(ByVal value As Variant) As Boolean` : 指定された値が最大長以下であるかどうかを検証する。
+    - `MaxLength(ByVal value As Long)` : 最大長の設定。
+    - `MaxLength() As Long` : 最大長の取得。
+    - `IValidationRule_ErrorMessage() As String` : エラーメッセージの取得。
+  - `[その他特記事項]` :
+    - `Class_Initialize` で `mMaxLength` を `2147483647` (Long型の最大値) に初期化する。
+    - `MaxLength` プロパティで負の値が設定された場合はエラーを発生させる。
+    - エラー発生時には `modError.HandleError` を使用してエラー処理を行う。
+
+- `MinDateRule` : モジュール名
+  - `[概要]` : 日付型の値が指定された最小日付以上であるかどうかを検証するルールを定義するクラス。
+  - `[依存関係]` :
+    - IValidationRule
+    - ErrorInfo
+    - modError
+    - modStackTrace
+  - `[メソッド一覧]` :
+    - `IValidationRule_Validate(ByVal value As Variant) As Boolean` : 指定された値が最小日付以上であるかどうかを検証する。
+    - `MinDate(ByVal value As Date)` : 最小日付の設定。
+    - `MinDate() As Date` : 最小日付の取得。
+    - `IValidationRule_ErrorMessage() As String` : エラーメッセージの取得。
+  - `[その他特記事項]` :
+    - `Class_Initialize` で `mMinDate` を `DateSerial(1900, 1, 1)` に初期化する。
+    - エラー発生時には `modError.HandleError` を使用してエラー処理を行う。
+
+- `MinLengthRule` : モジュール名
+  - `[概要]` : 文字列型の値が指定された最小長以上であるかどうかを検証するルールを定義するクラス。
+  - `[依存関係]` :
+    - IValidationRule
+    - ErrorInfo
+    - modError
+    - modStackTrace
+  - `[メソッド一覧]` :
+    - `IValidationRule_Validate(ByVal value As Variant) As Boolean` : 指定された値が最小長以上であるかどうかを検証する。
+    - `MinLength(ByVal value As Long)` : 最小長の設定。
+    - `MinLength() As Long` : 最小長の取得。
+    - `IValidationRule_ErrorMessage() As String` : エラーメッセージの取得。
+  - `[その他特記事項]` :
+    - `Class_Initialize` で `mMinLength` を `0` に初期化する。
+    - `MinLength` プロパティで負の値が設定された場合はエラーを発生させる。
+    - エラー発生時には `modError.HandleError` を使用してエラー処理を行う。
+
+- `PatternRule` : モジュール名
+  - `[概要]` : 文字列型の値が指定された正規表現パターンに一致するかどうかを検証するルールを定義するクラス。
+  - `[依存関係]` :
+    - IValidationRule
+    - IRegexEngine
+    - VBScriptRegexEngine
+    - ErrorInfo
+    - modError
+    - modStackTrace
+  - `[メソッド一覧]` :
+    - `IValidationRule_Validate(ByVal value As Variant) As Boolean` : 指定された値が正規表現パターンに一致するかどうかを検証する。
+    - `Pattern(ByVal value As String)` : 正規表現パターンの設定。
+    - `Pattern() As String` : 正規表現パターンの取得。
+    - `RegexEngine(ByVal value As IRegexEngine)` : 正規表現エンジンの設定。
+    - `RegexEngine() As IRegexEngine` : 正規表現エンジンの取得。
+    - `IValidationRule_ErrorMessage() As String` : エラーメッセージの取得。
+    - `CreateEmailRule() As PatternRule` : メールアドレスの検証に使用する `PatternRule` インスタンスを作成するファクトリメソッド。
+    - `CreatePhoneRule() As PatternRule` : 電話番号の検証に使用する `PatternRule` インスタンスを作成するファクトリメソッド。
+  - `[その他特記事項]` :
+    - `Class_Initialize` で `mPattern` を空文字列に初期化し、`mRegexEngine` を `VBScriptRegexEngine` のインスタンスに設定する。
+    - `IValidationRule_Validate` メソッドで正規表現エンジンが設定されていない場合はエラーを発生させる。
+    - `CreateEmailRule` および `CreatePhoneRule` ファクトリメソッドで、事前に設定された正規表現パターンを持つ `PatternRule` インスタンスを生成する。
+    - エラー発生時には `modError.HandleError` を使用してエラー処理を行う。
+
+- `StringValidator` : モジュール名
+  - `[概要]` : 文字列型の値に対する複数の検証ルールを適用するクラス。
+  - `[依存関係]` :
+    - IValidator
+    - IValidationRule
+    - IError
+    - ErrorInfo
+    - modError
+    - modStackTrace
+    - PatternRule
+    - MinLengthRule
+    - MaxLengthRule
+  - `[メソッド一覧]` :
+    - `IValidator_Validate(ByVal value As Variant) As Boolean` : 指定された値に対して、追加されたすべての検証ルールを適用する。
+    - `AddRule(ByVal rule As IValidationRule)` : 検証ルールを追加する。
+    - `ClearRules()` : 追加されたすべての検証ルールをクリアする。
+    - `Error(ByVal value As IError)` : エラーハンドラーの設定。
+    - `Error() As IError` : エラーハンドラーの取得。
+    - `IValidator_ErrorMessage() As String` : エラーメッセージの取得（このクラスでは使用されない）。
+    - `CreateEmailValidator(ByVal errorHandler As IError) As StringValidator` : メールアドレスの検証に使用する `StringValidator` インスタンスを作成するファクトリメソッド。
+    - `CreatePhoneValidator(ByVal errorHandler As IError) As StringValidator` : 電話番号の検証に使用する `StringValidator` インスタンスを作成するファクトリメソッド。
+  - `[その他特記事項]` :
+    - `Class_Initialize` で検証ルールを格納する `Collection` オブジェクトを初期化する。
+    - `AddRule` メソッドで `Nothing` が渡された場合はエラーを発生させる。
+    - `IValidator_Validate` メソッドでエラーハンドラーが設定されていない場合はエラーを発生させる。
+    - `CreateEmailValidator` および `CreatePhoneValidator` ファクトリメソッドで、事前に設定されたルールを持つ `StringValidator` インスタンスを生成する。
+    - エラー発生時には `modError.HandleError` または指定された `IError` オブジェクトを使用してエラー処理を行う。
+
+- `AllowFutureDateRule` : モジュール名
+  - `[概要]` : 日付型の値が未来日であるかどうかを検証するルールを定義するクラス。
+  - `[依存関係]` :
+    - IValidationRule
+    - ErrorInfo
+    - modError
+    - modStackTrace
+  - `[メソッド一覧]` :
+    - `IValidationRule_Validate(ByVal value As Variant) As Boolean` : 指定された値が未来日であるかどうかを検証する。
+    - `AllowFutureDate(ByVal value As Boolean)` : 未来日を許可するかどうかの設定。
+    - `AllowFutureDate() As Boolean` : 未来日を許可するかどうかの取得。
+    - `IValidationRule_ErrorMessage() As String` : エラーメッセージの取得。
+  - `[その他特記事項]` :
+    - `Class_Initialize` で `mAllowFutureDate` を `True` に初期化し、未来日をデフォルトで許可する。
+    - エラー発生時には `modError.HandleError` を使用してエラー処理を行う。
+
+- `AllowPastDateRule` : モジュール名
+  - `[概要]` : 日付型の値が過去日であるかどうかを検証するルールを定義するクラス。
+  - `[依存関係]` :
+    - IValidationRule
+    - ErrorInfo
+    - modError
+    - modStackTrace
+  - `[メソッド一覧]` :
+    - `IValidationRule_Validate(ByVal value As Variant) As Boolean` : 指定された値が過去日であるかどうかを検証する。
+    - `AllowPastDate(ByVal value As Boolean)` : 過去日を許可するかどうかの設定。
+    - `AllowPastDate() As Boolean` : 過去日を許可するかどうかの取得。
+    - `IValidationRule_ErrorMessage() As String` : エラーメッセージの取得。
+  - `[その他特記事項]` :
+    - `Class_Initialize` で `mAllowPastDate` を `True` に初期化し、過去日をデフォルトで許可する。
+    - エラー発生時には `modError.HandleError` を使用してエラー処理を行う。
+
+- `DateValidator` : モジュール名
+  - `[概要]` : 日付型の値に対する複数の検証ルールを適用するクラス。
+  - `[依存関係]` :
+    - IValidator
+    - IValidationRule
+    - IError
+    - ErrorInfo
+    - modError
+    - modStackTrace
+    - MinDateRule
+    - MaxDateRule
+    - AllowFutureDateRule
+    - AllowPastDateRule
+  - `[メソッド一覧]` :
+    - `IValidator_Validate(ByVal value As Variant) As Boolean` : 指定された値に対して、追加されたすべての検証ルールを適用する。
+    - `AddRule(ByVal rule As IValidationRule)` : 検証ルールを追加する。
+    - `ClearRules()` : 追加されたすべての検証ルールをクリアする。
+    - `Error(ByVal value As IError)` : エラーハンドラーの設定。
+    - `Error() As IError` : エラーハンドラーの取得。
+    - `IValidator_ErrorMessage() As String` : エラーメッセージの取得（このクラスでは使用されない）。
+    - `CreateBirthDateValidator(ByVal errorHandler As IError) As DateValidator` : 生年月日の検証に使用する `DateValidator` インスタンスを作成するファクトリメソッド。
+    - `CreateExpiryDateValidator(ByVal errorHandler As IError) As DateValidator` : 有効期限の検証に使用する `DateValidator` インスタンスを作成するファクトリメソッド。
+  - `[その他特記事項]` :
+    - `Class_Initialize` で検証ルールを格納する `Collection` オブジェクトを初期化する。
+    - `AddRule` メソッドで `Nothing` が渡された場合はエラーを発生させる。
+    - `IValidator_Validate` メソッドでエラーハンドラーが設定されていない場合はエラーを発生させる。
+    - `CreateBirthDateValidator` および `CreateExpiryDateValidator` ファクトリメソッドで、事前に設定されたルールを持つ `DateValidator` インスタンスを生成する。
+    - エラー発生時には `modError.HandleError` または指定された `IError` オブジェクトを使用してエラー処理を行う。
+
+- `MaxDateRule` : モジュール名
+  - `[概要]` : 日付型の値が指定された最大日付以下であるかどうかを検証するルールを定義するクラス。
+  - `[依存関係]` :
+    - IValidationRule
+    - ErrorInfo
+    - modError
+    - modStackTrace
+  - `[メソッド一覧]` :
+    - `IValidationRule_Validate(ByVal value As Variant) As Boolean` : 指定された値が最大日付以下であるかどうかを検証する。
+    - `MaxDate(ByVal value As Date)` : 最大日付の設定。
+    - `MaxDate() As Date` : 最大日付の取得。
+    - `IValidationRule_ErrorMessage() As String` : エラーメッセージの取得。
+  - `[その他特記事項]` :
+    - `Class_Initialize` で `mMaxDate` を `DateSerial(9999, 12, 31)` に初期化する。
+    - エラー発生時には `modError.HandleError` を使用してエラー処理を行う。
+
+- `MaxLengthRule` : モジュール名
+  - `[概要]` : 文字列型の値が指定された最大長以下であるかどうかを検証するルールを定義するクラス。
+  - `[依存関係]` :
+    - IValidationRule
+    - ErrorInfo
+    - modError
+    - modStackTrace
+  - `[メソッド一覧]` :
+    - `IValidationRule_Validate(ByVal value As Variant) As Boolean` : 指定された値が最大長以下であるかどうかを検証する。
+    - `MaxLength(ByVal value As Long)` : 最大長の設定。
+    - `MaxLength() As Long` : 最大長の取得。
+    - `IValidationRule_ErrorMessage() As String` : エラーメッセージの取得。
+  - `[その他特記事項]` :
+    - `Class_Initialize` で `mMaxLength` を `2147483647` (Long型の最大値) に初期化する。
+    - `MaxLength` プロパティで負の値が設定された場合はエラーを発生させる。
+    - エラー発生時には `modError.HandleError` を使用してエラー処理を行う。
+
+- `MinDateRule` : モジュール名
+  - `[概要]` : 日付型の値が指定された最小日付以上であるかどうかを検証するルールを定義するクラス。
+  - `[依存関係]` :
+    - IValidationRule
+    - ErrorInfo
+    - modError
+    - modStackTrace
+  - `[メソッド一覧]` :
+    - `IValidationRule_Validate(ByVal value As Variant) As Boolean` : 指定された値が最小日付以上であるかどうかを検証する。
+    - `MinDate(ByVal value As Date)` : 最小日付の設定。
+    - `MinDate() As Date` : 最小日付の取得。
+    - `IValidationRule_ErrorMessage() As String` : エラーメッセージの取得。
+  - `[その他特記事項]` :
+    - `Class_Initialize` で `mMinDate` を `DateSerial(1900, 1, 1)` に初期化する。
+    - エラー発生時には `modError.HandleError` を使用してエラー処理を行う。
+
+- `MinLengthRule` : モジュール名
+  - `[概要]` : 文字列型の値が指定された最小長以上であるかどうかを検証するルールを定義するクラス。
+  - `[依存関係]` :
+    - IValidationRule
+    - ErrorInfo
+    - modError
+    - modStackTrace
+  - `[メソッド一覧]` :
+    - `IValidationRule_Validate(ByVal value As Variant) As Boolean` : 指定された値が最小長以上であるかどうかを検証する。
+    - `MinLength(ByVal value As Long)` : 最小長の設定。
+    - `MinLength() As Long` : 最小長の取得。
+    - `IValidationRule_ErrorMessage() As String` : エラーメッセージの取得。
+  - `[その他特記事項]` :
+    - `Class_Initialize` で `mMinLength` を `0` に初期化する。
+    - `MinLength` プロパティで負の値が設定された場合はエラーを発生させる。
+    - エラー発生時には `modError.HandleError` を使用してエラー処理を行う。
+
+- `PatternRule` : モジュール名
+  - `[概要]` : 文字列型の値が指定された正規表現パターンに一致するかどうかを検証するルールを定義するクラス。
+  - `[依存関係]` :
+    - IValidationRule
+    - IRegexEngine
+    - VBScriptRegexEngine
+    - ErrorInfo
+    - modError
+    - modStackTrace
+  - `[メソッド一覧]` :
+    - `IValidationRule_Validate(ByVal value As Variant) As Boolean` : 指定された値が正規表現パターンに一致するかどうかを検証する。
+    - `Pattern(ByVal value As String)` : 正規表現パターンの設定。
+    - `Pattern() As String` : 正規表現パターンの取得。
+    - `RegexEngine(ByVal value As IRegexEngine)` : 正規表現エンジンの設定。
+    - `RegexEngine() As IRegexEngine` : 正規表現エンジンの取得。
+    - `IValidationRule_ErrorMessage() As String` : エラーメッセージの取得。
+    - `CreateEmailRule() As PatternRule` : メールアドレスの検証に使用する `PatternRule` インスタンスを作成するファクトリメソッド。
+    - `CreatePhoneRule() As PatternRule` : 電話番号の検証に使用する `PatternRule` インスタンスを作成するファクトリメソッド。
+  - `[その他特記事項]` :
+    - `Class_Initialize` で `mPattern` を空文字列に初期化し、`mRegexEngine` を `VBScriptRegexEngine` のインスタンスに設定する。
+    - `IValidationRule_Validate` メソッドで正規表現エンジンが設定されていない場合はエラーを発生させる。
+    - `CreateEmailRule` および `CreatePhoneRule` ファクトリメソッドで、事前に設定された正規表現パターンを持つ `PatternRule` インスタンスを生成する。
+    - エラー発生時には `modError.HandleError` を使用してエラー処理を行う。
+
+- `StringValidator` : モジュール名
+  - `[概要]` : 文字列型の値に対する複数の検証ルールを適用するクラス。
+  - `[依存関係]` :
+    - IValidator
+    - IValidationRule
+    - IError
+    - ErrorInfo
+    - modError
+    - modStackTrace
+    - PatternRule
+    - MinLengthRule
+    - MaxLengthRule
+  - `[メソッド一覧]` :
+    - `IValidator_Validate(ByVal value As Variant) As Boolean` : 指定された値に対して、追加されたすべての検証ルールを適用する。
+    - `AddRule(ByVal rule As IValidationRule)` : 検証ルールを追加する。
+    - `ClearRules()` : 追加されたすべての検証ルールをクリアする。
+    - `Error(ByVal value As IError)` : エラーハンドラーの設定。
+    - `Error() As IError` : エラーハンドラーの取得。
+    - `IValidator_ErrorMessage() As String` : エラーメッセージの取得（このクラスでは使用されない）。
+    - `CreateEmailValidator(ByVal errorHandler As IError) As StringValidator` : メールアドレスの検証に使用する `StringValidator` インスタンスを作成するファクトリメソッド。
+    - `CreatePhoneValidator(ByVal errorHandler As IError) As StringValidator` : 電話番号の検証に使用する `StringValidator` インスタンスを作成するファクトリメソッド。
+  - `[その他特記事項]` :
+    - `Class_Initialize` で検証ルールを格納する `Collection` オブジェクトを初期化する。
+    - `AddRule` メソッドで `Nothing` が渡された場合はエラーを発生させる。
+    - `IValidator_Validate` メソッドでエラーハンドラーが設定されていない場合はエラーを発生させる。
+    - `CreateEmailValidator` および `CreatePhoneValidator` ファクトリメソッドで、事前に設定されたルールを持つ `StringValidator` インスタンスを生成する。
+    - エラー発生時には `modError.HandleError` または指定された `IError` オブジェクトを使用してエラー処理を行う。

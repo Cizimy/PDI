@@ -28,10 +28,20 @@ Public Enum RetryBehavior
     rbCustom = 3        ' カスタムバックオフ
 End Enum
 
+' エラー処理結果を示す列挙型
+Public Enum HandlingResult
+    hrSuccess = 0           ' 処理成功
+    hrPartialSuccess = 1    ' 一部成功
+    hrRetryNeeded = 2       ' リトライが必要
+    hrFallbackNeeded = 3    ' フォールバックが必要
+    hrFailed = 4           ' 処理失敗
+    hrUnhandled = 5        ' 未処理
+End Enum
+
 ' イベント定義
 Public Event ErrorHandlingStarted(ByVal errorInfo As ErrorInfo, ByVal priority As ErrorPriority)
-Public Event ErrorHandlingCompleted(ByVal errorInfo As ErrorInfo, ByVal success As Boolean)
-Public Event RetryAttempted(ByVal errorInfo As ErrorInfo, ByVal attempt As Long, ByVal success As Boolean)
+Public Event ErrorHandlingCompleted(ByVal errorInfo As ErrorInfo, ByVal result As HandlingResult)
+Public Event RetryAttempted(ByVal errorInfo As ErrorInfo, ByVal attempt As Long, ByVal backoffInterval As Long, ByVal result As HandlingResult)
 Public Event ResourceReleased(ByVal resourceType As String, ByVal success As Boolean)
 
 ''' <summary>
@@ -39,7 +49,7 @@ Public Event ResourceReleased(ByVal resourceType As String, ByVal success As Boo
 ''' </summary>
 ''' <param name="errorInfo">エラー詳細情報</param>
 ''' <param name="options">処理オプション（オプション）</param>
-''' <returns>処理を継続する場合はTrue、中断する場合はFalse</returns>
+''' <returns>処理結果を示すHandlingResult列挙値</returns>
 ''' <remarks>
 ''' エラー処理要件：
 ''' - エラー情報の検証
@@ -50,7 +60,7 @@ Public Event ResourceReleased(ByVal resourceType As String, ByVal success As Boo
 ''' - メトリクス収集
 ''' </remarks>
 Public Function HandleError(ByRef errorInfo As ErrorInfo, _
-                          Optional ByVal options As HandlingOptions) As Boolean
+                         Optional ByVal options As HandlingOptions) As HandlingResult
 End Function
 
 ''' <summary>
@@ -65,23 +75,23 @@ End Function
 ''' - リトライ結果は統計情報に自動的に記録
 ''' </remarks>
 Public Function RetryOperation(ByVal operation As IRetryableOperation, _
-                             Optional ByVal options As RetryOptions) As OperationResult
+                            Optional ByVal options As RetryOptions) As OperationResult
 End Function
 
 ''' <summary>
 ''' エラーの優先度を設定します
 ''' </summary>
-''' <param name="errorType">エラータイプ</param>
+''' <param name="errorCode">エラーコード</param>
 ''' <param name="priority">優先度</param>
-Public Sub SetErrorPriority(ByVal errorType As String, ByVal priority As ErrorPriority)
+Public Sub SetErrorPriority(ByVal errorCode As ErrorCode, ByVal priority As ErrorPriority)
 End Sub
 
 ''' <summary>
 ''' エラー処理戦略を設定します
 ''' </summary>
-''' <param name="errorType">エラータイプ</param>
+''' <param name="errorCode">エラーコード</param>
 ''' <param name="strategy">処理戦略</param>
-Public Sub SetHandlingStrategy(ByVal errorType As String, ByVal strategy As IErrorStrategy)
+Public Sub SetHandlingStrategy(ByVal errorCode As ErrorCode, ByVal strategy As IErrorStrategy)
 End Sub
 
 ''' <summary>
@@ -91,7 +101,7 @@ End Sub
 ''' <param name="options">解放オプション（オプション）</param>
 ''' <returns>解放成功時True</returns>
 Public Function ReleaseResource(ByVal resource As Object, _
-                              Optional ByVal options As ReleaseOptions) As Boolean
+                             Optional ByVal options As ReleaseOptions) As Boolean
 End Function
 
 ''' <summary>
@@ -102,8 +112,8 @@ End Function
 ''' <param name="behavior">リトライの挙動</param>
 ''' <param name="options">リトライオプション（オプション）</param>
 Public Sub ConfigureRetry(ByVal maxRetryCount As Long, ByVal retryInterval As Long, _
-                        Optional ByVal behavior As RetryBehavior = rbLinear, _
-                        Optional ByVal options As RetryOptions)
+                       Optional ByVal behavior As RetryBehavior = rbExponential, _
+                       Optional ByVal options As RetryOptions)
 End Sub
 
 ''' <summary>
@@ -111,14 +121,6 @@ End Sub
 ''' </summary>
 ''' <returns>リトライ設定のディクショナリ</returns>
 Public Function GetRetryConfiguration() As Dictionary
-End Function
-
-''' <summary>
-''' リトライ間隔を計算します
-''' </summary>
-''' <param name="attempt">現在の試行回数</param>
-''' <returns>次のリトライまでの待機時間（ミリ秒）</returns>
-Public Function CalculateRetryInterval(ByVal attempt As Long) As Long
 End Function
 
 ''' <summary>

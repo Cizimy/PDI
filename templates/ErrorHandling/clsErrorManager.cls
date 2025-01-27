@@ -48,7 +48,7 @@ Private Sub Class_Terminate()
     Set mLastError = Nothing
 End Sub
 
-Private Function IError_HandleError(ByRef errorInfo As ErrorInfo, Optional ByVal options As ErrorHandlingOptions = ehoNone) As Boolean
+Private Function IError_HandleError(ByRef errorInfo As ErrorInfo, Optional ByVal options As ErrorHandlingOptions = ehoNone) As HandlingResult
     On Error GoTo ErrorHandler
     
     ' エラー情報の検証
@@ -79,31 +79,68 @@ Private Function IError_HandleError(ByRef errorInfo As ErrorInfo, Optional ByVal
     If mErrorHandlers.Exists(errorInfo.ErrorCode) Then
         Dim handler As IErrorHandler
         For Each handler In mErrorHandlers(errorInfo.ErrorCode)
-            If handler.HandleError(errorInfo, options) Then
-                RaiseEvent ErrorHandled(errorInfo, handler, True)
-                IError_HandleError = True
-                Exit Function
-            End If
+            Dim handlingResult As HandlingResult
+            handlingResult = handler.HandleError(errorInfo, options)
+            
+            Select Case handlingResult
+                Case hrSuccess
+                    RaiseEvent ErrorHandled(errorInfo, handler, True)
+                    IError_HandleError = hrSuccess
+                    Exit Function
+                    
+                Case hrPartialSuccess
+                    RaiseEvent ErrorHandled(errorInfo, handler, True)
+                    IError_HandleError = hrPartialSuccess
+                    Exit Function
+                    
+                Case hrRetryNeeded
+                    ' リトライが必要な場合は次のハンドラーに進む
+                    
+                Case hrFallbackNeeded
+                    ' フォールバックが必要な場合は次のハンドラーに進む
+                    
+                Case hrFailed, hrUnhandled
+                    ' 失敗または未処理の場合は次のハンドラーに進む
+            End Select
         Next handler
     End If
     
     ' リトライオプションの処理
     If (options And ehoRetry) = ehoRetry Then
-        If AttemptRetry(errorInfo) Then
-            IError_HandleError = True
-            Exit Function
-        End If
+        Dim retryResult As HandlingResult
+        retryResult = AttemptRetry(errorInfo)
         
-        ' リトライ失敗時は回復チェーンを試行
-        Dim recoveryChain As Collection
-        Set recoveryChain = CreateRecoveryChain(errorInfo)
-        
-        If recoveryChain.Count > 0 Then
-            If ExecuteRecoveryChain(recoveryChain, errorInfo) Then
-                IError_HandleError = True
+        Select Case retryResult
+            Case hrSuccess, hrPartialSuccess
+                IError_HandleError = retryResult
                 Exit Function
-            End If
-        End If
+                
+            Case hrRetryNeeded, hrFallbackNeeded
+                ' リトライまたはフォールバックが必要な場合は回復チェーンを試行
+                Dim recoveryChain As Collection
+                Set recoveryChain = CreateRecoveryChain(errorInfo)
+                
+                If recoveryChain.Count > 0 Then
+                    If ExecuteRecoveryChain(recoveryChain, errorInfo) Then
+                        IError_HandleError = hrSuccess
+                        Exit Function
+                    End If
+                End If
+                
+                ' 回復チェーンも失敗した場合
+                IError_HandleError = hrFailed
+                
+            Case hrFailed, hrUnhandled
+                ' リトライ失敗時は回復チェーンを試行
+                Set recoveryChain = CreateRecoveryChain(errorInfo)
+                
+                If recoveryChain.Count > 0 Then
+                    If ExecuteRecoveryChain(recoveryChain, errorInfo) Then
+                        IError_HandleError = hrSuccess
+                        Exit Function
+                    End If
+                End If
+        End Select
     End If
     
     ' ユーザー通知
@@ -111,7 +148,7 @@ Private Function IError_HandleError(ByRef errorInfo As ErrorInfo, Optional ByVal
         NotifyUser errorInfo
     End If
     
-    IError_HandleError = False
+    IError_HandleError = hrUnhandled
     Exit Function
     
 ErrorHandler:
@@ -472,7 +509,7 @@ Private Function GetEmergencyLogPath() As String
     GetEmergencyLogPath = App.Path & "\emergency.log"
 End Function
 
-Private Function AttemptRetry(ByVal errorInfo As ErrorInfo) As Boolean
+Private Function AttemptRetry(ByVal errorInfo As ErrorInfo) As HandlingResult
     On Error GoTo ErrorHandler
     
     Dim attempt As Long
@@ -484,6 +521,7 @@ Private Function AttemptRetry(ByVal errorInfo As ErrorInfo) As Boolean
     
     ' エラーコードに対応するハンドラーを取得
     If Not mErrorHandlers.Exists(errorInfo.ErrorCode) Then
+        AttemptRetry = hrUnhandled
         Exit Function
     End If
     
@@ -516,10 +554,13 @@ Private Function AttemptRetry(ByVal errorInfo As ErrorInfo) As Boolean
             Dim result As OperationResult
             Set result = handler.RetryOperation(operation, retryOptions)
             
+            ' リトライ試行のイベント発行（バックオフ間隔を含む）
+            RaiseEvent RetryAttempted(errorInfo, attempt, backoffInterval, IIf(result.Success, hrSuccess, hrFailed))
+            
             If result.Success Then
                 ' 統計情報の更新
                 mErrorStatistics.IncrementRetrySuccess
-                AttemptRetry = True
+                AttemptRetry = hrSuccess
                 Exit Function
             End If
         Next handler
@@ -531,15 +572,19 @@ Private Function AttemptRetry(ByVal errorInfo As ErrorInfo) As Boolean
         ' エラーキューの処理（必要な場合のみ）
         If ShouldProcessQueue(errorInfo) Then
             ProcessErrorQueue errorInfo
+            ' キュー処理後も失敗している場合はフォールバックが必要
+            AttemptRetry = hrFallbackNeeded
+            Exit Function
         End If
     Next attempt
     
-    AttemptRetry = False
+    ' すべてのリトライが失敗した場合
+    AttemptRetry = hrFailed
     Exit Function
     
 ErrorHandler:
     Debug.Print "Error in AttemptRetry: " & Err.Description
-    AttemptRetry = False
+    AttemptRetry = hrFailed
 End Function
 
 Private Function CalculateBackoffInterval(ByVal attempt As Long, ByVal baseInterval As Long) As Long

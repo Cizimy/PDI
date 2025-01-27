@@ -1,0 +1,111 @@
+モジュール名	概要	依存関係	機能
+AllowFutureDateRule.cls	日付が未来の日付であることを許可するかどうかを検証するルール	IValidationRule, ErrorInfo, modStackTrace, modError, modErrorCodes	- 未来日付の許可/不許可を設定 <br> - 日付の妥当性を検証 <br> - エラーメッセージを返す
+AllowPastDateRule.cls	日付が過去の日付であることを許可するかどうかを検証するルール	IValidationRule, ErrorInfo, modStackTrace, modError	- 過去日付の許可/不許可を設定 <br> - 日付の妥当性を検証 <br> - エラーメッセージを返す
+clsCallStack.cls	スレッドセーフなコールスタックの実装	IStackTrace, StackTraceImpl, clsLock, modErrorCodes, modError, ErrorInfo	- 呼び出し履歴のエントリを追加/削除 <br> - スタックトレースを取得 <br> - スタックの深さを取得
+clsCriticalSectionLock.cls	クリティカルセクションを用いたスレッドセーフなロック機構の実装	ILock, modStackTrace, modError, ErrorInfo	- ロックの取得/解放 <br> - タイムアウト付きロック取得 <br> - ロック状態の検証（テスト用）
+clsCrypto.cls	暗号化操作を提供するクラス	IPerformanceMonitor, ILock, ICryptography, IKeyDerivationStrategy, modWindowsAPI, modError, ErrorInfo	- 文字列の暗号化/復号化 <br> - ハッシュの生成 <br> - AESキーの導出 <br> - Base64エンコード/デコード
+clsLock.cls	Mutexを用いたスレッドセーフなロック機構の実装	modWindowsAPI, modError, ErrorInfo, modStackTrace	- ロックの取得/解放 <br> - ロック状態の検証（テスト用）
+clsLogger.cls	ログ出力機能を提供するクラス	ILogger, ILoggerSettings, IQueue, ILock, IPerformanceMonitor, FileLogger, DatabaseLogger, EventLogLogger, ConsoleLogger, QueueImpl, ErrorInfo, modStackTrace, modError	- ログメッセージのキューイング <br> - ログ出力先の管理 <br> - ログレベルによるフィルタリング <br> - タイマーによる非同期ログ処理 <br> - ログイベントの発行
+clsMutexLock.cls	ミューテックスを使用したロック機構を提供するクラス	ILock, IMutex, IAppConfig, modConfig, modStackTrace, modError, ErrorInfo	- ロックの取得と解放 <br> - タイムアウト付きロック取得 <br> - 設定ファイルからのミューテックス名読み込み <br> - エラーログ出力
+clsPerformanceMonitor.cls	パフォーマンス監視機能を提供するレガシークラス	IPerformanceMonitor, PerformanceMonitorImpl	- 計測の開始/終了 <br> - 計測結果の取得/クリア <br> - パフォーマンス監視の有効/無効設定
+clsSemaphoreLock.cls	セマフォを用いたスレッドセーフなロック機構の実装	ILock, IAppConfig, modError, ErrorInfo, modStackTrace	- ロックの取得/解放 <br> - タイムアウト付きロック取得 <br> - ロック状態の検証（テスト用）
+ConfigImpl.cls	アプリケーション設定とデータベース設定を管理するクラス	IAppConfig, IDatabaseConfig, IIniFile, IniFileImpl, clsLock, ODBCConnectionStringBuilder, OLEDBConnectionStringBuilder	- 設定の読み込み/保存 <br> - データベース接続文字列の生成 <br> - データベース設定の取得
+ConnectionPool.cls	データベース接続プールを管理するクラス	IConnectionPool, IDatabaseConfig, IPerformanceMonitor, ILock, ILogger, modError, ErrorInfo, modStackTrace	- 接続の取得/返却 <br> - アクティブな接続数の取得 <br> - 最大接続数の取得/設定 <br> - 接続タイムアウトの取得/設定 <br> - 新しい接続の作成 <br> - 接続の有効性検証
+ConsoleLogger.cls	コンソールへのログ出力を行うクラス	ILogger, IPerformanceMonitor, ErrorInfo, modError, modStackTrace	- コンソールへのログ出力 <br> - ログレベルに応じた色付け <br> - ログメッセージの組み立て
+CryptographyImpl.cls	暗号化操作の実装クラス	ICryptography, modWindowsAPI, clsPerformanceMonitor, clsLock, ErrorInfo	- 暗号化プロバイダの取得/解放 <br> - ハッシュの作成/破棄 <br> - データのハッシュ化 <br> - 鍵の導出/破棄 <br> - データの暗号化/復号化
+DatabaseConnectionErrorHandler.cls	データベース接続エラーを処理するクラス	IErrorHandler, ILock, ILogger, IEmergencyLogger, IDatabaseConfig, IUserNotifier, ErrorInfo, modStackTrace, modError, modWindowsAPI	- データベース接続エラーのハンドリング <br> - リトライ処理 <br> - エラーログ出力 <br> - ユーザーへの通知
+DatabaseLogger.cls	データベースへのログ出力を行うクラス	ILogger, IConnectionPool, ILock, IPerformanceMonitor, IDatabaseConfig, ErrorInfo, modError	- データベースへのログ出力 <br> - 接続プールの利用 <br> - リトライ処理
+DateValidator.cls	日付の妥当性検証を行うクラス	IValidator, IValidationRule, IError, ErrorInfo, modStackTrace, modError, MinDateRule, MaxDateRule, AllowFutureDateRule	- 日付検証ルールの追加/クリア <br> - 日付の妥当性検証 <br> - エラーハンドラーの設定 <br> - 生年月日バリデーターの作成 <br> - 有効期限バリデーターの作成
+DefaultLoggerSettings.cls	ロガー設定のデフォルト実装を提供するクラス	ILoggerSettings, IAppConfig, IFileOperations, IConnectionPool, IEventLog, IDatabaseConfig	- ログレベルの取得/設定 <br> - ログ出力先の取得 <br> - ログファイルパスの取得 <br> - ログテーブル名の取得 <br> - ログイベントソースの取得 <br> - タイマー間隔の取得 <br> - 依存オブジェクトの取得 <br> - ログ出力要否の判定 <br> - ログメッセージのフォーマット
+DefaultMessageFormatter.cls	デフォルトのエラーメッセージフォーマットを提供するクラス	IMessageFormatter, ErrorInfo, modStackTrace, modError	- エラーメッセージのフォーマット <br> - スタックトレースの追加
+EmergencyLogger.cls	緊急エラーログ出力を行うクラス	IEmergencyLogger, clsLock, modWindowsAPI	- 緊急エラーログの出力 <br> - イベントログへの出力 <br> - ファイルへの出力
+ErrorHandlerManager.cls	エラーハンドラーを管理するクラス	IErrorHandler, DatabaseConnectionErrorHandler, FileNotFoundErrorHandler, InvalidInputErrorHandler, modErrorCodes	- エラーハンドラーの登録/解除 <br> - エラーコードに対応するハンドラーの取得 <br> - デフォルトハンドラーの登録
+ErrorImpl.cls	エラー処理を実装するクラス	IError, ErrorHandlerManager, IEmergencyLogger, EmergencyLogger, ErrorInfo, modErrorCodes, modStackTrace, clsLock, clsPerformanceMonitor	- エラー処理の実行 <br> - エラーハンドラーの登録/解除 <br> - エラー回数のカウント <br> - エラー回数の閾値チェック <br> - エラー情報の補完
+ErrorInfo.cls	エラー詳細情報を格納するクラス		- エラーコード <br> - 説明 <br> - カテゴリ <br> - 発生元 <br> - プロシージャ名 <br> - スタックトレース <br> - 発生日時 <br> - 重要度 <br> - 内部エラー <br> - リカバリ試行/成功 <br> - 追加情報 <br> - 文字列化
+EventLogImpl.cls	Windowsイベントログへの書き込みを行うクラス	IEventLog, clsLock, clsPerformanceMonitor, ErrorInfo, modError	- イベントログへの書き込み <br> - イベントソースの存在確認 <br> - エラーログ出力
+EventLogLogger.cls	イベントログへのログ出力を行うクラス	ILogger, IEventLog, ILock, IPerformanceMonitor, ErrorInfo, modError	- イベントログへのログ出力 <br> - リトライ処理 <br> - メッセージの組み立て
+FileIOImpl.cls	ファイルI/O操作の具象クラス	IFileIO, ErrorInfo, modError	- ファイル/フォルダの存在確認 <br> - フォルダの作成 <br> - ファイルの削除/コピー/移動 <br> - ファイルのオープン/クローズ
+FileLogger.cls	ファイルへのログ出力を行うクラス	ILogger, IFileOperations, ILock, IPerformanceMonitor, ErrorInfo, modError	- ファイルへのログ出力 <br> - リトライ処理 <br> - ログメッセージの組み立て
+FileNotFoundErrorHandler.cls	ファイル不在エラーを処理するクラス	IErrorHandler, ILock, ILogger, IEmergencyLogger, IUserNotifier, IFileOperations, ErrorInfo, modStackTrace, modError	- ファイル不在エラーのハンドリング <br> - 代替ファイルパスの確認 <br> - バックアップファイルの確認 <br> - エラーログ出力 <br> - ユーザーへの通知
+FileSystemOperations.cls	ファイルシステム操作を提供するクラス	IFileOperations, ILock, IPerformanceMonitor, IFileIO, ErrorInfo, modError	- テキストファイルの読み書き <br> - バイナリファイルの読み書き <br> - ファイル/フォルダの存在確認 <br> - フォルダの作成/削除 <br> - ファイルの削除/コピー/移動 <br> - 絶対パスの取得
+IAppConfig.cls	アプリケーション設定インターフェース		- 設定の取得/設定 <br> - 設定の読み込み/保存 <br> - 各種設定プロパティ
+IConnectionPool.cls	データベース接続プールインターフェース		- 接続の取得/返却 <br> - アクティブな接続数の取得 <br> - 最大接続数の取得/設定 <br> - 接続タイムアウトの取得/設定
+IConnectionStringBuilder.cls	データベース接続文字列ビルダーインターフェース		- 接続文字列の生成 <br> - 各種接続パラメータの設定
+ICryptography.cls	暗号化操作インターフェース		- 暗号化コンテキストの取得 <br> - ハッシュオブジェクトの作成 <br> - データのハッシュ化 <br> - 鍵の導出 <br> - データの暗号化/復号化 <br> - 鍵/ハッシュオブジェクトの破棄 <br> - 暗号化コンテキストの解放
+IDatabaseConfig.cls	データベース設定インターフェース		- 接続文字列の取得 <br> - データベース固有設定の取得 <br> - 各種設定プロパティ
+IEmergencyLogger.cls	緊急エラーログ出力インターフェース		- 緊急エラーログの出力
+IError.cls	エラー処理インターフェース		- エラー処理 <br> - エラーハンドラーの登録/解除 <br> - エラー回数のカウント/チェック
+IErrorHandler.cls	エラーハンドラーインターフェース		- エラー処理の実装
+IEventLog.cls	Windowsイベントログ操作インターフェース		- イベントログへのメッセージ書き込み <br> - イベントソースの存在確認
+IFileIO.cls	ファイルI/O操作インターフェース		- ファイル/フォルダの存在確認 <br> - フォルダの作成 <br> - ファイルの削除/コピー/移動 <br> - ファイルのオープン/クローズ
+IFileOperations.cls	ファイル操作インターフェース		- テキストファイル/バイナリファイルの読み書き <br> - ファイル/フォルダの存在確認 <br> - フォルダの作成/削除 <br> - ファイルの削除/コピー/移動 <br> - 絶対パスの取得
+IIniFile.cls	INIファイル操作インターフェース		- INIファイルからの値の読み取り <br> - INIファイルへの値の書き込み
+IKeyDerivationStrategy.cls	鍵導出戦略インターフェース		- パスワードからのキー導出
+ILock.cls	ロック操作インターフェース		- ロックの取得/解放
+ILogger.cls	ロガーインターフェース		- ログの記録 <br> - ログレベルの設定/取得 <br> - ログ出力先の設定/取得
+ILoggerSettings.cls	ロガー設定インターフェース		- ログレベルの取得 <br> - ログ出力先の取得 <br> - ログファイルパスの取得 <br> - ログテーブル名の取得 <br> - ログイベントソースの取得 <br> - タイマー間隔の取得 <br> - データベース接続文字列の取得 <br> - ログ出力要否の判定 <br> - ログメッセージのフォーマット
+IMessageFormatter.cls	エラーメッセージフォーマッターインターフェース		- エラーメッセージのフォーマット
+IMutex.cls	ミューテックス操作インターフェース		- ミューテックスの作成/解放 <br> - ミューテックス所有権の取得
+IniFileImpl.cls	INIファイル操作の具象クラス	IIniFile, clsPerformanceMonitor, clsLock, modWindowsAPI, ErrorInfo, modStackTrace, modError	- INIファイルからの値の読み取り <br> - INIファイルへの値の書き込み <br> - エラーログ出力
+InvalidInputErrorHandler.cls	無効な入力エラーを処理するクラス	IErrorHandler, ILock, ILogger, IEmergencyLogger, IUserNotifier, IValidator, ErrorInfo, modError	- 無効な入力エラーのハンドリング <br> - 入力値の自動補正 <br> - エラーログ出力 <br> - ユーザーへの通知
+IPerformanceCounter.cls	パフォーマンスカウンター操作インターフェース		- カウンター値の取得 <br> - 周波数の取得
+IPerformanceMonitor.cls	パフォーマンス監視インターフェース		- 計測の開始/終了 <br> - 計測結果の取得/クリア <br> - パフォーマンス監視の有効/無効設定
+IQueue.cls	キューインターフェース		- キューへのアイテム追加/取り出し <br> - キューが空かどうかの確認 <br> - キュー内のアイテム数の取得 <br> - 先頭アイテムの参照 <br> - キューのクリア
+IRegexEngine.cls	正規表現エンジンインターフェース		- 正規表現による検証/置換/抽出
+ISleep.cls	スリープ操作インターフェース		- 指定時間実行を停止
+IStack.cls	スタックインターフェース		- スタックへの要素追加/削除 <br> - スタックの最後の要素取得 <br> - スタックが空かどうかの確認 <br> - スタック内の要素数取得 <br> - スタックのクリア
+IStackTrace.cls	スタックトレースインターフェース		- スタックにエントリを追加/削除 <br> - スタックトレースの取得 <br> - スタックの深さ取得 <br> - スタックのクリア/確認 <br> - スタックの最後の要素取得
+IUserNotifier.cls	ユーザー通知インターフェース		- ユーザーへのエラー通知 <br> - 通知スタイルの設定/取得 <br> - デフォルトタイトルの設定/取得
+IValidationRule.cls	バリデーションルールインターフェース		- 値の妥当性検証 <br> - エラーメッセージの取得
+IValidator.cls	バリデーターインターフェース		- 値の妥当性検証 <br> - エラーメッセージの取得 <br> - 検証ルールの追加/クリア <br> - 検証の詳細結果取得
+MaxDateRule.cls	最大日付を検証するルール	IValidationRule, ErrorInfo, modStackTrace, modError	- 最大日付の設定/取得 <br> - 日付の妥当性検証 <br> - エラーメッセージを返す
+MaxLengthRule.cls	最大長を検証するルール	IValidationRule, ErrorInfo, modStackTrace, modError	- 最大長の設定/取得 <br> - 文字列長の妥当性検証 <br> - エラーメッセージを返す
+MinDateRule.cls	最小日付を検証するルール	IValidationRule, ErrorInfo, modStackTrace, modError	- 最小日付の設定/取得 <br> - 日付の妥当性検証 <br> - エラーメッセージを返す
+MinLengthRule.cls	最小長を検証するルール	IValidationRule, ErrorInfo, modStackTrace, modError	- 最小長の設定/取得 <br> - 文字列長の妥当性検証 <br> - エラーメッセージを返す
+MockDatabaseConfig.cls	データベース設定のモック	IDatabaseConfig	- 接続文字列の設定/取得 <br> - 最大プールサイズの設定/取得 <br> - リトライ回数の設定/取得 <br> - リトライ間隔の設定/取得 <br> - 接続タイムアウトの設定/取得 <br> - メソッド呼び出し回数のカウント <br> - カウンターのリセット
+MockError.cls	エラー処理のモック	IError	- エラーの発生をシミュレート <br> - 発生したエラーの保持 <br> - エラーのクリア <br> - エラー数の取得 <br> - 特定
+modAppInitializer.bas	アプリケーションの初期化を行う	modConfig, DefaultLoggerSettings, clsLogger, modDatabaseUtils, ConnectionPool, DatabaseConnectionErrorHandler	- 設定の初期化 <br> - ロギングシステムの初期化 <br> - データベース関連の初期化 <br> - エラーハンドラーの初期化
+modCommon.bas	アプリケーション全体で使用する共通の定数、型、変数、関数を定義	modStackTrace, modErrorCodes, modConfig, modError, clsPerformanceMonitor, clsLock	- アプリケーション定数の定義 <br> - ログ関連の定義 <br> - セキュリティレベルの定義 <br> - ファイルアクセスモードの定義 <br> - エラー情報型の定義 <br> - ファイル情報型の定義 <br> - モジュールの初期化/終了処理 <br> - エラーハンドリング
+modConfig.bas	アプリケーションの設定を管理する	modWindowsAPI, modStackTrace, modError, clsCallStack, IDatabaseConfig	- 設定の読み込み/保存 <br> - デフォルト設定の適用 <br> - 設定値の取得/設定 <br> - データベース接続文字列の取得 <br> - 自動保存の制御
+modDatabaseUtils.bas	データベース操作に関するユーティリティ関数を提供	clsPerformanceMonitor, modErrorCodes, modStackTrace, modError, IDatabaseConfig, ConnectionPool	- データベース接続文字列の取得 <br> - データベース接続の取得/切断 <br> - 接続テスト <br> - SQLクエリの実行 <br> - パラメータの型判定 <br> - パラメータのバリデーション <br> - 警告のログ出力
+modDateUtils.bas	日付操作に関するユーティリティ関数を提供	clsPerformanceMonitor, modStackTrace, modError	- 日付の妥当性確認 <br> - 日付の加算/減算 <br> - 日付の差分計算 <br> - 日付のフォーマット <br> - 現在の日時取得 <br> - 営業日判定
+modError.bas	アプリケーション全体のエラー処理を定義	ErrorInfo, modErrorCodes, DatabaseConnectionErrorHandler, FileNotFoundErrorHandler, InvalidInputErrorHandler, modStackTrace, clsPerformanceMonitor, clsLock, IErrorHandler	- エラー処理の実行 <br> - エラーハンドラーの登録/解除 <br> - デフォルトエラーハンドラーの登録 <br> - エラーコードに対応するハンドラーの取得 <br> - エラーカテゴリに対応するデフォルトハンドラーの取得 <br> - エラー情報の補完 <br> - 緊急エラーログの出力
+modErrorCodes.bas	アプリケーション全体で使用するエラーコードを定義		- エラーコードの定義 <br> - エラーカテゴリの定義 <br> - エラーコードからカテゴリの取得
+modFileIO.bas	ファイル入出力に関するユーティリティ関数を提供	clsPerformanceMonitor, modErrorCodes, modStackTrace, modError, IFileIO	- テキストファイルの読み込み/書き込み <br> - バイナリファイルの読み込み/書き込み <br> - ファイル/フォルダの存在確認 <br> - フォルダの作成/削除 <br> - ファイルの削除 <br> - 絶対パスの取得 <br> - エラーコードのマッピング
+modMathUtils.bas	数学関連のユーティリティ関数を提供	clsPerformanceMonitor, modStackTrace, modError	- 安全な除算 <br> - 値の範囲チェック <br> - 値のクランプ <br> - 四捨五入
+modStackTrace.bas	スタックトレースの管理を行う	clsLock, ErrorInfo, modError	- スタックトレースへのエントリ追加/削除 <br> - スタックトレースの取得 <br> - スタックの深さ取得 <br> - スタックのクリア <br> - スタックの状態確認
+modStringUtils.bas	文字列操作に関するユーティリティ関数を提供	clsPerformanceMonitor, modStackTrace, modError	- 文字列の左/右パディング <br> - 文字列の前後の空白削除 <br> - 文字列の分割/結合
+modTestRunner.bas	テストの実行を管理する	modTestUtility, Test_ErrorHandlers, Test_Loggers, Test_FileOperations, Test_Validators, Test_MathUtils, Test_StringUtils, Test_DateUtils, Test_DatabaseUtils, Test_ConnectionPool, Test_Crypto, Test_PerformanceMonitor, Test_Lock, Test_CallStack, ErrorInfo, modStackTrace, modError	- すべてのテストの実行 <br> - エラーハンドリングテストの実行 <br> - ロギングテストの実行 <br> - ファイル操作テストの実行 <br> - バリデーションテストの実行 <br> - ユーティリティテストの実行 <br> - データベーステストの実行 <br> - セキュリティテストの実行 <br> - パフォーマンステストの実行 <br> - テストレポートの出力
+modTestUtility.bas	テストの実行を支援するユーティリティ関数を提供	clsLogger, DefaultLoggerSettings, clsPerformanceMonitor, TestCase, TestResult, ErrorInfo, modStackTrace, modError	- テストの開始/終了 <br> - アサーション関数の提供 <br> - テストレポートの生成 <br> - テストイベントのログ出力 <br> - テスト実行時間の取得 <br> - テストモジュールの初期化/クリーンアップ
+modWindowsAPI.bas	Windows APIの呼び出しとインターフェースベースの実装への変換を行う	ModWindowsAPIConverter, IMutex, ICryptography, IIniFile, IPerformanceCounter, ISleep, MutexImpl, ErrorInfo	- Mutex操作 <br> - 暗号化操作 <br> - INIファイル操作 <br> - パフォーマンスカウンター操作 <br> - スリープ操作 <br> - Windowsエラーコードからアプリケーションエラーコードへのマッピング
+ModWindowsAPIConverter.cls	Windows APIの呼び出しを新しいインターフェースベースの実装に変換するヘルパークラス	IMutex, ICryptography, IIniFile, IPerformanceCounter, IEventLog, ISleep, clsLock, MutexImpl, CryptographyImpl, IniFileImpl, PerformanceCounterImpl, EventLogImpl, SleepImpl	- 各インターフェースの実装クラスのインスタンス化 <br> - 最終エラーコードの取得 <br> - 各インターフェースの取得
+MsgBoxNotifier.cls	メッセージボックスを使用してユーザーに通知を行うクラス	IUserNotifier, ILock, IPerformanceMonitor, IAppConfig, IMessageFormatter, ErrorInfo, modStackTrace, modError, DefaultMessageFormatter	- ユーザーへのエラー通知 <br> - 通知スタイルの設定/取得 <br> - デフォルトタイトルの設定/取得 <br> - 通知メッセージのフォーマット <br> - エラーカテゴリに応じたアイコン設定
+MutexImpl.cls	ミューテックス操作の具象クラス	IMutex, clsPerformanceMonitor, ErrorInfo, modStackTrace, modError	- ミューテックスの作成/解放 <br> - ミューテックス所有権の待機 <br> - エラーログ出力
+MutexLock.cls	ミューテックスを使用したロック機構を提供するクラス（MutexLockとの違いに注意）	ILock, IMutex, IAppConfig, modConfig, modStackTrace, modError, ErrorInfo	- ロックの取得と解放 <br> - タイムアウト付きロック取得 <br> - 設定ファイルからのミューテックス名読み込み <br> - エラーログ出力
+ODBCConnectionStringBuilder.cls	ODBC接続文字列を生成するクラス	IConnectionStringBuilder	- ODBC接続文字列の生成 <br> - サーバー名の設定/取得 <br> - データベース名の設定/取得 <br> - ユーザー名の設定/取得 <br> - パスワードの設定/取得 <br> - 追加パラメータの設定/取得
+OLEDBConnectionStringBuilder.cls	OLEDB接続文字列を生成するクラス	IConnectionStringBuilder	- OLEDB接続文字列の生成 <br> - サーバー名の設定/取得 <br> - データベース名の設定/取得 <br> - ユーザー名の設定/取得 <br> - パスワードの設定/取得 <br> - 追加パラメータの設定/取得
+PatternRule.cls	正規表現パターンによる検証ルール	IValidationRule, IRegexEngine, VBScriptRegexEngine, ErrorInfo, modStackTrace, modError	- 正規表現パターンの設定/取得 <br> - 正規表現エンジンの設定/取得 <br> - 文字列のパターンマッチングによる妥当性検証 <br> - メールアドレス検証ルールの作成 <br> - 電話番号検証ルールの作成
+PBKDF2KeyDerivationStrategy.cls	PBKDF2アルゴリズムによるキー導出戦略を実装するクラス	IKeyDerivationStrategy, modWindowsAPI, ErrorInfo, modStackTrace, modError	- パスワードとソルトを用いたキー導出 <br> - ハッシュオブジェクトの作成 <br> - ハッシュ値の計算 <br> - エラー処理
+PerformanceCounterImpl.cls	パフォーマンスカウンター操作の具象クラス	IPerformanceCounter, clsLock, modWindowsAPI, ErrorInfo, modStackTrace, modError	- パフォーマンスカウンターの値取得 <br> - パフォーマンスカウンターの周波数取得 <br> - 高分解能タイマーのサポート確認 <br> - エラーログ出力 <br> - 分解能の取得
+PerformanceMonitorImpl.cls	パフォーマンス監視機能の具象クラス	IPerformanceMonitor, modWindowsAPI, clsLock, IAppConfig, modConfig, ErrorInfo, modStackTrace, modError	- パフォーマンス計測の開始/終了 <br> - パフォーマンス測定データ（時間、メモリ使用量）の収集 <br> - パフォーマンス計測結果の取得 <br> - パフォーマンス計測結果の詳細取得 <br> - パフォーマンス監視の有効化/無効化
+QueueImpl.cls	キューの具象クラス	IQueue	- キューへのアイテム追加 <br> - キューからのアイテム取り出し <br> - キューが空かどうかの確認 <br> - キュー内のアイテム数の取得 <br> - 先頭アイテムの参照 <br> - キューのクリア
+SleepImpl.cls	スリープ処理の具象クラス	ISleep, IPerformanceCounter, ErrorInfo, modStackTrace, modError, PerformanceCounterImpl, modWindowsAPI	- 高精度スリープ <br> - 標準スリープ <br> - エラーログ出力
+StackImpl.cls	スタックの具象クラス	IStack, clsLock	- スタックへの要素追加/削除 <br> - スタックの最後の要素取得 <br> - スタックが空かどうかの確認 <br> - スタック内の要素数取得 <br> - スタックのクリア <br> - 最大サイズの取得/設定
+StackTraceImpl.cls	スタックトレースの実装を提供するクラス	IStackTrace, IStack, StackImpl, IAppConfig, modConfig, clsLock	- スタックエントリのプッシュ/ポップ <br> - スタックトレースの取得 <br> - スタック深さの取得 <br> - スタックのクリア <br> - スタックの空確認 <br> - スタックのピーク <br> - スタックエントリのフォーマット
+StringValidator.cls	文字列の妥当性検証を行うクラス	IValidator, IValidationRule, IError, ErrorInfo, modStackTrace, modError, PatternRule, MinLengthRule, MaxLengthRule	- 文字列検証ルールの追加/クリア <br> - 文字列の妥当性検証 <br> - エラーハンドラーの設定 <br> - メールアドレスバリデーターの作成 <br> - 電話番号バリデーターの作成
+TestClsCrypto.cls	clsCryptoクラステスト	clsCrypto, MockPerformanceMonitor, MockLock, ICryptography, IKeyDerivationStrategy, CryptographyImpl, PBKDF2KeyDerivationStrategy	- 暗号化と復号化のテスト <br> - パフォーマンスモニタリングのテスト <br> - 排他制御のテスト <br> - エラー処理のテスト
+TestConnectionPool.cls	ConnectionPoolクラステスト	MockDatabaseConfig, MockPerformanceMonitor, MockLock, MockLogger, ConnectionPool	- 初期化時の依存オブジェクト設定テスト <br> - 不正接続文字列のテスト <br> - 接続リトライ処理のテスト <br> - プールサイズ制限のテスト <br> - 接続再利用のテスト
+TestConsoleLogger.cls	ConsoleLoggerクラステスト	ConsoleLogger, clsPerformanceMonitor	- 初期化のテスト <br> - ログ書き込みのテスト <br> - 異なるログレベルでの書き込みテスト <br> - パフォーマンスモニタリングのテスト
+TestCriticalSectionLock.cls	CriticalSectionLockクラステスト	clsCriticalSectionLock	- ロック取得成功のテスト <br> - タイムアウト付きロック取得のテスト <br> - ロック解放成功のテスト <br> - 複数回ロック取得のテスト <br> - 初期化のテスト
+TestDatabaseLogger.cls	DatabaseLoggerクラステスト	DatabaseLogger, ConnectionPool, clsLock, clsPerformanceMonitor, ConfigImpl	- 初期化のテスト <br> - ログ書き込みのテスト <br> - 同時書き込みのテスト <br> - エラー処理のテスト <br> - テストテーブルの作成/削除
+TestDateValidator.cls	DateValidatorクラステスト	DateValidator, MockError, MinDateRule, MaxDateRule, AllowFutureDateRule, AllowPastDateRule	- 最小日付検証のテスト <br> - 最大日付検証のテスト <br> - 未来日付許可検証のテスト <br> - 過去日付許可検証のテスト <br> - 生年月日バリデーターのテスト <br> - 有効期限バリデーターのテスト <br> - 複数ルール検証のテスト
+TestDefaultMessageFormatter.cls	DefaultMessageFormatterクラステスト	DefaultMessageFormatter, ErrorInfo	- 基本メッセージフォーマットのテスト <br> - スタックトレース付きメッセージのテスト <br> - 空メッセージ処理のテスト <br> - エラー処理のテスト
+TestEventLogLogger.cls	EventLogLoggerクラステスト	EventLogLogger, EventLogImpl, clsLock, clsPerformanceMonitor	- 初期化のテスト <br> - ログ書き込みのテスト <br> - 異なるログレベルでの書き込みテスト <br> - エラー処理のテスト <br> - テスト用イベントソースの作成/削除
+TestFileLogger.cls	FileLoggerクラステスト	FileLogger, FileSystemOperations, clsLock, clsPerformanceMonitor	- 初期化のテスト <br> - ログ書き込みのテスト <br> - 同時書き込みのテスト <br> - エラー処理のテスト
+TestFileSystemOperations.cls	FileSystemOperationsクラステスト	MockLock, MockPerformanceMonitor, MockFileIO, FileSystemOperations	- 未初期化状態でのメソッド呼び出しテスト <br> - 初期化済み状態でのメソッド呼び出しテスト <br> - ファイル操作テスト <br> - エラー処理テスト <br> - バイナリファイル操作テスト <br> - パス操作テスト
+TestLogger.cls	Loggerクラステスト	clsLogger, DefaultLoggerSettings, QueueImpl, clsLock, clsPerformanceMonitor, FileLogger, DatabaseLogger, EventLogLogger, ConsoleLogger	- 初期化のテスト <br> - ロガー追加のテスト <br> - ログメッセージキューイングのテスト <br> - 非同期処理のテスト
+TestMsgBoxNotifier.cls	MsgBoxNotifierクラステスト	MockLock, MockPerformanceMonitor, MockAppConfig, DefaultMessageFormatter, MsgBoxNotifier, ErrorInfo	- 初期化テスト（正常系/異常系） <br> - 通知スタイル設定テスト <br> - メッセージフォーマット処理テスト <br> - ロック処理テスト <br> - 各種スタイルでの通知テスト <br> - リソース管理テスト
+TestMutexLock.cls	MutexLockクラステスト	clsMutexLock	- ロック取得成功のテスト <br> - タイムアウト付きロック取得のテスト <br> - ロック解放成功のテスト <br> - ミューテックス名設定のテスト <br> - 複数回ロック取得のテスト
+TestSemaphoreLock.cls	SemaphoreLockクラステスト	clsSemaphoreLock	- ロック取得成功のテスト <br> - タイムアウト付きロック取得のテスト <br> - ロック解放成功のテスト <br> - セマフォ名設定のテスト <br> - 複数回ロック取得のテスト
+TestStringValidator.cls	StringValidatorクラステスト	StringValidator, MockError, MinLengthRule, MaxLengthRule, PatternRule	- 最小長検証のテスト <br> - 最大長検証のテスト <br> - パターン検証のテスト <br> - メールアドレス検証のテスト <br> - 電話番号検証のテスト <br> - 複数ルール検証のテスト
+VBScriptRegexEngine.cls	VBScriptの正規表現エンジンを使用するクラス	IRegexEngine, ErrorInfo, modStackTrace, modError	- 正規表現によるテスト <br> - 正規表現による置換 <br> - 正規表現によるマッチング

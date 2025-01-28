@@ -347,42 +347,58 @@ End Sub
 ' エラー処理とリトライ処理
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-' リトライ対象の処理を実行
-Private Function ExecuteRetry(ByRef errorInfo As ErrorInfo) As Boolean
+''' <summary>
+''' リトライ対象の処理を実行します
+''' </summary>
+''' <param name="errorInfo">エラー情報</param>
+''' <returns>リトライ成功時True、失敗時False</returns>
+''' <remarks>
+''' エラーコードに基づいて適切なリトライ処理を実行します。
+''' 各エラー種別に応じた専用のリトライ処理を呼び出します。
+''' </remarks>
+Private Function ExecuteRetryOperation(ByRef errorInfo As ErrorInfo) As Boolean
     On Error GoTo ErrorHandler
     
     ' エラーコードに基づいて適切なリトライ処理を実行
     Select Case errorInfo.ErrorCode
         Case ecDatabaseError
             ' データベース接続の再試行
-            ExecuteRetry = RetryDatabaseOperation(errorInfo)
+            ExecuteRetryOperation = TryRetryDatabaseOperation(errorInfo)
             
         Case ecNetworkError
             ' ネットワーク操作の再試行
-            ExecuteRetry = RetryNetworkOperation(errorInfo)
+            ExecuteRetryOperation = TryRetryNetworkOperation(errorInfo)
             
         Case ecFileNotFound, ecFileAccessDenied
             ' ファイルアクセスの再試行
-            ExecuteRetry = RetryFileOperation(errorInfo)
+            ExecuteRetryOperation = TryRetryFileOperation(errorInfo)
             
         Case ecTimeout
             ' タイムアウトした操作の再試行
-            ExecuteRetry = RetryTimedOutOperation(errorInfo)
+            ExecuteRetryOperation = TryRetryTimedOutOperation(errorInfo)
             
         Case Else
             ' その他のエラーは、デフォルトの再試行処理を実行
-            ExecuteRetry = ExecuteDefaultRetry(errorInfo)
+            ExecuteRetryOperation = ExecuteDefaultRetry(errorInfo)
     End Select
     
     Exit Function
     
 ErrorHandler:
-    LogError "ExecuteRetry", Err.Description & " (ErrorCode: " & Err.Number & ")"
-    ExecuteRetry = False
+    LogError "ExecuteRetryOperation", Err.Description & " (ErrorCode: " & Err.Number & ")"
+    ExecuteRetryOperation = False
 End Function
 
-' データベース操作の再試行
-Private Function RetryDatabaseOperation(ByRef errorInfo As ErrorInfo) As Boolean
+''' <summary>
+''' データベース操作のリトライを実行します
+''' </summary>
+''' <param name="errorInfo">エラー情報</param>
+''' <returns>リトライ成功時True、失敗時False</returns>
+''' <remarks>
+''' データベース接続の再確立を試みます。
+''' 接続が成功した場合はTrueを返します。
+''' </remarks>
+Private Function TryRetryDatabaseOperation(ByRef errorInfo As ErrorInfo) As Boolean
     On Error GoTo ErrorHandler
     
     ' データベース接続の再確立を試みる
@@ -396,21 +412,29 @@ Private Function RetryDatabaseOperation(ByRef errorInfo As ErrorInfo) As Boolean
         ' 接続成功を確認
         If .State = 1 Then ' adStateOpen
             .Close
-            RetryDatabaseOperation = True
+            TryRetryDatabaseOperation = True
             Exit Function
         End If
     End With
     
-    RetryDatabaseOperation = False
+    TryRetryDatabaseOperation = False
     Exit Function
     
 ErrorHandler:
-    LogError "RetryDatabaseOperation", Err.Description
-    RetryDatabaseOperation = False
+    LogError "TryRetryDatabaseOperation", Err.Description
+    TryRetryDatabaseOperation = False
 End Function
 
-' ネットワーク操作の再試行
-Private Function RetryNetworkOperation(ByRef errorInfo As ErrorInfo) As Boolean
+''' <summary>
+''' ネットワーク操作のリトライを実行します
+''' </summary>
+''' <param name="errorInfo">エラー情報</param>
+''' <returns>リトライ成功時True、失敗時False</returns>
+''' <remarks>
+''' ネットワーク接続の確認を行います。
+''' HTTPステータスコードが200-299の場合に成功とみなします。
+''' </remarks>
+Private Function TryRetryNetworkOperation(ByRef errorInfo As ErrorInfo) As Boolean
     On Error GoTo ErrorHandler
     
     ' ネットワーク接続の確認
@@ -423,21 +447,29 @@ Private Function RetryNetworkOperation(ByRef errorInfo As ErrorInfo) As Boolean
         
         ' レスポンスコードの確認
         If .Status >= 200 And .Status < 300 Then
-            RetryNetworkOperation = True
+            TryRetryNetworkOperation = True
             Exit Function
         End If
     End With
     
-    RetryNetworkOperation = False
+    TryRetryNetworkOperation = False
     Exit Function
     
 ErrorHandler:
-    LogError "RetryNetworkOperation", Err.Description
-    RetryNetworkOperation = False
+    LogError "TryRetryNetworkOperation", Err.Description
+    TryRetryNetworkOperation = False
 End Function
 
-' ファイル操作の再試行
-Private Function RetryFileOperation(ByRef errorInfo As ErrorInfo) As Boolean
+''' <summary>
+''' ファイル操作のリトライを実行します
+''' </summary>
+''' <param name="errorInfo">エラー情報</param>
+''' <returns>リトライ成功時True、失敗時False</returns>
+''' <remarks>
+''' ファイルの存在確認とアクセス権限の確認を行います。
+''' 読み取りテストが成功した場合にTrueを返します。
+''' </remarks>
+Private Function TryRetryFileOperation(ByRef errorInfo As ErrorInfo) As Boolean
     On Error GoTo ErrorHandler
     
     Dim fso As Object
@@ -454,20 +486,28 @@ Private Function RetryFileOperation(ByRef errorInfo As ErrorInfo) As Boolean
         Set ts = file.OpenAsTextStream(1) ' ForReading
         ts.Close
         
-        RetryFileOperation = True
+        TryRetryFileOperation = True
         Exit Function
     End If
     
-    RetryFileOperation = False
+    TryRetryFileOperation = False
     Exit Function
     
 ErrorHandler:
-    LogError "RetryFileOperation", Err.Description
-    RetryFileOperation = False
+    LogError "TryRetryFileOperation", Err.Description
+    TryRetryFileOperation = False
 End Function
 
-' タイムアウト操作の再試行
-Private Function RetryTimedOutOperation(ByRef errorInfo As ErrorInfo) As Boolean
+''' <summary>
+''' タイムアウトした操作のリトライを実行します
+''' </summary>
+''' <param name="errorInfo">エラー情報</param>
+''' <returns>リトライ成功時True、失敗時False</returns>
+''' <remarks>
+''' タイムアウト値を一時的に延長して再試行を行います。
+''' 処理完了後は元のタイムアウト値に戻します。
+''' </remarks>
+Private Function TryRetryTimedOutOperation(ByRef errorInfo As ErrorInfo) As Boolean
     On Error GoTo ErrorHandler
     
     ' タイムアウト値を一時的に延長して再試行
@@ -476,15 +516,15 @@ Private Function RetryTimedOutOperation(ByRef errorInfo As ErrorInfo) As Boolean
     mSettings("DEFAULT_TIMEOUT_MS") = originalTimeout * 2
     
     ' 元の操作を再実行
-    RetryTimedOutOperation = ExecuteDefaultRetry(errorInfo)
+    TryRetryTimedOutOperation = ExecuteDefaultRetry(errorInfo)
     
     ' タイムアウト値を元に戻す
     mSettings("DEFAULT_TIMEOUT_MS") = originalTimeout
     Exit Function
     
 ErrorHandler:
-    LogError "RetryTimedOutOperation", Err.Description
-    RetryTimedOutOperation = False
+    LogError "TryRetryTimedOutOperation", Err.Description
+    TryRetryTimedOutOperation = False
 End Function
 
 ' リトライ処理の実行
@@ -512,7 +552,7 @@ Private Function AttemptRetry(ByRef errorInfo As ErrorInfo) As HandlingResult
         Sleep backoffInterval
         
         ' リトライ実行
-        If ExecuteRetry(errorInfo) Then
+        If ExecuteRetryOperation(errorInfo) Then
             ' 成功時の統計更新
             UpdateRetryStatistics errorInfo, attempt, True
             
@@ -555,8 +595,16 @@ Private Sub UpdateRetryStatistics(ByRef errorInfo As ErrorInfo, ByVal attempt As
     End With
 End Sub
 
-' デフォルトの再試行処理
-Private Function ExecuteDefaultRetry(ByRef errorInfo As ErrorInfo) As Boolean
+''' <summary>
+''' デフォルトの再試行処理を実行します
+''' </summary>
+''' <param name="errorInfo">エラー情報</param>
+''' <returns>リトライ成功時True、失敗時False</returns>
+''' <remarks>
+''' エラー情報から再試行可能な操作を特定し、実行します。
+''' RetryableOperationが設定されている場合のみ実行を試みます。
+''' </remarks>
+Private Function TryExecuteDefaultRetry(ByRef errorInfo As ErrorInfo) As Boolean
     On Error GoTo ErrorHandler
     
     ' エラー情報から再試行可能な操作を特定

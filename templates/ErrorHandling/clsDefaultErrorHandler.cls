@@ -1,6 +1,40 @@
 Option Explicit
 
-' インターフェース実装
+' 定数定義
+Private Const MILLISECONDS_PER_SECOND As Long = 1000
+Private Const JITTER_RANGE As Double = 0.1
+Private Const FIBONACCI_INITIAL_VALUE As Long = 0
+Private Const ERROR_BURST_THRESHOLD As Long = 5
+Private Const ERROR_BURST_INTERVAL As Long = 60
+Private Const ERROR_HANDLER_ENV_PREFIX As String = "ERROR_HANDLER_"
+
+' デフォルト値の定数
+Private Const DEFAULT_MAX_RETRY_COUNT As Long = 3
+Private Const DEFAULT_RETRY_INTERVAL As Long = 1000
+Private Const DEFAULT_MIN_RETRY_INTERVAL As Long = 100
+Private Const DEFAULT_MAX_RETRY_INTERVAL As Long = 30000
+Private Const DEFAULT_TIMEOUT_MS As Long = 30000
+Private Const DEFAULT_CONNECTION_TIMEOUT_MS As Long = 5000
+Private Const DEFAULT_OPERATION_TIMEOUT_MS As Long = 30000
+Private Const DEFAULT_MAX_ACTIVE_RESOURCES As Long = 100
+Private Const DEFAULT_RESOURCE_CLEANUP_INTERVAL As Long = 300000
+Private Const DEFAULT_MAX_RESOURCE_AGE_MS As Long = 3600000
+Private Const DEFAULT_MAX_LOG_SIZE As Long = 5242880
+Private Const DEFAULT_LOG_ROTATION_COUNT As Long = 5
+Private Const DEFAULT_ERROR_HISTORY_SIZE As Long = 1000
+Private Const DEFAULT_PATTERN_ANALYSIS_WINDOW As Long = 3600
+Private Const DEFAULT_METRICS_SAMPLE_INTERVAL As Long = 60000
+Private Const DEFAULT_METRICS_HISTORY_SIZE As Long = 1000
+Private Const DEFAULT_MAX_RECOVERY_CHAIN_LENGTH As Long = 5
+Private Const DEFAULT_RECOVERY_TIMEOUT_MS As Long = 60000
+
+''' <summary>
+''' エラーハンドリングの実装を提供するクラス
+''' </summary>
+''' <remarks>
+''' エラーの検出、リトライ処理、リソース管理を担当します。
+''' トランザクション管理とパフォーマンスメトリクスの収集も行います。
+''' </remarks>
 Implements IErrorHandler
 Implements IDisposable
 
@@ -356,37 +390,98 @@ End Sub
 ''' エラーコードに基づいて適切なリトライ処理を実行します。
 ''' 各エラー種別に応じた専用のリトライ処理を呼び出します。
 ''' </remarks>
-Private Function ExecuteRetryOperation(ByRef errorInfo As ErrorInfo) As Boolean
+''' <summary>
+''' エラーの種類に応じたリトライ処理を実行します
+''' </summary>
+''' <param name="errorInfo">エラー情報</param>
+''' <returns>リトライ成功時True、失敗時False</returns>
+''' <remarks>
+''' エラーコードに基づいて適切なリトライ処理を選択し実行します。
+''' データベース、ネットワーク、ファイル、タイムアウトの各エラーに対して
+''' 専用の処理を提供します。
+''' </remarks>
+''' <summary>
+''' エラーの種類に応じたリトライ処理を実行します
+''' </summary>
+''' <param name="errorInfo">エラー情報</param>
+''' <returns>リトライ成功時True、失敗時False</returns>
+''' <remarks>
+''' エラーコードに基づいて適切なリトライ処理を選択し実行します。
+''' データベース、ネットワーク、ファイル、タイムアウトの各エラーに対して
+''' 専用の処理を提供します。
+''' </remarks>
+Private Function AttemptRetryOperation(ByRef errorInfo As ErrorInfo) As HandlingResult
     On Error GoTo ErrorHandler
     
-    ' エラーコードに基づいて適切なリトライ処理を実行
-    Select Case errorInfo.ErrorCode
-        Case ecDatabaseError
-            ' データベース接続の再試行
-            ExecuteRetryOperation = TryRetryDatabaseOperation(errorInfo)
-            
-        Case ecNetworkError
-            ' ネットワーク操作の再試行
-            ExecuteRetryOperation = TryRetryNetworkOperation(errorInfo)
-            
-        Case ecFileNotFound, ecFileAccessDenied
-            ' ファイルアクセスの再試行
-            ExecuteRetryOperation = TryRetryFileOperation(errorInfo)
-            
-        Case ecTimeout
-            ' タイムアウトした操作の再試行
-            ExecuteRetryOperation = TryRetryTimedOutOperation(errorInfo)
-            
-        Case Else
-            ' その他のエラーは、デフォルトの再試行処理を実行
-            ExecuteRetryOperation = ExecuteDefaultRetry(errorInfo)
-    End Select
+    Dim attempt As Long
+    Dim backoffInterval As Long
+    Dim startTime As Date
+    Dim retryResult As Boolean
     
+    ' リトライ開始時刻を記録
+    startTime = Now
+    
+    For attempt = 1 To mMaxRetryCount
+        ' バックオフ間隔の計算
+        backoffInterval = GetBackoffInterval(attempt)
+        
+        ' タイムアウトチェック
+        If DateDiff("s", startTime, Now) > mSettings("DEFAULT_TIMEOUT_MS") / MILLISECONDS_PER_SECOND Then
+            LogError "AttemptRetryOperation", "リトライ処理がタイムアウトしました: " & Err.Description
+            RaiseEvent RetryAttempted(errorInfo, attempt, backoffInterval, hrFailed)
+            AttemptRetryOperation = hrFailed
+            Exit Function
+        End If
+        
+        ' バックオフ待機
+        Sleep backoffInterval
+        
+        ' エラーコードに基づいて適切なリトライ処理を実行
+        Select Case errorInfo.ErrorCode
+            Case ecDatabaseError
+                retryResult = TryRetryDatabaseOperation(errorInfo)
+            Case ecNetworkError
+                retryResult = TryRetryNetworkOperation(errorInfo)
+            Case ecFileNotFound, ecFileAccessDenied
+                retryResult = TryRetryFileOperation(errorInfo)
+            Case ecTimeout
+                retryResult = TryRetryTimedOutOperation(errorInfo)
+            Case Else
+                retryResult = TryExecuteDefaultRetry(errorInfo)
+        End Select
+        
+        If retryResult Then
+            ' 成功時の統計更新
+            UpdateRetryStats errorInfo, attempt, True
+            
+            ' イベント通知
+            RaiseEvent RetryAttempted(errorInfo, attempt, backoffInterval, hrSuccess)
+            
+            AttemptRetryOperation = hrSuccess
+            Exit Function
+        End If
+        
+        ' 失敗時の統計更新
+        UpdateRetryStats errorInfo, attempt, False
+        
+        ' イベント通知
+        RaiseEvent RetryAttempted(errorInfo, attempt, backoffInterval, hrFailed)
+        
+        ' エラー情報の更新
+        With errorInfo
+            .RetryCount = attempt
+            .LastRetryTimestamp = Now
+        End With
+    Next attempt
+    
+    ' 全リトライ失敗
+    AttemptRetryOperation = hrFailed
     Exit Function
     
 ErrorHandler:
-    LogError "ExecuteRetryOperation", Err.Description & " (ErrorCode: " & Err.Number & ")"
-    ExecuteRetryOperation = False
+    LogError "AttemptRetryOperation", "リトライ処理の実行中にエラーが発生しました: " & _
+             Err.Description & " (ErrorCode: " & Err.Number & ")"
+    AttemptRetryOperation = hrFailed
 End Function
 
 ''' <summary>
@@ -527,8 +622,16 @@ ErrorHandler:
     TryRetryTimedOutOperation = False
 End Function
 
-' リトライ処理の実行
-Private Function AttemptRetry(ByRef errorInfo As ErrorInfo) As HandlingResult
+''' <summary>
+''' エラーが発生した処理のリトライを実行します
+''' </summary>
+''' <param name="errorInfo">エラー情報</param>
+''' <returns>リトライの結果（成功/失敗）</returns>
+''' <remarks>
+''' 設定された最大リトライ回数まで処理の再実行を試みます。
+''' バックオフ戦略に基づいて待機時間を調整し、タイムアウト制御も行います。
+''' </remarks>
+Private Function AttemptRetryOperation(ByRef errorInfo As ErrorInfo) As HandlingResult
     Dim attempt As Long
     Dim backoffInterval As Long
     Dim startTime As Date
@@ -538,13 +641,13 @@ Private Function AttemptRetry(ByRef errorInfo As ErrorInfo) As HandlingResult
     
     For attempt = 1 To mMaxRetryCount
         ' バックオフ間隔の計算
-        backoffInterval = CalculateBackoffInterval(attempt)
+        backoffInterval = GetBackoffInterval(attempt)
         
         ' タイムアウトチェック
-        If DateDiff("s", startTime, Now) > mSettings("DEFAULT_TIMEOUT_MS") / 1000 Then
-            LogError "AttemptRetry", "Retry timeout exceeded"
+        If DateDiff("s", startTime, Now) > mSettings("DEFAULT_TIMEOUT_MS") / MILLISECONDS_PER_SECOND Then
+            LogError "AttemptRetryOperation", "リトライ処理がタイムアウトしました: " & Err.Description
             RaiseEvent RetryAttempted(errorInfo, attempt, backoffInterval, hrFailed)
-            AttemptRetry = hrFailed
+            AttemptRetryOperation = hrFailed
             Exit Function
         End If
         
@@ -559,7 +662,7 @@ Private Function AttemptRetry(ByRef errorInfo As ErrorInfo) As HandlingResult
             ' イベント通知
             RaiseEvent RetryAttempted(errorInfo, attempt, backoffInterval, hrSuccess)
             
-            AttemptRetry = hrSuccess
+            AttemptRetryOperation = hrSuccess
             Exit Function
         End If
         
@@ -577,11 +680,20 @@ Private Function AttemptRetry(ByRef errorInfo As ErrorInfo) As HandlingResult
     Next attempt
     
     ' 全リトライ失敗
-    AttemptRetry = hrFailed
+    AttemptRetryOperation = hrFailed
 End Function
 
 ' リトライ統計の更新
-Private Sub UpdateRetryStatistics(ByRef errorInfo As ErrorInfo, ByVal attempt As Long, ByVal success As Boolean)
+''' <summary>
+''' リトライ統計情報を更新します
+''' </summary>
+''' <param name="errorInfo">エラー情報</param>
+''' <param name="attempt">リトライ試行回数</param>
+''' <param name="success">リトライ成功フラグ</param>
+''' <remarks>
+''' 成功/失敗回数と平均リトライ回数を更新します
+''' </remarks>
+Private Sub UpdateRetryStats(ByRef errorInfo As ErrorInfo, ByVal attempt As Long, ByVal success As Boolean)
     With mHandlingStats
         If success Then
             .RetrySuccessCount = .RetrySuccessCount + 1
@@ -625,12 +737,18 @@ ErrorHandler:
     ExecuteDefaultRetry = False
 End Function
 
-' トランザクション開始
+''' <summary>
+''' トランザクションを開始します
+''' </summary>
+''' <remarks>
+''' ネストされたトランザクションをサポートし、トランザクションレベルを管理します
+''' </remarks>
 Private Sub BeginTransaction()
     On Error GoTo ErrorHandler
     
     If Not mIsTransactionSupported Then
-        Err.Raise vbObjectError + 1, "BeginTransaction", "Transactions are not supported"
+        Err.Raise vbObjectError + 1, "BeginTransaction", _
+                "トランザクションがサポートされていません: " & Err.Description
     End If
     
     If mInTransaction Then
@@ -650,16 +768,24 @@ Private Sub BeginTransaction()
     Exit Sub
     
 ErrorHandler:
-    LogError "BeginTransaction", Err.Description
-    Err.Raise Err.Number, "BeginTransaction", "Failed to begin transaction: " & Err.Description
+    LogError "BeginTransaction", "トランザクションの開始に失敗しました: " & _
+             Err.Description & " (ErrorCode: " & Err.Number & ")"
+    Err.Raise Err.Number, "BeginTransaction", _
+              "トランザクションの開始に失敗しました: " & Err.Description
 End Sub
 
-' トランザクションのコミット
+''' <summary>
+''' トランザクションをコミットします
+''' </summary>
+''' <remarks>
+''' ネストされたトランザクションの場合、最外部のトランザクションのみが実際にコミットされます
+''' </remarks>
 Private Sub CommitTransaction()
     On Error GoTo ErrorHandler
     
     If Not mInTransaction Then
-        Err.Raise vbObjectError + 2, "CommitTransaction", "No active transaction"
+        Err.Raise vbObjectError + 2, "CommitTransaction", _
+                "アクティブなトランザクションが存在しません: " & Err.Description
     End If
     
     mTransactionLevel = mTransactionLevel - 1
@@ -675,8 +801,10 @@ Private Sub CommitTransaction()
     Exit Sub
     
 ErrorHandler:
-    LogError "CommitTransaction", Err.Description
-    Err.Raise Err.Number, "CommitTransaction", "Failed to commit transaction: " & Err.Description
+    LogError "CommitTransaction", "トランザクションのコミットに失敗しました: " & _
+             Err.Description & " (ErrorCode: " & Err.Number & ")"
+    Err.Raise Err.Number, "CommitTransaction", _
+              "トランザクションのコミットに失敗しました: " & Err.Description
 End Sub
 
 ' トランザクションのロールバック
@@ -706,9 +834,16 @@ Private Function IsInTransaction() As Boolean
     IsInTransaction = mInTransaction
 End Function
 
-' トランザクションレベルの取得
-Private Function GetTransactionLevel() As Long
-    GetTransactionLevel = mTransactionLevel
+''' <summary>
+''' 現在のトランザクションレベルを取得します
+''' </summary>
+''' <returns>現在のトランザクションのネストレベル</returns>
+''' <remarks>
+''' トランザクションのネスト深度を表す数値を返します。
+''' 0の場合はトランザクションが開始されていないことを示します。
+''' </remarks>
+Private Function GetCurrentTransactionLevel() As Long
+    GetCurrentTransactionLevel = mTransactionLevel
 End Function
 
 ' ADO接続の設定
@@ -851,8 +986,17 @@ Private Function IsErrorBurst(ByVal errorKey As String, ByVal timeWindow As Long
     IsErrorBurst = False
 End Function
 
-' バックオフ間隔の計算
-Private Function CalculateBackoffInterval(ByVal attempt As Long) As Long
+''' <summary>
+''' リトライ時のバックオフ間隔を計算します
+''' </summary>
+''' <param name="attempt">リトライ試行回数</param>
+''' <returns>バックオフ間隔（ミリ秒）</returns>
+''' <remarks>
+''' 設定された戦略（線形、指数、フィボナッチ、カスタム）に基づいて
+''' バックオフ間隔を計算します。必要に応じてジッターを追加し、
+''' 設定された最小・最大範囲内に収まるように調整します。
+''' </remarks>
+Private Function GetBackoffInterval(ByVal attempt As Long) As Long
     On Error GoTo ErrorHandler
     
     Dim interval As Long
@@ -868,7 +1012,7 @@ Private Function CalculateBackoffInterval(ByVal attempt As Long) As Long
             
         Case rbFibonacci
             ' フィボナッチバックオフ: フィボナッチ数列に基づいて増加
-            interval = CalculateFibonacciInterval(attempt)
+            interval = GetFibonacciInterval(attempt)
             
         Case rbCustom
             ' カスタムバックオフ: 独自の計算ロジック
@@ -886,7 +1030,7 @@ Private Function CalculateBackoffInterval(ByVal attempt As Long) As Long
     ' ジッター（ランダムな変動）の追加
     If mSettings("USE_JITTER") Then
         Dim jitterRange As Long
-        jitterRange = interval * 0.1 ' 10%のジッター範囲
+        jitterRange = interval * JITTER_RANGE
         interval = interval + Int((Rnd * jitterRange * 2) - jitterRange)
     End If
     
@@ -894,23 +1038,31 @@ Private Function CalculateBackoffInterval(ByVal attempt As Long) As Long
     interval = WorksheetFunction.Max(mSettings("MIN_RETRY_INTERVAL"), _
                WorksheetFunction.Min(interval, mSettings("MAX_RETRY_INTERVAL")))
     
-    CalculateBackoffInterval = interval
+    GetBackoffInterval = interval
     Exit Function
     
 ErrorHandler:
-    LogError "CalculateBackoffInterval", Err.Description
-    CalculateBackoffInterval = mRetryInterval ' エラー時はデフォルト間隔を返す
+    LogError "GetBackoffInterval", "バックオフ間隔の計算中にエラーが発生しました: " & Err.Description
+    Err.Raise Err.Number, "GetBackoffInterval", "バックオフ間隔の計算に失敗しました: " & Err.Description
 End Function
 
-' フィボナッチ数列に基づくリトライ間隔を計算
-Private Function CalculateFibonacciInterval(ByVal attempt As Long) As Long
+''' <summary>
+''' フィボナッチ数列に基づくリトライ間隔を計算します
+''' </summary>
+''' <param name="attempt">リトライ試行回数</param>
+''' <returns>計算されたリトライ間隔（ミリ秒）</returns>
+''' <remarks>
+''' フィボナッチ数列を使用して、徐々に増加するリトライ間隔を計算します。
+''' オーバーフロー防止のため、最大値を超えないように制御します。
+''' </remarks>
+Private Function GetFibonacciInterval(ByVal attempt As Long) As Long
     On Error GoTo ErrorHandler
     
     Dim a As Long, b As Long, temp As Long
     Dim i As Long
     
     ' フィボナッチ数列の初期値
-    a = 0
+    a = FIBONACCI_INITIAL_VALUE
     b = mRetryInterval
     
     ' n番目のフィボナッチ数を計算
@@ -926,16 +1078,25 @@ Private Function CalculateFibonacciInterval(ByVal attempt As Long) As Long
         End If
     Next i
     
-    CalculateFibonacciInterval = a
+    GetFibonacciInterval = a
     Exit Function
     
 ErrorHandler:
-    LogError "CalculateFibonacciInterval", Err.Description
-    CalculateFibonacciInterval = mRetryInterval ' エラー時はデフォルト間隔を返す
+    LogError "GetFibonacciInterval", "フィボナッチ間隔の計算中にエラーが発生しました: " & _
+             Err.Description & " (ErrorCode: " & Err.Number & ")"
+    GetFibonacciInterval = mRetryInterval ' エラー時はデフォルト間隔を返す
 End Function
 
-' コンテキストの復元
-Private Sub RestoreContext(ByVal context As ExecutionContext)
+''' <summary>
+''' 実行コンテキストを復元します
+''' </summary>
+''' <param name="context">復元する実行コンテキスト</param>
+''' <remarks>
+''' エラー処理の実行コンテキストを復元し、リトライカウントと
+''' タイムスタンプをリセットします。コンテキストがNullの場合は
+''' 何も行いません。
+''' </remarks>
+Private Sub RestoreExecutionContext(ByVal context As ExecutionContext)
     On Error GoTo ErrorHandler
     
     If context Is Nothing Then Exit Sub
@@ -951,7 +1112,8 @@ Private Sub RestoreContext(ByVal context As ExecutionContext)
     Exit Sub
     
 ErrorHandler:
-    LogError "RestoreContext", Err.Description
+    LogError "RestoreExecutionContext", "実行コンテキストの復元中にエラーが発生しました: " & _
+             Err.Description & " (ErrorCode: " & Err.Number & ")"
 End Sub
 
 ' 設定の読み込み
